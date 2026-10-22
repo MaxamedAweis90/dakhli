@@ -36,3 +36,7 @@ coverage/
 # Plans
 /plan
 plan/
+
+# Tests
+/apitesting
+apitesting/
