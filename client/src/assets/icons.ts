@@ -1,4 +1,3 @@
-/* oxlint-disable react/only-export-components */
 import type { LucideIcon, LucideProps } from 'lucide-react'
 import {
   // Navigation & Brand
