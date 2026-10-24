@@ -1,23 +1,49 @@
-import React from 'react'
-import { Receipt } from '@/components/shared/icons'
+import React, { useState } from 'react'
+import { OverheadBillsLedgerBanner } from './components/OverheadBillsLedgerBanner'
+import { MonthlyBillingRibbonCard } from './components/MonthlyBillingRibbonCard'
+import { OverheadLedgerTable } from './components/OverheadLedgerTable'
+import { AddBillModal } from './components/AddBillModal'
+import { useOverheadsStore } from '@/stores/overheadsStore'
 
 export const OverheadsPage: React.FC = () => {
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const {
+    bills,
+    toggleBillPaid,
+    addBill,
+    getTotalOverhead,
+    getTotalPaid,
+    getTotalUnpaid,
+    getPaidPercentage,
+  } = useOverheadsStore()
+
   return (
-    <div className="space-y-6">
-      <div className="p-6 rounded-card bg-surface-card border border-surface-subtle shadow-sm">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="p-2 rounded-lg bg-brand/10 text-brand">
-            <Receipt className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">Overhead Bills</h2>
-            <p className="text-xs text-slate-400 font-mono">Route: /overheads</p>
-          </div>
-        </div>
-        <p className="text-sm text-slate-400 mt-2">
-          Recurring monthly obligations ledger placeholder ready for Phase 6.
-        </p>
-      </div>
+    <div className="flex flex-col gap-4 lg:gap-5 pb-12">
+      {/* Section 1: Overhead Bills Ledger Summary Card with enlarged numbers */}
+      <OverheadBillsLedgerBanner
+        totalOverhead={getTotalOverhead()}
+        totalPaid={getTotalPaid()}
+        totalUnpaid={getTotalUnpaid()}
+      />
+
+      {/* Section 2: Dedicated Monthly Billing Ribbon Card & Add Bill Action */}
+      <MonthlyBillingRibbonCard
+        percentage={getPaidPercentage()}
+        onAddBill={() => setIsAddModalOpen(true)}
+      />
+
+      {/* Section 3: Bills Ledger Table Card */}
+      <OverheadLedgerTable
+        bills={bills}
+        onTogglePaid={toggleBillPaid}
+      />
+
+      {/* Add Bill Modal */}
+      <AddBillModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={addBill}
+      />
     </div>
   )
 }

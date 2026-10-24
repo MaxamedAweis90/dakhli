@@ -4,7 +4,7 @@ import {
   AddRegistryItemCard,
   type RegistryItem,
   type TierKey,
-} from './RegistryItemCard'
+} from '@/components/shared/RegistryItemCard'
 import { cn } from '@/lib/utils'
 
 export interface ItemRegistryCardProps {

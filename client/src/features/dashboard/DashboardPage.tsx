@@ -1,10 +1,10 @@
 import React from 'react'
-import { LiquidityBanner } from '@/components/shared/LiquidityBanner'
-import { SavingPlanCard } from '@/components/shared/SavingPlanCard'
-import { OverheadBillsCard } from '@/components/shared/OverheadBillsCard'
-import { CashFlowCard } from '@/components/shared/CashFlowCard'
-import { UpcomingOverheadCard } from '@/components/shared/UpcomingOverheadCard'
-import { ItemRegistryCard } from '@/components/shared/ItemRegistryCard'
+import { LiquidityBanner } from './components/LiquidityBanner'
+import { SavingPlanCard } from './components/SavingPlanCard'
+import { OverheadBillsCard } from './components/OverheadBillsCard'
+import { CashFlowCard } from './components/CashFlowCard'
+import { UpcomingOverheadCard } from './components/UpcomingOverheadCard'
+import { ItemRegistryCard } from './components/ItemRegistryCard'
 
 /**
  * Layout is expressed in reference pixels (see `--u` in index.css) taken from dashboard.png:

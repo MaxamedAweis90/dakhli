@@ -2,6 +2,8 @@ import React from 'react'
 import { useLocation } from 'react-router-dom'
 import { Calendar } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
+import { useOverheadsStore } from '@/stores/overheadsStore'
+import { MonthNavigator } from '@/components/shared/ui/MonthNavigator'
 
 const ROUTE_TITLES: Record<string, string> = {
   '/overheads': 'Overhead Bills',
@@ -14,9 +16,11 @@ const ROUTE_TITLES: Record<string, string> = {
 export const Header: React.FC = () => {
   const location = useLocation()
   const { user } = useAuthStore()
+  const { currentMonth, prevMonth, nextMonth } = useOverheadsStore()
 
   const rawName = user?.email ? user.email.split('@')[0] : 'Anna'
   const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1)
+  const isOverheads = location.pathname === '/overheads'
   const title =
     location.pathname === '/' ? `Hello, ${displayName}!` : (ROUTE_TITLES[location.pathname] ?? 'Overview')
 
@@ -43,9 +47,17 @@ export const Header: React.FC = () => {
 
       {/* Screen Title: in natural document flow, scrolls with screen to top */}
       <div className="flex items-center h-14 lg:h-[4.75rem] px-4 lg:px-0 pr-[14rem] lg:pr-[16rem]">
-        <h1 className="text-[1.35rem] lg:text-[1.5rem] font-semibold leading-none tracking-[-0.015em] text-white">
-          {title}
-        </h1>
+        {isOverheads ? (
+          <MonthNavigator
+            currentMonth={currentMonth}
+            onPrev={prevMonth}
+            onNext={nextMonth}
+          />
+        ) : (
+          <h1 className="text-[1.35rem] lg:text-[1.5rem] font-semibold leading-none tracking-[-0.015em] text-white">
+            {title}
+          </h1>
+        )}
       </div>
     </>
   )

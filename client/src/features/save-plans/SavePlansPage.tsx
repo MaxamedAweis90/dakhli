@@ -1,6 +1,6 @@
 import React from 'react'
 import { useSavingsStore } from '@/stores/savingsStore'
-import { SegmentedTicks } from '@/components/shared/SavingPlanCard'
+import { SegmentedTicks } from '@/features/dashboard/components/SavingPlanCard'
 import { PiggyBank, Pin } from '@/components/shared/icons'
 import { cn } from '@/lib/utils'
 

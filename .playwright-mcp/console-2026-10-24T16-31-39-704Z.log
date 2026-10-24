@@ -1,1 +1,13 @@
 [     301ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:5173/node_modules/.vite/deps/react-dom_client.js?v=a6c5c10e:15802
+[  936551ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/src/components/shared/CashFlowCard.tsx?t=1792860436150:0
+[  936553ms] [ERROR] [vite] Failed to reload /src/components/shared/CashFlowCard.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:1022
+[  937045ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/src/components/shared/ItemRegistryCard.tsx?t=1792860436153:0
+[  937046ms] [ERROR] [vite] Failed to reload /src/components/shared/ItemRegistryCard.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:1022
+[  937215ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/src/components/shared/LiquidityBanner.tsx?t=1792860436155:0
+[  937216ms] [ERROR] [vite] Failed to reload /src/components/shared/LiquidityBanner.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:1022
+[  937290ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/src/components/shared/OverheadBillsCard.tsx?t=1792860436166:0
+[  937291ms] [ERROR] [vite] Failed to reload /src/components/shared/OverheadBillsCard.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:1022
+[  937368ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/src/components/shared/SavingPlanCard.tsx?t=1792860436220:0
+[  937369ms] [ERROR] [vite] Failed to reload /src/components/shared/SavingPlanCard.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:1022
+[  937465ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:5173/src/components/shared/UpcomingOverheadCard.tsx?t=1792860436222:0
+[  937465ms] [ERROR] [vite] Failed to reload /src/components/shared/UpcomingOverheadCard.tsx. This could be due to syntax errors or importing non-existent modules. (see errors above) @ http://localhost:5173/@vite/client:1022
