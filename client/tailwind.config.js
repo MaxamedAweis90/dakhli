@@ -6,11 +6,15 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
       colors: {
         canvas: '#111215',
         card: {
           DEFAULT: '#17181D',
           elevated: '#1E2027',
+          tile: '#222530',
         },
         border: {
           subtle: 'rgba(255, 255, 255, 0.02)',

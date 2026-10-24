@@ -7,8 +7,8 @@ export interface SavingPlanCardProps {
   className?: string;
 }
 
-// Total number of discrete vertical tally ticks matching the reference design
-const TOTAL_TICKS = 36;
+// Hairline tally ticks, as in the reference
+const TOTAL_TICKS = 44;
 
 function interpolateRgb(
   start: [number, number, number],
@@ -22,11 +22,11 @@ function interpolateRgb(
 }
 
 /**
- * Returns dynamic tick color according to user requirements:
- * - < 50%: graded blue/indigo (soft lavender to vibrant indigo/blue)
- * - >= 50%: samy green (pale mint to rich emerald)
- * - 100%: radiant yellow/amber (pale lemon to rich gold)
- * - Inactive: dark slate (#20222A)
+ * Dynamic tick color:
+ * - < 50%: graded blue (pale periwinkle to indigo)
+ * - >= 50%: green (pale mint to emerald)
+ * - 100%: yellow (pale lemon to amber)
+ * - Inactive: barely-there dark tick
  */
 function getSegmentTickColor(
   percentage: number,
@@ -34,7 +34,7 @@ function getSegmentTickColor(
   activeCount: number,
 ): string {
   if (activeCount <= 0 || index >= activeCount) {
-    return "#20222A";
+    return "#242424";
   }
 
   const factor = activeCount === 1 ? 1 : index / (activeCount - 1);
@@ -44,10 +44,10 @@ function getSegmentTickColor(
   }
 
   if (percentage >= 50) {
-    return interpolateRgb([167, 243, 208], [16, 185, 129], factor);
+    return interpolateRgb([178, 226, 178], [112, 190, 130], factor);
   }
 
-  return interpolateRgb([186, 215, 253], [99, 102, 241], factor);
+  return interpolateRgb([170, 184, 248], [98, 100, 226], factor);
 }
 
 export const SegmentedTicks: React.FC<{ percentage: number }> = ({
@@ -57,17 +57,19 @@ export const SegmentedTicks: React.FC<{ percentage: number }> = ({
   const activeCount = Math.round((clamped / 100) * TOTAL_TICKS);
 
   return (
-    <div className="flex gap-[3px] items-center w-full justify-between">
-      {Array.from({ length: TOTAL_TICKS }).map((_, i) => {
-        const bg = getSegmentTickColor(clamped, i, activeCount);
-        return (
-          <span
-            key={i}
-            className="flex-1 h-[70px] rounded-[2px] max-w-[4px] transition-colors"
-            style={{ backgroundColor: bg }}
-          />
-        );
-      })}
+    <div
+      className="grid w-full gap-x-[0.14rem]"
+      style={{ gridTemplateColumns: `repeat(${TOTAL_TICKS}, minmax(0, 1fr))` }}
+    >
+      {Array.from({ length: TOTAL_TICKS }).map((_, i) => (
+        <span
+          key={i}
+          className="h-[3rem] rounded-[1px]"
+          style={{
+            backgroundColor: getSegmentTickColor(clamped, i, activeCount),
+          }}
+        />
+      ))}
     </div>
   );
 };
@@ -82,41 +84,33 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
   return (
     <div
       className={cn(
-        "rounded-[26px] bg-[#17181D] border border-white/[0.02] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-6 flex flex-col justify-between",
+        "rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] px-[1.1rem] pt-[1.1rem] pb-[1.25rem] flex flex-col justify-between gap-[1rem] select-none h-auto min-h-fit",
         className,
       )}
     >
-      {/* Header */}
-      <div className="mb-3">
-        <h3 className="text-[14px] font-semibold text-white tracking-tight">
-          Saving plan
-        </h3>
-      </div>
+      <h3 className="text-[0.78rem] leading-4 font-normal text-white">
+        Saving plan
+      </h3>
 
-      {/* Plan items with subtle dividers matching reference interface */}
-      <div className="divide-y divide-white/[0.04]">
+      {/* Rows are spread evenly; hairline dividers sit between them */}
+      <div className="flex-1 flex flex-col justify-between gap-[0.75rem]">
         {displayPlans.map((plan, idx) => (
-          <div
-            key={plan.id}
-            className={cn(
-              "py-3",
-              idx === 0 && "pt-0",
-              idx === displayPlans.length - 1 && "pb-0",
-            )}
-          >
-            {/* Title and Percentage row (Clean text, no icons per requirements) */}
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-white font-medium text-[14px] tracking-tight">
-                {plan.name}
-              </span>
-              <span className="text-slate-400 font-normal text-xs tabular-nums">
-                {plan.percentage}%
-              </span>
+          <React.Fragment key={plan.id}>
+            {idx > 0 && <div className="h-px bg-white/[0.05]" />}
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[0.9rem] leading-5 font-medium tracking-[-0.01em] text-white">
+                  {plan.name}
+                </span>
+                <span className="text-[0.69rem] leading-4 text-[#8d8d8d]">
+                  {plan.percentage}%
+                </span>
+              </div>
+              <div className="mt-[0.55rem]">
+                <SegmentedTicks percentage={plan.percentage} />
+              </div>
             </div>
-
-            {/* Segmented Tick Bar with dynamic multi-color gradient */}
-            <SegmentedTicks percentage={plan.percentage} />
-          </div>
+          </React.Fragment>
         ))}
       </div>
     </div>

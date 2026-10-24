@@ -1,64 +1,39 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  Receipt,
-  CalendarCheck,
-  PiggyBank,
-  PackageCheck,
-  Settings,
-  Search,
-  LogOut,
-  ChevronDown,
-} from '@/components/shared/icons'
+import { Search, LogOut } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
-
-interface NavItem {
-  name: string
-  to: string
-  icon: React.ComponentType<{ className?: string }>
-}
-
-const NAV_ITEMS: NavItem[] = [
-  { name: 'Dashboard', to: '/', icon: LayoutDashboard },
-  { name: 'Overheads', to: '/overheads', icon: Receipt },
-  { name: 'Daily Check-Off', to: '/daily', icon: CalendarCheck },
-  { name: 'Save Plans', to: '/save-plans', icon: PiggyBank },
-  { name: 'Item Registry', to: '/items', icon: PackageCheck },
-  { name: 'Settings', to: '/settings', icon: Settings },
-]
+import { NAV_ITEMS } from './navItems'
 
 export const Sidebar: React.FC = () => {
   const { user, clearSession } = useAuthStore()
-
-  const displayName = user?.email ? user.email.split('@')[0] : 'Anna Watson'
-  const displayEmail = user?.email || 'ann.watson@dakhli.app'
+  const initial = (user?.email?.[0] ?? 'A').toUpperCase()
 
   return (
-    <aside className="w-64 h-full bg-[#111215] flex flex-col flex-shrink-0 select-none p-6 justify-between">
+    <aside className="hidden lg:flex w-[13.5rem] xl:w-[14.5rem] h-full flex-shrink-0 flex-col justify-between select-none pl-[1.1rem] pr-[1.25rem] pt-[1.5rem] pb-[1.25rem]">
       <div>
-        {/* Clean Brand Mark: + Dakhli */}
-        <div className="flex items-center space-x-2 mb-7 px-1">
-          <span className="text-white font-light text-2xl leading-none select-none">+</span>
-          <span className="text-xl font-bold tracking-tight text-white font-sans">Dakhli</span>
+        {/* Brand */}
+        <div className="flex items-center gap-[0.625rem] h-[2rem] pl-[0.125rem]">
+          <svg viewBox="0 0 16 16" className="w-[1.125rem] h-[1.125rem] text-white" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+            <path d="M8 1.5v13M1.5 8h13" />
+          </svg>
+          <span className="text-[1.25rem] leading-none font-medium tracking-[-0.015em] text-white">Dakhli</span>
         </div>
 
-        {/* Search Pill: Compact rounded-full */}
-        <div className="mb-6">
-          <div className="relative flex items-center">
-            <Search className="absolute left-4 w-4 h-4 text-slate-500 pointer-events-none" />
-            <input
-              type="text"
-              readOnly
-              placeholder="Search"
-              className="w-full pl-11 pr-4 py-2 bg-[#171922] text-slate-300 placeholder-slate-500 text-sm rounded-full border border-white/5 focus:outline-none transition-colors cursor-pointer"
-            />
-          </div>
+        {/* Search */}
+        <div className="mt-[1.75rem] relative flex items-center h-[2.35rem] rounded-[0.75rem] bg-[#1b1b1b]">
+          <Search className="absolute left-[0.875rem] w-[0.95rem] h-[0.95rem] text-[#6f6f6f]" />
+          <input
+            type="text"
+            readOnly
+            placeholder="Search"
+            aria-label="Search"
+            className="w-full h-full bg-transparent pl-[2.4rem] pr-3 text-[0.825rem] text-white placeholder-[#777] outline-none cursor-pointer"
+          />
         </div>
 
-        {/* Navigation List: gap-2 vertical stack */}
-        <nav className="space-y-2">
+        {/* Navigation */}
+        <nav className="mt-[1.75rem] flex flex-col gap-[0.35rem]">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon
             return (
@@ -68,21 +43,16 @@ export const Sidebar: React.FC = () => {
                 end={item.to === '/'}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-colors duration-150',
+                    'flex items-center gap-[0.75rem] h-[2.35rem] pl-[0.75rem] pr-3 rounded-[0.625rem] text-[0.825rem] transition-colors',
                     isActive
-                      ? 'bg-[#1A1D26] text-white shadow-sm font-medium'
-                      : 'text-slate-400 hover:text-white hover:bg-[#1A1D26]/40'
+                      ? 'bg-[#1f1f1f] text-white font-medium shadow-sm'
+                      : 'text-[#c2c2c2] hover:bg-[#1b1b1b] hover:text-white'
                   )
                 }
               >
                 {({ isActive }) => (
                   <>
-                    <Icon
-                      className={cn(
-                        'w-4 h-4 transition-colors',
-                        isActive ? 'text-white' : 'text-slate-400'
-                      )}
-                    />
+                    <Icon className={cn('w-[1rem] h-[1rem]', isActive && item.to === '/' && 'fill-current')} />
                     <span>{item.name}</span>
                   </>
                 )}
@@ -92,32 +62,23 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Bottom Profile: Circular avatar, name, and vertical chevron */}
-      <div className="pt-4 border-t border-white/5">
-        <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#171922] transition-colors group cursor-pointer">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-full bg-slate-700/80 border border-white/10 flex items-center justify-center text-slate-200 text-xs font-semibold uppercase flex-shrink-0">
-              AW
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-white truncate capitalize">
-                {displayName}
-              </p>
-              <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
-            </div>
-          </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              clearSession()
-            }}
-            title="Sign out"
-            className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors rounded-lg"
-          >
-            <ChevronDown className="w-4 h-4 group-hover:hidden" />
-            <LogOut className="w-4 h-4 hidden group-hover:block" />
-          </button>
+      {/* Avatar (sign-out appears on hover) */}
+      <div className="group flex items-center gap-[0.75rem] pl-[0.25rem]">
+        <div
+          title={user?.email ?? 'Anna'}
+          className="w-[2.25rem] h-[2.25rem] rounded-full flex items-center justify-center text-[0.875rem] font-semibold text-[#2b2118] bg-gradient-to-br from-[#f3c9a6] to-[#d9a07a] flex-shrink-0"
+        >
+          {initial}
         </div>
+        <button
+          type="button"
+          onClick={clearSession}
+          title="Sign out"
+          aria-label="Sign out"
+          className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-[#8a8a8a] hover:text-white cursor-pointer"
+        >
+          <LogOut className="w-[1rem] h-[1rem]" />
+        </button>
       </div>
     </aside>
   )

@@ -55,6 +55,11 @@ import {
   Loader2,
   MoreHorizontal,
   Pin,
+  Home,
+  Wifi,
+  Dumbbell,
+  ArrowLeftRight,
+  ClipboardList,
 } from 'lucide-react'
 
 export type Icon = LucideIcon
@@ -175,4 +180,9 @@ export {
   Loader2,
   MoreHorizontal,
   Pin,
+  Home,
+  Wifi,
+  Dumbbell,
+  ArrowLeftRight,
+  ClipboardList,
 }

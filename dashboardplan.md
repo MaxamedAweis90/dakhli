@@ -58,19 +58,22 @@
   - **Inactive Ticks:** Discrete dark slate (`#20222A`) vertical tally marks.
   - **Item Separators:** Subtle horizontal hairline dividers (`divide-y divide-white/[0.04] py-3`).
 
-### Card 3: Overhead Bills (Column 2, Top &mdash; Hero Gradient)
-- **Container:** High-contrast radiant warm sunset gradient (`linear-gradient(135deg, #FF8E88 0%, #FFA885 40%, #FFF2B2 100%)`).
-- **Header:** `Overhead Bills` & `This Month` in deep raspberry/coral (`#E05275`).
+### Card 3: Overhead Bills (Column 2, Top &mdash; Hero Gradient) — [Completed]
+- **Container:** High-contrast radiant warm sunset gradient (`.bg-overhead-warm`: `linear-gradient(135deg, #FF6E92 0%, #FF8383 30%, #FFA275 65%, #FFF0A4 100%)`) with `rounded-[26px] p-6 shadow-[0_4px_24px_-4px_rgba(255,110,146,0.25)]`.
+- **Header:** Title-case `Overhead Bills` in text-[15px] font-semibold text-white tracking-tight with `This Month` in text-xs text-white/80 underneath.
 - **Dual Large Metrics:**
-  - Left: `$175.03` in large white bold font-mono + `Unpaid` label.
-  - Right: `$200.00` in large white bold font-mono + `Paid` label.
+  - Left: `$175.03` (`text-2xl sm:text-[26px] font-semibold tracking-tight text-white tabular-nums`) + `Unpaid` label (`text-xs text-white/80 mt-1.5`).
+  - Right: `$200.00` (`text-2xl sm:text-[26px] font-semibold tracking-tight text-white tabular-nums`) + `Paid` label (`text-xs text-white/80 mt-1.5`).
 - **Nested Quick Items Box:**
-  - Pure white card (`bg-white rounded-2xl p-4 text-[#2D1F24] shadow-sm`).
-  - Label: `Quick items`.
-  - Stacked list: `🏠 Rent`, `📶 Internet`, `🏋️ Gym`.
+  - Frosted glass card (`.bg-quick-items-frosted`: `rgba(255, 255, 255, 0.78)` with `backdrop-filter: blur(16px)` and `rounded-2xl p-4.5 shadow-sm`).
+  - Label: `Quick items` in `text-[#1E2028] font-semibold text-[14px] mb-3`.
+  - Stacked vector SVG items (no emojis):
+    - 🏠 Rent (`Home` SVG outline, `text-[#1E2028]`)
+    - 📶 Internet (`Wifi` SVG outline, `text-[#1E2028]`)
+    - 🏋️ Gym (`Dumbbell` SVG outline, `text-[#1E2028]`)
 
-### Card 4: Cash Flow (Column 2, Bottom)
-- **Container:** Dark matte card (`#13151B rounded-3xl`).
+### Card 4: Cash Flow (Column 2, Bottom) — [Completed]
+- **Container:** Dark matte card (`#17181D rounded-[1.25rem] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)]`).
 - **Header:** `Cash Flow` title + top-right pill toggle.
 - **Dual Metrics with Undulating Sparklines:**
   - **Income:** `$8,385` + smooth **green undulating SVG wave** with glowing apex circle.
@@ -108,27 +111,27 @@
 
 ## 3. Step-by-Step Implementation Roadmap
 
-- [ ] **Step 1: True Fullscreen Viewport & Frame Removal**
+- [x] **Step 1: True Fullscreen Viewport & Frame Removal**
   - Modify [`AppShell.tsx`](file:///c:/Users/HP/Desktop/WorkPlace/Dev_Place/dakhli/client/src/components/layout/AppShell.tsx) to eliminate outer centering padding, max-width constraints, and dark letterbox margins.
   - Ensure sidebar and main content canvas stretch flush across 100vw × 100vh.
 
-- [ ] **Step 2: Sidebar & Header Exact Pixel Alignment**
+- [x] **Step 2: Sidebar & Header Exact Pixel Alignment**
   - Verify brand header `✦ Dakhli` and search pill geometry.
-  - Ensure active navigation pill uses exact `#1A1D26` surface.
+  - Ensure active navigation pill uses exact `#1F1F1F` surface.
   - Align header greeting `Hello, Anna!` and top-right `Ask AI` + date pills.
 
-- [ ] **Step 3: Column 1 Refactoring**
-  - Fine-tune `LiquidityBanner` spacing, font sizes, and gradient-highlight active card.
-  - Implement full-width segmented vertical tally ticks (`SegmentedTicks`) in `SavingPlanCard`.
+- [x] **Step 3: Column 1 Refactoring**
+  - Fine-tune `LiquidityBanner` spacing, font sizes, and gradient-highlight active card with shadow and no border color.
+  - Implement full-width segmented vertical tally ticks (`SegmentedTicks`) in `SavingPlanCard` with shadow and no border color.
 
-- [ ] **Step 4: Column 2 Refactoring**
+- [x] **Step 4: Column 2 Refactoring**
   - Align exact peach-to-coral sunset gradient on `OverheadBillsCard` and nested white quick-items capsule.
-  - Build inline SVG green & red sparklines and hatched limit bar in `CashFlowCard`.
+  - Build inline SVG green & red sparklines and hatched limit bar in `CashFlowCard` with shadow and no border color.
 
-- [ ] **Step 5: Column 3 Refactoring**
-  - Style `UpcomingOverheadCard` with dark icon boxes and paid checkmark pills.
-  - Assemble `ItemRegistryCard` 4×2 grid with custom product emojis and status indicator mini-bars.
+- [x] **Step 5: Column 3 Refactoring**
+  - Style `UpcomingOverheadCard` with dark icon boxes and paid checkmark pills with shadow and no border color.
+  - Assemble `ItemRegistryCard` 4×2 grid with custom product emojis and status indicator mini-bars with shadow and no border color.
 
-- [ ] **Step 6: Quality Assurance & Build Verification**
+- [x] **Step 6: Quality Assurance & Build Verification**
   - Execute `pnpm run lint` and `pnpm run build` to confirm 0 errors and 0 warnings.
   - Visual inspection against `dashboard.png`.

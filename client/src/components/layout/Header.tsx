@@ -4,55 +4,50 @@ import { Calendar } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
 
 const ROUTE_TITLES: Record<string, string> = {
-  '/': 'Hello, Anna!',
   '/overheads': 'Overhead Bills',
   '/daily': 'Daily Check-Off',
   '/save-plans': 'Save Plans',
   '/items': 'Item Registry',
-  '/settings': 'Settings & Baseline',
+  '/settings': 'Settings',
 }
 
 export const Header: React.FC = () => {
   const location = useLocation()
   const { user } = useAuthStore()
 
-  const displayName = user?.email ? user.email.split('@')[0] : 'Anna'
-  const isDashboard = location.pathname === '/'
-  const currentTitle = ROUTE_TITLES[location.pathname] || 'Overview'
+  const rawName = user?.email ? user.email.split('@')[0] : 'Anna'
+  const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1)
+  const title =
+    location.pathname === '/' ? `Hello, ${displayName}!` : (ROUTE_TITLES[location.pathname] ?? 'Overview')
 
   return (
-    <header className="h-16 px-8 flex items-center justify-between flex-shrink-0 bg-transparent">
-      {/* Left Welcome Breadcrumb */}
-      <div>
-        {isDashboard ? (
-          <h1 className="text-xl font-medium text-white capitalize">
-            Hello, {displayName}!
-          </h1>
-        ) : (
-          <h1 className="text-xl font-medium text-white">
-            {currentTitle}
-          </h1>
-        )}
-      </div>
+    <>
+      {/* Floating Action Controls: Ask AI + Date, sticky at top-0, background opacity 0 */}
+      <div className="sticky top-0 z-30 pointer-events-none flex items-center justify-end h-14 lg:h-[4.75rem] px-4 lg:px-0 bg-transparent -mb-14 lg:-mb-[4.75rem]">
+        <div className="pointer-events-auto flex items-center gap-[0.75rem]">
+          {/* Ask AI: glowing gradient outline pill (no sparkle glyph) */}
+          <button
+            type="button"
+            className="border-gradient-highlight rounded-full h-[2.2rem] px-[1.1rem] text-[0.78rem] font-medium text-white cursor-pointer hover:brightness-110 transition-all shadow-[0_2px_12px_rgba(0,0,0,0.5)]"
+          >
+            Ask AI
+          </button>
 
-      {/* Right Persistent Utility Pills */}
-      <div className="flex items-center gap-3">
-        {/* Action Pill: Clean pill with subtle border */}
-        <button
-          type="button"
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#171922] text-xs font-medium text-slate-200 border border-white/10 hover:border-white/20 transition-all cursor-pointer shadow-sm"
-        >
-          <span className="text-amber-400 font-serif text-xs">✦</span>
-          <span>Ask AI</span>
-        </button>
-
-        {/* Date Display Pill matching reference */}
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#171922] text-slate-300 text-xs border border-white/5 shadow-sm">
-          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-medium text-xs tracking-wide">December 2025</span>
+          {/* Date pill */}
+          <div className="flex items-center gap-[0.5rem] h-[2.2rem] px-[1rem] rounded-full bg-[#212121] text-[0.78rem] font-medium text-white shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+            <Calendar className="w-[0.9rem] h-[0.9rem] text-[#cfcfcf]" />
+            <span>December 2025</span>
+          </div>
         </div>
       </div>
-    </header>
+
+      {/* Screen Title: in natural document flow, scrolls with screen to top */}
+      <div className="flex items-center h-14 lg:h-[4.75rem] px-4 lg:px-0 pr-[14rem] lg:pr-[16rem]">
+        <h1 className="text-[1.35rem] lg:text-[1.5rem] font-semibold leading-none tracking-[-0.015em] text-white">
+          {title}
+        </h1>
+      </div>
+    </>
   )
 }
 

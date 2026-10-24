@@ -1,6 +1,5 @@
 import React from 'react'
 import { useLiquidityStore } from '@/stores/liquidityStore'
-import { MoreHorizontal } from '@/components/shared/icons'
 import { cn } from '@/lib/utils'
 
 export interface LiquidityBannerProps {
@@ -29,67 +28,65 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
       : store.netSpendable)
   const currencySymbol = propCurrency ?? (store.currency === 'USD' ? '$' : store.currency)
 
-  const formatAmount = (val: number): string => {
-    return new Intl.NumberFormat('en-US', {
+  const formatAmount = (val: number): string =>
+    new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(val)
-  }
 
   return (
     <div
       className={cn(
-        'rounded-[26px] bg-[#17181D] border border-white/[0.02] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-6 flex flex-col justify-between',
+        'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] px-[1.1rem] pt-[1.1rem] pb-[1.25rem] flex flex-col justify-between gap-[1rem] select-none h-auto min-h-fit',
         className
       )}
     >
-      {/* Title Tracker Label */}
-      <div className="mb-4">
-        <span className="text-[14px] font-medium text-slate-400">Liquidity Summary</span>
-      </div>
-
-      {/* Main Metric: Gross Balance */}
-      <div className="mb-6">
-        <div className="flex items-baseline space-x-2">
-          <span className="text-2xl font-normal text-slate-400 select-none">
+      {/* Title + gross balance */}
+      <div>
+        <h3 className="text-[0.78rem] leading-4 font-normal text-white">Liquidity Summary</h3>
+        <div className="mt-[0.7rem] flex items-start gap-[0.3rem]">
+          <span className="mt-[0.4rem] text-[0.875rem] leading-none text-[#8d8d8d] select-none">
             {currencySymbol}
           </span>
-          <span className="text-[34px] sm:text-[36px] font-semibold tracking-tight text-white tabular-nums leading-none">
+          <span className="text-[2rem] leading-none font-medium tracking-[-0.035em] text-white">
             {formatAmount(gross)}
           </span>
         </div>
-        <p className="text-xs text-slate-400 font-normal mt-1.5">Gross Balance</p>
+        <p className="mt-[0.5rem] text-[0.72rem] leading-4 text-[#979797]">Gross Balance</p>
       </div>
 
-      {/* Dual Sub-Metrics: Total Saved & Net Spendable */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+      {/* Saved / spendable */}
+      <div className="flex items-start gap-[1.6rem]">
         <div>
-          <div className="text-lg font-semibold tracking-tight text-white tabular-nums">
-            {currencySymbol}{formatAmount(saved)}
+          <div className="text-[0.97rem] leading-5 font-medium tracking-[-0.02em] text-white">
+            {currencySymbol}
+            {formatAmount(saved)}
           </div>
-          <p className="text-xs text-slate-400 mt-1 font-normal">Total Saved</p>
+          <p className="mt-[0.1rem] text-[0.72rem] leading-4 text-[#979797]">Total Saved</p>
         </div>
-
         <div>
-          <div className="text-lg font-semibold tracking-tight text-white tabular-nums">
-            {currencySymbol}{formatAmount(net)}
+          <div className="text-[0.97rem] leading-5 font-medium tracking-[-0.02em] text-white">
+            {currencySymbol}
+            {formatAmount(net)}
           </div>
-          <p className="text-xs text-slate-400 mt-1 font-normal">Net Spendable</p>
+          <p className="mt-[0.1rem] text-[0.72rem] leading-4 text-[#979797]">Net Spendable</p>
         </div>
       </div>
 
-      {/* Inset Sub-Card: Active Visual card highlight with glowing emerald/cyan gradient border */}
-      <div className="border-gradient-highlight px-4 py-3.5 flex items-center justify-between">
+      {/* Active highlight */}
+      <div className="border-gradient-highlight rounded-[0.9rem] h-[3.5625rem] pl-[0.8rem] pr-[0.6rem] flex items-center justify-between">
         <div>
-          <span className="text-[13px] font-semibold text-emerald-400 tracking-wide">Active</span>
-          <p className="text-xs text-slate-400 mt-0.5 font-normal">Visual card highlight</p>
+          <span className="block text-[0.78rem] leading-4 font-normal text-[#aee69a]">Active</span>
+          <p className="mt-[0.15rem] text-[0.66rem] leading-4 text-[#9a9a9a]">Visual card highlight</p>
         </div>
         <button
           type="button"
           aria-label="Options"
-          className="w-8 h-8 rounded-xl bg-[#1C202C] hover:bg-[#252B3C] border border-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+          className="w-[1.5rem] h-[1.5rem] rounded-[0.5rem] bg-[#2a2a2a] hover:bg-[#333] flex items-center justify-center gap-[0.1rem] cursor-pointer transition-colors"
         >
-          <MoreHorizontal className="w-4 h-4 text-slate-400" />
+          <span className="w-[0.14rem] h-[0.14rem] rounded-full bg-white" />
+          <span className="w-[0.14rem] h-[0.14rem] rounded-full bg-white" />
+          <span className="w-[0.14rem] h-[0.14rem] rounded-full bg-white" />
         </button>
       </div>
     </div>

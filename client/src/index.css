@@ -2,6 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Reference-scale unit.
+ * dashboard.png frames the app in a 920 x 656 window. `--u` is "one reference pixel"
+ * expressed in real pixels, derived from whichever viewport dimension is limiting.
+ * The root font-size is 16 reference-px, so every rem value in the dashboard
+ * components equals (reference px / 16) and the whole UI scales proportionally.
+ */
+:root {
+  --u: clamp(0.8px, min(calc(100vw / 920), calc(100vh / 656)), 2.2px);
+}
+
+@media (max-width: 1023px) {
+  :root {
+    --u: 1.1px;
+  }
+}
+
+html {
+  font-size: calc(var(--u) * 16);
+}
+
 @layer base {
   :root {
     color-scheme: dark;
@@ -9,8 +30,8 @@
 
   body {
     background-color: #111215;
-    color: #f8fafc;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #ffffff;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     min-height: 100vh;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -18,7 +39,7 @@
   }
 
   .font-mono {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 
   .tabular-nums {
@@ -26,35 +47,69 @@
   }
 }
 
-/* Special Gradients from Reference image_6374d5.jpg */
+/* Overhead Bills hero: pink -> coral -> orange with a pale lime bloom in the lower-right (sampled from dashboard.png) */
 .bg-overhead-warm {
-  background: linear-gradient(135deg, #FF9E9E 0%, #FFB085 45%, #FFF0AA 100%);
+  background:
+    radial-gradient(120% 85% at 100% 100%, rgba(236, 236, 154, 0.95) 0%, rgba(236, 236, 154, 0) 62%),
+    radial-gradient(95% 75% at 100% 0%, rgba(253, 160, 125, 0.95) 0%, rgba(253, 160, 125, 0) 70%),
+    linear-gradient(125deg, #f981af 0%, #fd7f8a 38%, #fd9a80 68%, #fdbc88 100%);
 }
 
+/* Translucent frosted panel inside the Overhead card */
+.bg-quick-items-frosted {
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+/* Expenses limit bar: lemon-lime -> mint -> cyan (sampled directly from reference) */
 .bg-expenses-neon {
-  background: linear-gradient(90deg, #CEF97A 0%, #76E5FC 100%);
+  background: linear-gradient(90deg, #d6f86c 0%, #a8f2b5 50%, #7ee6f9 100%);
+  box-shadow: 0 0 1.25rem rgba(168, 242, 181, 0.35);
 }
 
-/* Precise emerald/cyan gradient border frame for active card highlight matching reference */
+/* Diagonal hatch on the expenses limit bar track */
+.bg-limit-hatch {
+  background-color: transparent;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.12) 0,
+    rgba(255, 255, 255, 0.12) 1.5px,
+    transparent 1.5px,
+    transparent 0.55rem
+  );
+}
+
+/* Glowing pale lime -> green -> cyan outline (Active highlight card, Ask AI pill) */
 .border-gradient-highlight {
   position: relative;
-  background: #141722;
-  border-radius: 18px;
-  box-shadow: 0 0 16px -2px rgba(52, 211, 153, 0.15), 0 0 16px -2px rgba(56, 189, 248, 0.15);
+  background: #1a1b1a;
+  box-shadow:
+    0 0 0.9rem -0.1rem rgba(190, 235, 150, 0.2),
+    0 0 0.9rem -0.1rem rgba(120, 215, 235, 0.2);
 }
 
 .border-gradient-highlight::before {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 18px;
-  padding: 1.5px;
-  background: linear-gradient(120deg, #34D399 0%, #22D3EE 50%, #38BDF8 100%);
+  border-radius: inherit;
+  padding: 0.095rem;
+  background: linear-gradient(135deg, #e6e58c 0%, #a5e6a4 45%, #7fd3ec 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
-  opacity: 0.9;
+  opacity: 0.85;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 /* Minimal dark scrollbar */
@@ -68,15 +123,15 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1A1D26;
+  background: #1e2027;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #252A37;
+  background: #2a2d37;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #1A1D26 #0D0E12;
+  scrollbar-color: #1e2027 #111215;
 }
