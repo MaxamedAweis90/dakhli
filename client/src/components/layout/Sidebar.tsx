@@ -8,9 +8,8 @@ import {
   PackageCheck,
   Settings,
   Search,
-  Sparkles,
   LogOut,
-  User as UserIcon,
+  ChevronDown,
 } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
@@ -33,86 +32,90 @@ const NAV_ITEMS: NavItem[] = [
 export const Sidebar: React.FC = () => {
   const { user, clearSession } = useAuthStore()
 
-  const displayName = user?.email ? user.email.split('@')[0] : 'User'
-  const displayEmail = user?.email || 'user@dakhli.app'
+  const displayName = user?.email ? user.email.split('@')[0] : 'Anna Watson'
+  const displayEmail = user?.email || 'ann.watson@dakhli.app'
 
   return (
-    <aside className="w-64 h-screen bg-canvas border-r border-surface-subtle/70 flex flex-col flex-shrink-0 select-none">
-      {/* Brand Header */}
-      <div className="h-16 px-6 flex items-center space-x-2.5">
-        <div className="w-7 h-7 rounded-lg bg-brand/10 border border-brand/30 flex items-center justify-center text-brand">
-          <Sparkles className="w-4 h-4 fill-brand/20" />
+    <aside className="w-64 h-full bg-[#111215] flex flex-col flex-shrink-0 select-none p-6 justify-between">
+      <div>
+        {/* Clean Brand Mark: + Dakhli */}
+        <div className="flex items-center space-x-2 mb-7 px-1">
+          <span className="text-white font-light text-2xl leading-none select-none">+</span>
+          <span className="text-xl font-bold tracking-tight text-white font-sans">Dakhli</span>
         </div>
-        <span className="text-lg font-bold tracking-tight text-white">Dakhli</span>
+
+        {/* Search Pill: Compact rounded-full */}
+        <div className="mb-6">
+          <div className="relative flex items-center">
+            <Search className="absolute left-4 w-4 h-4 text-slate-500 pointer-events-none" />
+            <input
+              type="text"
+              readOnly
+              placeholder="Search"
+              className="w-full pl-11 pr-4 py-2 bg-[#171922] text-slate-300 placeholder-slate-500 text-sm rounded-full border border-white/5 focus:outline-none transition-colors cursor-pointer"
+            />
+          </div>
+        </div>
+
+        {/* Navigation List: gap-2 vertical stack */}
+        <nav className="space-y-2">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.to === '/'}
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-colors duration-150',
+                    isActive
+                      ? 'bg-[#1A1D26] text-white shadow-sm font-medium'
+                      : 'text-slate-400 hover:text-white hover:bg-[#1A1D26]/40'
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon
+                      className={cn(
+                        'w-4 h-4 transition-colors',
+                        isActive ? 'text-white' : 'text-slate-400'
+                      )}
+                    />
+                    <span>{item.name}</span>
+                  </>
+                )}
+              </NavLink>
+            )
+          })}
+        </nav>
       </div>
 
-      {/* Quick Search Pill */}
-      <div className="px-4 py-2">
-        <div className="relative flex items-center">
-          <Search className="absolute left-3 w-4 h-4 text-slate-500 pointer-events-none" />
-          <input
-            type="text"
-            readOnly
-            placeholder="Search..."
-            className="w-full pl-9 pr-3 py-2 bg-surface-card/60 hover:bg-surface-card border border-surface-subtle/80 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand/50 transition-colors cursor-pointer"
-          />
-        </div>
-      </div>
-
-      {/* Navigation Links */}
-      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-150',
-                  isActive
-                    ? 'text-white bg-surface-card border border-surface-subtle/90 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-100 hover:bg-surface-elevated/40'
-                )
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon
-                    className={cn(
-                      'w-4 h-4 transition-colors',
-                      isActive ? 'text-brand' : 'text-slate-400 group-hover:text-slate-200'
-                    )}
-                  />
-                  <span className="tracking-wide">{item.name}</span>
-                </>
-              )}
-            </NavLink>
-          )
-        })}
-      </nav>
-
-      {/* Sidebar Footer: User profile pill */}
-      <div className="p-3 border-t border-surface-subtle/60">
-        <div className="flex items-center justify-between p-2 rounded-xl bg-surface-card/40 border border-surface-subtle/40 hover:bg-surface-card/70 transition-colors">
-          <div className="flex items-center space-x-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-surface-elevated border border-surface-subtle flex items-center justify-center text-slate-300 text-xs font-semibold uppercase flex-shrink-0">
-              {displayName.slice(0, 2) || <UserIcon className="w-4 h-4" />}
+      {/* Bottom Profile: Circular avatar, name, and vertical chevron */}
+      <div className="pt-4 border-t border-white/5">
+        <div className="flex items-center justify-between p-2 rounded-xl hover:bg-[#171922] transition-colors group cursor-pointer">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-slate-700/80 border border-white/10 flex items-center justify-center text-slate-200 text-xs font-semibold uppercase flex-shrink-0">
+              AW
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-slate-200 truncate capitalize">
+              <p className="text-sm font-medium text-white truncate capitalize">
                 {displayName}
               </p>
-              <p className="text-[10px] text-slate-500 truncate">{displayEmail}</p>
+              <p className="text-xs text-slate-500 truncate">{displayEmail}</p>
             </div>
           </div>
           <button
-            onClick={() => clearSession()}
+            onClick={(e) => {
+              e.stopPropagation()
+              clearSession()
+            }}
             title="Sign out"
-            className="p-1.5 text-slate-400 hover:text-status-danger hover:bg-surface-elevated rounded-lg transition-colors ml-1"
+            className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors rounded-lg"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <ChevronDown className="w-4 h-4 group-hover:hidden" />
+            <LogOut className="w-4 h-4 hidden group-hover:block" />
           </button>
         </div>
       </div>

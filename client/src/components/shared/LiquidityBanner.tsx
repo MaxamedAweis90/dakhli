@@ -1,6 +1,6 @@
 import React from 'react'
-import { Wallet, ShieldCheck, Sparkles } from '@/components/shared/icons'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { MoreHorizontal } from '@/components/shared/icons'
 import { cn } from '@/lib/utils'
 
 export interface LiquidityBannerProps {
@@ -22,8 +22,12 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
 
   const gross = propGross ?? store.grossBalance
   const saved = propSaved ?? store.totalSaved
-  const net = propNet ?? (propGross !== undefined && propSaved !== undefined ? propGross - propSaved : store.netSpendable)
-  const currencySymbol = propCurrency ?? store.currency === 'USD' ? '$' : store.currency
+  const net =
+    propNet ??
+    (propGross !== undefined && propSaved !== undefined
+      ? propGross - propSaved
+      : store.netSpendable)
+  const currencySymbol = propCurrency ?? (store.currency === 'USD' ? '$' : store.currency)
 
   const formatAmount = (val: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -32,79 +36,61 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
     }).format(val)
   }
 
-  const isDeficit = net < 0
-
   return (
     <div
       className={cn(
-        'w-full rounded-card bg-surface-card border border-surface-subtle p-6 shadow-md transition-all',
+        'rounded-[26px] bg-[#17181D] border border-white/[0.02] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-6 flex flex-col justify-between',
         className
       )}
     >
-      {/* Card Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <div className="p-1.5 rounded-lg bg-surface-elevated text-brand border border-surface-subtle">
-            <Wallet className="w-4 h-4" />
-          </div>
-          <span className="text-xs font-semibold tracking-wider text-slate-400 uppercase">
-            Liquidity Summary
-          </span>
-        </div>
-
-        <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full bg-surface-elevated border border-surface-subtle text-[11px] text-slate-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse" />
-          <span className="font-mono text-[10px]">Synced</span>
-        </div>
+      {/* Title Tracker Label */}
+      <div className="mb-4">
+        <span className="text-[14px] font-medium text-slate-400">Liquidity Summary</span>
       </div>
 
       {/* Main Metric: Gross Balance */}
       <div className="mb-6">
-        <div className="flex items-baseline space-x-1">
-          <span className="text-xl font-mono text-slate-400">{currencySymbol}</span>
-          <span className="text-3xl md:text-4xl font-bold font-mono tracking-tight text-white tabular-nums">
+        <div className="flex items-baseline space-x-2">
+          <span className="text-2xl font-normal text-slate-400 select-none">
+            {currencySymbol}
+          </span>
+          <span className="text-[34px] sm:text-[36px] font-semibold tracking-tight text-white tabular-nums leading-none">
             {formatAmount(gross)}
           </span>
         </div>
-        <p className="text-xs text-slate-400 mt-1 font-medium">Gross Balance</p>
+        <p className="text-xs text-slate-400 font-normal mt-1.5">Gross Balance</p>
       </div>
 
-      {/* Triplet Sub-Metrics: Total Saved & Net Spendable */}
-      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-surface-subtle/70">
-        {/* Total Saved */}
-        <div className="space-y-1">
-          <div className="flex items-center space-x-1 text-slate-400 text-xs mb-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-            <span>Total Saved</span>
+      {/* Dual Sub-Metrics: Total Saved & Net Spendable */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div>
+          <div className="text-lg font-semibold tracking-tight text-white tabular-nums">
+            {currencySymbol}{formatAmount(saved)}
           </div>
-          <div className="text-lg font-bold font-mono text-slate-200 tabular-nums">
-            {currencySymbol}
-            {formatAmount(saved)}
-          </div>
-          <p className="text-[11px] text-slate-500">Locked in Save Plans</p>
+          <p className="text-xs text-slate-400 mt-1 font-normal">Total Saved</p>
         </div>
 
-        {/* Net Spendable */}
-        <div className="space-y-1">
-          <div className="flex items-center space-x-1 text-slate-400 text-xs mb-1">
-            <Sparkles className="w-3.5 h-3.5 text-brand" />
-            <span>Net Spendable</span>
+        <div>
+          <div className="text-lg font-semibold tracking-tight text-white tabular-nums">
+            {currencySymbol}{formatAmount(net)}
           </div>
-          <div
-            className={cn(
-              'text-lg font-bold font-mono tabular-nums transition-colors',
-              isDeficit
-                ? 'text-status-danger'
-                : 'text-brand'
-            )}
-          >
-            {currencySymbol}
-            {formatAmount(net)}
-          </div>
-          <p className="text-[11px] text-slate-500">
-            {isDeficit ? 'Reserve deficit warning' : 'Available unreserved cash'}
-          </p>
+          <p className="text-xs text-slate-400 mt-1 font-normal">Net Spendable</p>
         </div>
+      </div>
+
+      {/* Inset Sub-Card: Active Visual card highlight with glowing emerald/cyan gradient border */}
+      <div className="border-gradient-highlight px-4 py-3.5 flex items-center justify-between">
+        <div>
+          <span className="text-[13px] font-semibold text-emerald-400 tracking-wide">Active</span>
+          <p className="text-xs text-slate-400 mt-0.5 font-normal">Visual card highlight</p>
+        </div>
+        <button
+          type="button"
+          aria-label="Options"
+          className="w-8 h-8 rounded-xl bg-[#1C202C] hover:bg-[#252B3C] border border-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+        >
+          <MoreHorizontal className="w-4 h-4 text-slate-400" />
+        </button>
       </div>
     </div>
   )

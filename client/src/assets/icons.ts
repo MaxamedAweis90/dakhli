@@ -49,11 +49,12 @@ import {
   ChevronUp,
   Filter,
   Search,
-  Sparkles,
   Tag,
   Layers,
   Star,
   Loader2,
+  MoreHorizontal,
+  Pin,
 } from 'lucide-react'
 
 export type Icon = LucideIcon
@@ -110,7 +111,6 @@ export const Icons = {
   refresh: RefreshCw,
   filter: Filter,
   search: Search,
-  sparkles: Sparkles,
   tag: Tag,
   layers: Layers,
   star: Star,
@@ -169,9 +169,10 @@ export {
   ChevronUp,
   Filter,
   Search,
-  Sparkles,
   Tag,
   Layers,
   Star,
   Loader2,
+  MoreHorizontal,
+  Pin,
 }

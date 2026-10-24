@@ -22,14 +22,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const percentage = Math.min(Math.max((value / safeMax) * 100, 0), 100)
 
   const variantFills: Record<ProgressVariant, string> = {
-    amber: 'bg-gradient-to-r from-amber-500 to-amber-400',
+    amber: 'bg-amber-500',
     emerald: 'bg-emerald-500',
-    gradient: 'bg-gradient-to-r from-brand to-emerald-400',
+    gradient: 'bg-gradient-to-r from-amber-500 to-emerald-400',
   }
-
-  // If percentage reaches 100%, optionally highlight in emerald
-  const isComplete = percentage >= 100
-  const fillStyle = isComplete && variant === 'amber' ? 'bg-emerald-500' : variantFills[variant]
 
   return (
     <div className={cn('w-full space-y-1.5', className)}>
@@ -40,9 +36,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         </div>
       )}
 
-      <div className="w-full h-2.5 bg-surface-elevated rounded-full overflow-hidden border border-surface-subtle/50">
+      <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
         <div
-          className={cn('h-full rounded-full transition-all duration-500 ease-out', fillStyle)}
+          className={cn('h-full rounded-full transition-all duration-500 ease-out', variantFills[variant])}
           style={{ width: `${percentage}%` }}
         />
       </div>

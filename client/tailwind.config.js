@@ -7,11 +7,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        canvas: '#0B0F19',
+        canvas: '#111215',
+        card: {
+          DEFAULT: '#17181D',
+          elevated: '#1E2027',
+        },
+        border: {
+          subtle: 'rgba(255, 255, 255, 0.02)',
+        },
         surface: {
-          card: '#111827',
-          elevated: '#1E293B',
-          subtle: '#1F2937',
+          card: '#17181D',
+          elevated: '#1E2027',
+          subtle: 'rgba(255, 255, 255, 0.02)',
         },
         brand: {
           DEFAULT: '#F59E0B',
@@ -25,7 +32,10 @@ export default {
         },
       },
       borderRadius: {
-        card: '1rem',
+        '2xl': '16px',
+        '3xl': '24px',
+        '4xl': '32px',
+        card: '24px',
         pill: '9999px',
       },
     },

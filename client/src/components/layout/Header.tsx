@@ -1,10 +1,10 @@
 import React from 'react'
 import { useLocation } from 'react-router-dom'
-import { Calendar, Sparkles } from '@/components/shared/icons'
+import { Calendar } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
 
 const ROUTE_TITLES: Record<string, string> = {
-  '/': 'Dashboard',
+  '/': 'Hello, Anna!',
   '/overheads': 'Overhead Bills',
   '/daily': 'Daily Check-Off',
   '/save-plans': 'Save Plans',
@@ -16,46 +16,40 @@ export const Header: React.FC = () => {
   const location = useLocation()
   const { user } = useAuthStore()
 
-  const displayName = user?.email ? user.email.split('@')[0] : 'Member'
+  const displayName = user?.email ? user.email.split('@')[0] : 'Anna'
   const isDashboard = location.pathname === '/'
   const currentTitle = ROUTE_TITLES[location.pathname] || 'Overview'
 
-  const today = new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    year: 'numeric',
-  }).format(new Date())
-
   return (
-    <header className="h-16 px-8 border-b border-surface-subtle/70 bg-canvas/60 backdrop-blur-md flex items-center justify-between flex-shrink-0 z-10">
-      {/* Left Greeting / Breadcrumb Slot */}
-      <div className="flex items-center space-x-3">
+    <header className="h-16 px-8 flex items-center justify-between flex-shrink-0 bg-transparent">
+      {/* Left Welcome Breadcrumb */}
+      <div>
         {isDashboard ? (
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white capitalize">
-              Hello, {displayName}!
-            </h1>
-          </div>
+          <h1 className="text-xl font-medium text-white capitalize">
+            Hello, {displayName}!
+          </h1>
         ) : (
-          <div>
-            <h1 className="text-lg font-bold tracking-tight text-white">
-              {currentTitle}
-            </h1>
-          </div>
+          <h1 className="text-xl font-medium text-white">
+            {currentTitle}
+          </h1>
         )}
       </div>
 
-      {/* Right Persistent Utility Slots */}
-      <div className="flex items-center space-x-3">
-        {/* Contextual Action / Badge */}
-        <div className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-surface-card border border-surface-subtle/80 text-xs text-slate-300 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5 text-brand" />
-          <span className="font-medium text-[11px] tracking-wide">Dakhli Engine</span>
-        </div>
+      {/* Right Persistent Utility Pills */}
+      <div className="flex items-center gap-3">
+        {/* Action Pill: Clean pill with subtle border */}
+        <button
+          type="button"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#171922] text-xs font-medium text-slate-200 border border-white/10 hover:border-white/20 transition-all cursor-pointer shadow-sm"
+        >
+          <span className="text-amber-400 font-serif text-xs">✦</span>
+          <span>Ask AI</span>
+        </button>
 
-        {/* Date Indicator Pill */}
-        <div className="flex items-center space-x-2 px-3 py-1.5 rounded-full bg-surface-card border border-surface-subtle/80 text-xs text-slate-300 shadow-sm">
+        {/* Date Display Pill matching reference */}
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#171922] text-slate-300 text-xs border border-white/5 shadow-sm">
           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-          <span className="font-medium text-[11px] tracking-wide">{today}</span>
+          <span className="font-medium text-xs tracking-wide">December 2025</span>
         </div>
       </div>
     </header>

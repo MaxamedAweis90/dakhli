@@ -1,15 +1,13 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { Sparkles, User } from '@/components/shared/icons'
+import { User } from '@/components/shared/icons'
 
 export const RegisterPage: React.FC = () => {
   return (
-    <div className="min-h-screen w-screen bg-canvas text-slate-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm p-8 rounded-card bg-surface-card border border-surface-subtle shadow-2xl">
-        <div className="flex items-center space-x-2.5 mb-6">
-          <div className="w-8 h-8 rounded-lg bg-brand/10 border border-brand/30 flex items-center justify-center text-brand">
-            <Sparkles className="w-4 h-4" />
-          </div>
+    <div className="min-h-screen w-screen bg-[#0B0F19] text-slate-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm p-8 rounded-2xl bg-[#111827] border border-[#1F2937]/70 shadow-2xl">
+        <div className="flex items-center space-x-2 mb-6">
+          <span className="text-brand font-light text-2xl leading-none select-none">+</span>
           <span className="text-xl font-bold tracking-tight text-white">Dakhli</span>
         </div>
 
@@ -21,13 +19,13 @@ export const RegisterPage: React.FC = () => {
         </div>
 
         <div className="space-y-4">
-          <div className="p-4 rounded-xl bg-surface-elevated/40 border border-surface-subtle/60 text-xs text-slate-400 flex items-center space-x-2.5">
+          <div className="p-4 rounded-xl bg-surface-elevated/40 border border-[#1F2937]/60 text-xs text-slate-400 flex items-center space-x-2.5">
             <User className="w-4 h-4 text-slate-400" />
             <span>Registration endpoint: <code>/api/v1/auth/register</code></span>
           </div>
         </div>
 
-        <div className="mt-6 pt-4 border-t border-surface-subtle text-center">
+        <div className="mt-6 pt-4 border-t border-[#1F2937]/60 text-center">
           <p className="text-xs text-slate-400">
             Already have an account?{' '}
             <Link to="/login" className="text-brand hover:underline font-medium">

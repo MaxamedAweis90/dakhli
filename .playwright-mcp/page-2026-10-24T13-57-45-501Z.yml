@@ -1,0 +1,157 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: +
+        - generic [ref=e8]: Dakhli
+      - textbox "Search" [ref=e11] [cursor=pointer]
+      - navigation [ref=e12]:
+        - link "Dashboard" [ref=e13] [cursor=pointer]:
+          - /url: /
+        - link "Overheads" [ref=e20] [cursor=pointer]:
+          - /url: /overheads
+        - link "Daily Check-Off" [ref=e25] [cursor=pointer]:
+          - /url: /daily
+        - link "Save Plans" [ref=e30] [cursor=pointer]:
+          - /url: /save-plans
+        - link "Item Registry" [ref=e35] [cursor=pointer]:
+          - /url: /items
+        - link "Settings" [ref=e42] [cursor=pointer]:
+          - /url: /settings
+    - generic [ref=e48] [cursor=pointer]:
+      - generic [ref=e49]:
+        - generic [ref=e50]: AW
+        - generic [ref=e51]:
+          - paragraph [ref=e52]: anna
+          - paragraph [ref=e53]: anna@dakhli.app
+      - button "Sign out" [ref=e54]
+  - generic [ref=e57]:
+    - banner [ref=e58]:
+      - heading "Hello, anna!" [level=1] [ref=e60]
+      - generic [ref=e61]:
+        - button "✦ Ask AI" [ref=e62] [cursor=pointer]:
+          - generic [ref=e63]: ✦
+          - generic [ref=e64]: Ask AI
+        - generic [ref=e65]: December 2025
+    - main [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - generic [ref=e73]: Liquidity Summary
+            - generic [ref=e74]:
+              - generic [ref=e75]:
+                - generic [ref=e76]: $
+                - generic [ref=e77]: 260,375.03
+              - paragraph [ref=e78]: Gross Balance
+            - generic [ref=e79]:
+              - generic [ref=e80]:
+                - generic [ref=e81]: $118,759.97
+                - paragraph [ref=e82]: Total Saved
+              - generic [ref=e83]:
+                - generic [ref=e84]: $141,615.06
+                - paragraph [ref=e85]: Net Spendable
+            - generic [ref=e86]:
+              - generic [ref=e87]:
+                - text: Active
+                - paragraph [ref=e88]: Visual card highlight
+              - button "Options" [ref=e89] [cursor=pointer]:
+                - generic [ref=e90]: ···
+          - generic [ref=e91]:
+            - heading "Saving plan" [level=3] [ref=e93]
+            - generic [ref=e94]:
+              - generic [ref=e96]:
+                - generic [ref=e97]:
+                  - generic [ref=e98]: 🚗
+                  - generic [ref=e99]: Gym
+                - generic [ref=e100]: 45%
+              - generic [ref=e131]:
+                - generic [ref=e132]:
+                  - generic [ref=e133]: 📚
+                  - generic [ref=e134]: Education
+                - generic [ref=e135]: 68%
+              - generic [ref=e166]:
+                - generic [ref=e167]:
+                  - generic [ref=e168]: 🛡️
+                  - generic [ref=e169]: Emergency
+                - generic [ref=e170]: 32%
+        - generic [ref=e200]:
+          - generic [ref=e201]:
+            - generic [ref=e202]:
+              - text: Overhead Bills
+              - paragraph [ref=e203]: This Month
+            - generic [ref=e204]:
+              - generic [ref=e205]:
+                - generic [ref=e206]: $175.03
+                - paragraph [ref=e207]: Unpaid
+              - generic [ref=e208]:
+                - generic [ref=e209]: $200.00
+                - paragraph [ref=e210]: Paid
+            - generic [ref=e211]:
+              - paragraph [ref=e212]: Quick items
+              - generic [ref=e213]:
+                - generic [ref=e214]:
+                  - generic [ref=e215]: 🏠
+                  - generic [ref=e216]: Rent
+                - generic [ref=e217]:
+                  - generic [ref=e218]: 📶
+                  - generic [ref=e219]: Internet
+                - generic [ref=e220]:
+                  - generic [ref=e221]: 🏋️
+                  - generic [ref=e222]: Gym
+          - generic [ref=e223]:
+            - generic [ref=e224]:
+              - heading "Cash Flow" [level=3] [ref=e225]
+              - generic [ref=e226]: +$6,195
+            - generic [ref=e227]:
+              - generic [ref=e228]:
+                - generic [ref=e229]: Income
+                - generic [ref=e234]: $8,385
+              - generic [ref=e235]:
+                - generic [ref=e236]: Expenses
+                - generic [ref=e241]: $2,200
+            - generic [ref=e243]:
+              - generic [ref=e244]: Expenses limit
+              - generic [ref=e245]: $82,300
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - heading "Upcoming Overhead" [level=3] [ref=e250]
+            - generic [ref=e251]:
+              - generic [ref=e252]:
+                - generic [ref=e253]:
+                  - generic [ref=e254]: 🏋️
+                  - generic [ref=e255]:
+                    - paragraph [ref=e256]: Gym
+                    - paragraph [ref=e257]: 1 Dec
+                - generic [ref=e258]: $20
+              - generic [ref=e259]:
+                - generic [ref=e260]:
+                  - generic [ref=e261]: 🏠
+                  - generic [ref=e262]:
+                    - paragraph [ref=e263]: Rent
+                    - paragraph [ref=e264]: 17 Dec
+                - generic [ref=e265]: $200
+              - generic [ref=e271]:
+                - paragraph [ref=e272]: Other dues
+                - paragraph [ref=e273]: 22 Dec
+              - generic [ref=e278]:
+                - generic [ref=e279]: 🎵
+                - generic [ref=e280]:
+                  - paragraph [ref=e281]: Apple Music
+                  - paragraph [ref=e282]: 22 Dec
+          - generic [ref=e286]:
+            - heading "Item Registry" [level=3] [ref=e288]
+            - generic [ref=e289]:
+              - button "Essentials" [ref=e290] [cursor=pointer]
+              - button "Future Needs" [ref=e291] [cursor=pointer]
+              - button "Wants" [ref=e292] [cursor=pointer]
+            - generic [ref=e293]:
+              - generic [ref=e294]:
+                - generic [ref=e295]: 🧴
+                - generic [ref=e296]: Tier
+              - generic [ref=e297]:
+                - generic [ref=e298]: 👟
+                - generic [ref=e299]: Tier
+              - generic [ref=e300]:
+                - generic [ref=e301]: 🏀
+                - generic [ref=e302]: Tier
+              - generic [ref=e303] [cursor=pointer]
