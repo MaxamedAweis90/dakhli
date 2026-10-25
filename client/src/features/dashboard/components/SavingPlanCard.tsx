@@ -50,22 +50,25 @@ function getSegmentTickColor(
   return interpolateRgb([170, 184, 248], [98, 100, 226], factor);
 }
 
-export const SegmentedTicks: React.FC<{ percentage: number }> = ({
-  percentage,
-}) => {
+export const SegmentedTicks: React.FC<{
+  percentage: number;
+  tickHeight?: string;
+  className?: string;
+}> = ({ percentage, tickHeight = "3rem", className }) => {
   const clamped = Math.min(100, Math.max(0, percentage));
   const activeCount = Math.round((clamped / 100) * TOTAL_TICKS);
 
   return (
     <div
-      className="grid w-full gap-x-[0.14rem]"
+      className={cn("grid w-full gap-x-[0.14rem]", className)}
       style={{ gridTemplateColumns: `repeat(${TOTAL_TICKS}, minmax(0, 1fr))` }}
     >
       {Array.from({ length: TOTAL_TICKS }).map((_, i) => (
         <span
           key={i}
-          className="h-[3rem] rounded-[1px]"
+          className="rounded-[1px]"
           style={{
+            height: tickHeight,
             backgroundColor: getSegmentTickColor(clamped, i, activeCount),
           }}
         />

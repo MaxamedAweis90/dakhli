@@ -1,0 +1,84 @@
+- generic [ref=f15e4]:
+  - complementary [ref=f15e5]:
+    - generic [ref=f15e6]:
+      - generic [ref=f15e7]: Dakhli
+      - textbox "Search" [ref=f15e15] [cursor=pointer]
+      - navigation [ref=f15e16]:
+        - link "Dashboard" [ref=f15e17] [cursor=pointer]:
+          - /url: /
+        - link "Overheads" [ref=f15e22] [cursor=pointer]:
+          - /url: /overheads
+        - link "Daily Check-Off" [ref=f15e28] [cursor=pointer]:
+          - /url: /daily
+        - link "Save Plans" [ref=f15e33] [cursor=pointer]:
+          - /url: /save-plans
+        - link "Item Registry" [ref=f15e38] [cursor=pointer]:
+          - /url: /items
+        - link "Settings" [ref=f15e43] [cursor=pointer]:
+          - /url: /settings
+    - generic [ref=f15e48]:
+      - generic "anna@dakhli.app" [ref=f15e49]: A
+      - button "Sign out" [ref=f15e50] [cursor=pointer]
+  - main [ref=f15e55]:
+    - generic [ref=f15e56]:
+      - button "Ask AI" [ref=f15e57] [cursor=pointer]
+      - generic [ref=f15e58]: December 2025
+    - heading "Daily Spending & Cap" [level=1] [ref=f15e63]
+    - generic [ref=f15e64]:
+      - generic [ref=f15e66]:
+        - generic [ref=f15e67]: Preview-only
+        - generic [ref=f15e70]:
+          - generic [ref=f15e71]: "Cumulative Savings:"
+          - paragraph [ref=f15e72]: +$45.00
+      - generic [ref=f15e78]:
+        - generic [ref=f15e79]:
+          - generic [ref=f15e80]:
+            - generic [ref=f15e81]: Today
+            - generic [ref=f15e82]: Oct
+            - generic [ref=f15e83]:
+              - text: "24"
+              - superscript [ref=f15e84]: th
+          - 'button "under_budget $30 $20 +$10 Notes: Planned cap vs actual spend $20" [ref=f15e193] [cursor=pointer]':
+            - generic [ref=f15e194]:
+              - generic [ref=f15e195]: under_budget
+              - generic [ref=f15e196]:
+                - generic [ref=f15e197]: $30
+                - generic [ref=f15e198]: $20
+                - generic [ref=f15e199]: +$10
+            - paragraph [ref=f15e204]: "Notes: Planned cap vs actual spend $20"
+        - generic [ref=f15e113]:
+          - generic [ref=f15e114]:
+            - generic [ref=f15e115]: Oct
+            - generic [ref=f15e116]: "23"
+          - 'button "under_budget $30 $15 +$15 Notes: under_budget savings of $15" [ref=f15e181] [cursor=pointer]':
+            - generic [ref=f15e182]:
+              - generic [ref=f15e183]: under_budget
+              - generic [ref=f15e184]:
+                - generic [ref=f15e185]: $30
+                - generic [ref=f15e186]: $15
+                - generic [ref=f15e187]: +$15
+            - paragraph [ref=f15e192]: "Notes: under_budget savings of $15"
+        - generic [ref=f15e146]:
+          - generic [ref=f15e147]:
+            - generic [ref=f15e148]: Oct
+            - generic [ref=f15e149]: "22"
+          - 'button "over_budget $30 $45 -$15 Notes: Planned new day budget and exceeded..." [ref=f15e152] [cursor=pointer]':
+            - generic [ref=f15e153]:
+              - generic [ref=f15e154]: over_budget
+              - generic [ref=f15e155]:
+                - generic [ref=f15e156]: $30
+                - generic [ref=f15e157]: $45
+                - generic [ref=f15e158]: "-$15"
+            - paragraph [ref=f15e163]: "Notes: Planned new day budget and exceeded..."
+        - generic [ref=f15e164]:
+          - generic [ref=f15e165]:
+            - generic [ref=f15e166]: Oct
+            - generic [ref=f15e167]: "21"
+          - 'button "on_budget $30 $30 $0 Notes: Recorded check for the team $0" [ref=f15e169] [cursor=pointer]':
+            - generic [ref=f15e170]:
+              - generic [ref=f15e171]: on_budget
+              - generic [ref=f15e172]:
+                - generic [ref=f15e173]: $30
+                - generic [ref=f15e174]: $30
+                - generic [ref=f15e175]: $0
+            - paragraph [ref=f15e180]: "Notes: Recorded check for the team $0"

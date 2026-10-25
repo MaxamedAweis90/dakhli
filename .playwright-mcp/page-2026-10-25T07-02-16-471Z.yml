@@ -1,0 +1,160 @@
+- generic [ref=f30e4]:
+  - complementary [ref=f30e5]:
+    - generic [ref=f30e6]:
+      - generic [ref=f30e7]: Dakhli
+      - textbox "Search" [ref=f30e15] [cursor=pointer]
+      - navigation [ref=f30e16]:
+        - link "Dashboard" [ref=f30e17] [cursor=pointer]:
+          - /url: /
+        - link "Overheads" [ref=f30e22] [cursor=pointer]:
+          - /url: /overheads
+        - link "Daily Check-Off" [ref=f30e28] [cursor=pointer]:
+          - /url: /daily
+        - link "Save Plans" [ref=f30e33] [cursor=pointer]:
+          - /url: /save-plans
+        - link "Item Registry" [ref=f30e38] [cursor=pointer]:
+          - /url: /items
+        - link "Settings" [ref=f30e43] [cursor=pointer]:
+          - /url: /settings
+    - generic [ref=f30e48]:
+      - generic "anna@example.com" [ref=f30e49]: A
+      - button "Sign out" [ref=f30e50] [cursor=pointer]
+  - main [ref=f30e55]:
+    - generic [ref=f30e56]:
+      - button "Ask AI" [ref=f30e57] [cursor=pointer]
+      - generic [ref=f30e58]: December 2025
+    - heading "Save Plans" [level=1] [ref=f30e63]
+    - generic [ref=f30e64]:
+      - generic [ref=f30e65]:
+        - generic [ref=f30e66]:
+          - heading "Save Plans & Reserve Buckets" [level=1] [ref=f30e67]
+          - paragraph [ref=f30e68]: "Active Reserves: 2"
+        - button "Add Save Plan" [active] [ref=f30e70] [cursor=pointer]
+      - generic [ref=f30e72]:
+        - generic [ref=f30e73]:
+          - generic [ref=f30e74]:
+            - generic [ref=f30e75]:
+              - generic [ref=f30e76]:
+                - img "6-Month Rent Runway" [ref=f30e77]: 🚗
+                - heading "6-Month Rent Runway" [level=3] [ref=f30e79]
+              - button "More options" [ref=f30e83] [cursor=pointer]
+            - generic [ref=f30e88]: Emergency
+            - generic [ref=f30e91]:
+              - generic [ref=f30e92]:
+                - text: "Target:"
+                - strong [ref=f30e93]: $6,000
+              - generic [ref=f30e94]:
+                - text: "Saved:"
+                - strong [ref=f30e95]: $2,400
+            - generic [ref=f30e96]: 40%
+          - generic [ref=f30e148]:
+            - button "Deactivate" [ref=f30e258] [cursor=pointer]
+            - button "Cancel" [ref=f30e153] [cursor=pointer]
+        - generic [ref=f30e154]:
+          - generic [ref=f30e155]:
+            - generic [ref=f30e156]:
+              - generic [ref=f30e157]:
+                - img "Emergency Fund" [ref=f30e158]: 🛡️
+                - heading "Emergency Fund" [level=3] [ref=f30e160]
+              - button "More options" [ref=f30e164] [cursor=pointer]
+            - generic [ref=f30e169]: Emergency
+            - generic [ref=f30e171]:
+              - generic [ref=f30e172]:
+                - text: "Target:"
+                - strong [ref=f30e173]: $1,000
+              - generic [ref=f30e174]:
+                - text: "Saved:"
+                - strong [ref=f30e175]: $1,000
+            - generic [ref=f30e179]:
+              - generic [ref=f30e180]:
+                - text: "Saved:"
+                - strong [ref=f30e181]: $1,000
+              - generic [ref=f30e182]: 100%
+          - button "Complete" [ref=f30e185] [cursor=pointer]
+        - generic [ref=f30e186]:
+          - generic [ref=f30e187]:
+            - generic [ref=f30e188]:
+              - generic [ref=f30e189]:
+                - img "MacBook Pro" [ref=f30e190]: 💻
+                - heading "MacBook Pro" [level=3] [ref=f30e192]
+              - button "More options" [ref=f30e196] [cursor=pointer]
+            - generic [ref=f30e201]: Item Funding
+            - generic [ref=f30e203]:
+              - generic [ref=f30e204]:
+                - text: "Target:"
+                - strong [ref=f30e205]: $2,000
+              - generic [ref=f30e206]:
+                - text: "Saved:"
+                - strong [ref=f30e207]: $600
+            - generic [ref=f30e211]:
+              - generic [ref=f30e212]:
+                - text: "Saved:"
+                - strong [ref=f30e213]: $600
+              - generic [ref=f30e214]: 30%
+            - generic [ref=f30e215]: Linked to 1 registry item
+          - generic [ref=f30e218]:
+            - button "Deactivate" [ref=f30e219] [cursor=pointer]
+            - button "Cancel" [ref=f30e223] [cursor=pointer]
+        - generic [ref=f30e224]:
+          - generic [ref=f30e225]:
+            - generic [ref=f30e226]:
+              - generic [ref=f30e227]:
+                - img "General Rainy Day Reserve" [ref=f30e228]: 💰
+                - heading "General Rainy Day Reserve" [level=3] [ref=f30e230]
+              - button "More options" [ref=f30e232] [cursor=pointer]
+            - generic [ref=f30e237]:
+              - generic [ref=f30e238]: General Reserve
+              - generic [ref=f30e239]: Reserve Bucket
+            - generic [ref=f30e240]:
+              - generic [ref=f30e241]:
+                - text: "Reserve:"
+                - strong [ref=f30e242]: $3,200
+              - generic [ref=f30e243]:
+                - text: "Auto-Alloc:"
+                - strong [ref=f30e244]: $200/mo
+            - generic [ref=f30e248]:
+              - generic [ref=f30e249]: Open-ended reserve accumulation
+              - generic [ref=f30e250]: Continuous
+          - generic [ref=f30e252]:
+            - button "Deactivate" [ref=f30e253] [cursor=pointer]
+            - button "Cancel" [ref=f30e257] [cursor=pointer]
+      - generic [ref=f30e261]:
+        - generic [ref=f30e262]:
+          - generic [ref=f30e268]:
+            - heading "Add Save Plan" [level=2] [ref=f30e269]
+            - paragraph [ref=f30e270]: Create a targeted goal or an open-ended reserve bucket
+          - button [ref=f30e271] [cursor=pointer]
+        - generic [ref=f30e275]:
+          - button "Targeted Goal" [ref=f30e276] [cursor=pointer]
+          - button "Reserve Bucket (Save-Only)" [ref=f30e282] [cursor=pointer]
+        - generic [ref=f30e287]:
+          - generic [ref=f30e288]:
+            - generic [ref=f30e289]: Plan Title
+            - textbox "e.g., 6-Month Rent Runway, New Laptop" [ref=f30e290]
+          - generic [ref=f30e291]:
+            - generic [ref=f30e292]: Icon
+            - generic [ref=f30e293]:
+              - button "🚗" [ref=f30e294] [cursor=pointer]
+              - button "🛡️" [ref=f30e295] [cursor=pointer]
+              - button "💻" [ref=f30e296] [cursor=pointer]
+              - button "💰" [ref=f30e297] [cursor=pointer]
+              - button "🏠" [ref=f30e298] [cursor=pointer]
+              - button "🏖️" [ref=f30e299] [cursor=pointer]
+              - button "✈️" [ref=f30e300] [cursor=pointer]
+              - button "🎓" [ref=f30e301] [cursor=pointer]
+              - button "⚡" [ref=f30e302] [cursor=pointer]
+              - button "💎" [ref=f30e303] [cursor=pointer]
+          - generic [ref=f30e304]:
+            - button "Emergency" [ref=f30e305] [cursor=pointer]
+            - button "General" [ref=f30e306] [cursor=pointer]
+            - button "Item Funding" [ref=f30e307] [cursor=pointer]
+          - generic [ref=f30e308]:
+            - generic [ref=f30e309]:
+              - generic [ref=f30e310]: Target Goal ($)
+              - spinbutton "e.g. 6000" [ref=f30e311]
+            - generic [ref=f30e312]:
+              - generic [ref=f30e313]: Initial Saved ($)
+              - spinbutton "e.g. 2400" [ref=f30e314]
+          - generic [ref=f30e315]:
+            - button "Cancel" [ref=f30e316] [cursor=pointer]
+            - button "Create Save Plan" [ref=f30e317] [cursor=pointer]

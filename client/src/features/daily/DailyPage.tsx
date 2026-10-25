@@ -1,22 +1,41 @@
 import React from 'react'
-import { CalendarCheck } from '@/components/shared/icons'
+import { CumulativeSavingsCard } from './components/CumulativeSavingsCard'
+import { DailyTimelineFeed } from './components/DailyTimelineFeed'
+import { useDailyStore } from '@/stores/dailyStore'
 
 export const DailyPage: React.FC = () => {
+  const {
+    records,
+    editingRecordId,
+    recordToday,
+    updateRecord,
+    setEditingRecordId,
+    getCumulativeSavings,
+    getSparklinePoints,
+  } = useDailyStore()
+
+  const cumulativeSavings = getCumulativeSavings()
+  const sparklinePoints = getSparklinePoints()
+
   return (
-    <div className="space-y-6">
-      <div className="p-6 rounded-card bg-surface-card border border-surface-subtle shadow-sm">
-        <div className="flex items-center space-x-3 mb-2">
-          <div className="p-2 rounded-lg bg-brand/10 text-brand">
-            <CalendarCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">Daily Check-Off</h2>
-            <p className="text-xs text-slate-400 font-mono">Route: /daily</p>
-          </div>
-        </div>
-        <p className="text-sm text-slate-400 mt-2">
-          Daily discipline audit feed and variance check-in placeholder.
-        </p>
+    <div className="grid grid-cols-1 lg:grid-cols-[330px_1fr] xl:grid-cols-[380px_1fr] items-start gap-8 lg:gap-10 pb-16 pt-1">
+      {/* Left Column: Preview-only Cumulative Savings Card */}
+      <div className="w-full max-w-md lg:max-w-none">
+        <CumulativeSavingsCard
+          savings={cumulativeSavings}
+          points={sparklinePoints}
+        />
+      </div>
+
+      {/* Right Column: Timeline Spine & Interactive Check-Off Cards */}
+      <div className="w-full">
+        <DailyTimelineFeed
+          records={records}
+          editingRecordId={editingRecordId}
+          onRecordToday={recordToday}
+          onUpdateRecord={(id, updates) => updateRecord(id, updates)}
+          onSetEditingId={setEditingRecordId}
+        />
       </div>
     </div>
   )

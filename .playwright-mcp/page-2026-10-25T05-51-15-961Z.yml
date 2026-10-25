@@ -1,0 +1,94 @@
+- generic [ref=f21e3]:
+  - complementary [ref=f21e4]:
+    - generic [ref=f21e5]:
+      - generic [ref=f21e6]: Dakhli
+      - textbox "Search" [ref=f21e14] [cursor=pointer]
+      - navigation [ref=f21e15]:
+        - link "Dashboard" [ref=f21e16] [cursor=pointer]:
+          - /url: /
+        - link "Overheads" [ref=f21e21] [cursor=pointer]:
+          - /url: /overheads
+        - link "Daily Check-Off" [ref=f21e27] [cursor=pointer]:
+          - /url: /daily
+        - link "Save Plans" [ref=f21e32] [cursor=pointer]:
+          - /url: /save-plans
+        - link "Item Registry" [ref=f21e37] [cursor=pointer]:
+          - /url: /items
+        - link "Settings" [ref=f21e42] [cursor=pointer]:
+          - /url: /settings
+    - generic [ref=f21e47]:
+      - generic "anna@example.com" [ref=f21e48]: A
+      - button "Sign out" [ref=f21e49] [cursor=pointer]
+  - main [ref=f21e54]:
+    - generic [ref=f21e55]:
+      - button "Ask AI" [ref=f21e56] [cursor=pointer]
+      - generic [ref=f21e57]: December 2025
+    - heading "Daily Spending & Cap" [level=1] [ref=f21e62]
+    - generic [ref=f21e63]:
+      - generic [ref=f21e65]:
+        - generic [ref=f21e66]: Preview-only
+        - generic [ref=f21e69]:
+          - generic [ref=f21e70]: "Cumulative Savings:"
+          - paragraph [ref=f21e71]: +$35.00
+      - generic [ref=f21e77]:
+        - generic [ref=f21e78]:
+          - generic [ref=f21e79]:
+            - generic [ref=f21e80]: Today
+            - generic [ref=f21e81]: Oct
+            - generic [ref=f21e82]:
+              - text: "24"
+              - superscript [ref=f21e83]: th
+          - generic [ref=f21e87]:
+            - generic [ref=f21e88]:
+              - heading "Record Check-Off" [level=3] [ref=f21e89]
+              - button "Options" [ref=f21e91] [cursor=pointer]
+            - generic [ref=f21e96]:
+              - generic [ref=f21e97]:
+                - generic [ref=f21e98]: Planned cap
+                - generic [ref=f21e99]:
+                  - generic [ref=f21e100]: $
+                  - spinbutton [ref=f21e101]: "30"
+              - generic [ref=f21e102]: vs
+              - generic [ref=f21e103]:
+                - generic [ref=f21e104]: Actual spend
+                - generic [ref=f21e105]:
+                  - generic [ref=f21e106]: $
+                  - spinbutton [ref=f21e107]: "20"
+              - button "Record" [ref=f21e109] [cursor=pointer]
+            - textbox "Add note..." [ref=f21e111]: Planned cap vs actual spend $20
+        - generic [ref=f21e112]:
+          - generic [ref=f21e113]:
+            - generic [ref=f21e114]: Oct
+            - generic [ref=f21e115]: "23"
+          - 'button "under_budget $30 $15 +$15 Notes: under_budget savings of $15" [ref=f21e118] [cursor=pointer]':
+            - generic [ref=f21e119]:
+              - generic [ref=f21e120]: under_budget
+              - generic [ref=f21e121]:
+                - generic [ref=f21e122]: $30
+                - generic [ref=f21e123]: $15
+                - generic [ref=f21e124]: +$15
+            - paragraph [ref=f21e129]: "Notes: under_budget savings of $15"
+        - generic [ref=f21e130]:
+          - generic [ref=f21e131]:
+            - generic [ref=f21e132]: Oct
+            - generic [ref=f21e133]: "22"
+          - 'button "over_budget $30 $45 -$15 Notes: Planned new day budget and exceeded..." [ref=f21e136] [cursor=pointer]':
+            - generic [ref=f21e137]:
+              - generic [ref=f21e138]: over_budget
+              - generic [ref=f21e139]:
+                - generic [ref=f21e140]: $30
+                - generic [ref=f21e141]: $45
+                - generic [ref=f21e142]: "-$15"
+            - paragraph [ref=f21e147]: "Notes: Planned new day budget and exceeded..."
+        - generic [ref=f21e148]:
+          - generic [ref=f21e149]:
+            - generic [ref=f21e150]: Oct
+            - generic [ref=f21e151]: "21"
+          - 'button "on_budget $30 $30 $0 Notes: Recorded check for the team $0" [ref=f21e153] [cursor=pointer]':
+            - generic [ref=f21e154]:
+              - generic [ref=f21e155]: on_budget
+              - generic [ref=f21e156]:
+                - generic [ref=f21e157]: $30
+                - generic [ref=f21e158]: $30
+                - generic [ref=f21e159]: $0
+            - paragraph [ref=f21e164]: "Notes: Recorded check for the team $0"

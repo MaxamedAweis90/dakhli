@@ -14,7 +14,7 @@ const fmt = (n: number): string =>
 
 /**
  * Section 1: Overhead Bills Ledger Summary Card
- * Dedicated top card featuring Overhead Bills Ledger header with [🔗 | •••] capsule
+ * Dedicated top card featuring Overhead Bills Ledger header with [Link | Options] capsule
  * and enlarged, prominent 3-column financial metrics with exact reference alignment.
  */
 export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps> = ({
@@ -36,7 +36,7 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
           Overhead Bills Ledger
         </h2>
 
-        {/* Right Capsule Options [🔗 | •••] */}
+        {/* Right Capsule Options [Link | Options] */}
         <div className="flex items-center h-[1.95rem] px-3 rounded-full bg-[#22242D] text-[#8E92A0] text-[0.75rem] font-medium gap-2.5 border border-white/[0.04]">
           <Link2 className="w-3.5 h-3.5 text-[#B5B9C9]" />
           <span className="w-px h-3.5 bg-white/10" />

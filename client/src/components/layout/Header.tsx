@@ -7,9 +7,9 @@ import { MonthNavigator } from '@/components/shared/ui/MonthNavigator'
 
 const ROUTE_TITLES: Record<string, string> = {
   '/overheads': 'Overhead Bills',
-  '/daily': 'Daily Check-Off',
+  '/daily': 'Daily Spending & Cap',
   '/save-plans': 'Save Plans',
-  '/items': 'Item Registry',
+  '/items': 'Registered Items',
   '/settings': 'Settings',
 }
 

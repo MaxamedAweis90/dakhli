@@ -1,0 +1,87 @@
+- generic [ref=f28e3]:
+  - complementary [ref=f28e4]:
+    - generic [ref=f28e5]:
+      - generic [ref=f28e6]: Dakhli
+      - textbox "Search" [ref=f28e14] [cursor=pointer]
+      - navigation [ref=f28e15]:
+        - link "Dashboard" [ref=f28e16] [cursor=pointer]:
+          - /url: /
+        - link "Overheads" [ref=f28e21] [cursor=pointer]:
+          - /url: /overheads
+        - link "Daily Check-Off" [ref=f28e27] [cursor=pointer]:
+          - /url: /daily
+        - link "Save Plans" [ref=f28e32] [cursor=pointer]:
+          - /url: /save-plans
+        - link "Item Registry" [ref=f28e37] [cursor=pointer]:
+          - /url: /items
+        - link "Settings" [ref=f28e42] [cursor=pointer]:
+          - /url: /settings
+    - generic [ref=f28e47]:
+      - generic "anna@example.com" [ref=f28e48]: A
+      - button "Sign out" [ref=f28e49] [cursor=pointer]
+  - main [ref=f28e54]:
+    - generic [ref=f28e55]:
+      - button "Ask AI" [ref=f28e56] [cursor=pointer]
+      - generic [ref=f28e57]: December 2025
+    - heading "Registered Items" [level=1] [ref=f28e62]
+    - generic [ref=f28e63]:
+      - generic [ref=f28e64]:
+        - generic [ref=f28e65]:
+          - button "All" [ref=f28e66] [cursor=pointer]
+          - button "Essentials" [ref=f28e67] [cursor=pointer]
+          - button "Future Needs" [ref=f28e68] [cursor=pointer]
+          - button "Wants" [ref=f28e69] [cursor=pointer]
+        - button "Add Item" [ref=f28e72] [cursor=pointer]
+      - generic [ref=f28e75]:
+        - generic [ref=f28e76]:
+          - generic [ref=f28e77]:
+            - generic [ref=f28e78]:
+              - heading "PlayStation 5" [level=3] [ref=f28e79]
+              - img "PlayStation 5" [ref=f28e80]
+            - generic [ref=f28e82]:
+              - generic [ref=f28e83]: $500
+              - generic [ref=f28e84]: Wants
+          - generic [ref=f28e85]:
+            - button "Remove" [ref=f28e86] [cursor=pointer]
+            - button "Bought" [ref=f28e87] [cursor=pointer]
+        - generic [ref=f28e88]:
+          - generic [ref=f28e89]:
+            - generic [ref=f28e90]:
+              - heading "Motorbike" [level=3] [ref=f28e91]
+              - img "Motorbike" [ref=f28e92]
+            - generic [ref=f28e94]:
+              - generic [ref=f28e95]: $4,500
+              - generic [ref=f28e96]: In Save Plan
+          - generic [ref=f28e97]:
+            - button "Remove" [ref=f28e98] [cursor=pointer]
+            - button "Bought" [ref=f28e99] [cursor=pointer]
+        - generic [ref=f28e100]:
+          - generic [ref=f28e101]:
+            - generic [ref=f28e102]:
+              - heading "PC Setup" [level=3] [ref=f28e103]
+              - img "PC Setup" [ref=f28e104]
+            - generic [ref=f28e106]:
+              - generic [ref=f28e107]: $1,800
+              - generic [ref=f28e108]: Want
+          - generic [ref=f28e109]:
+            - button "Remove" [ref=f28e110] [cursor=pointer]
+            - button "Bought" [ref=f28e111] [cursor=pointer]
+        - generic [ref=f28e112]:
+          - generic [ref=f28e113]:
+            - generic [ref=f28e114]:
+              - heading "iPhone 15 Pro" [level=3] [ref=f28e115]
+              - img "iPhone 15 Pro" [ref=f28e116]
+            - generic [ref=f28e118]:
+              - generic [ref=f28e119]: $1,000
+              - generic [ref=f28e120]: Wants
+          - generic [ref=f28e121]:
+            - button "Remove" [ref=f28e122] [cursor=pointer]
+            - button "Bought" [ref=f28e123] [cursor=pointer]
+      - generic [ref=f28e124]:
+        - generic [ref=f28e125]:
+          - generic [ref=f28e126]: "Unbought totals:"
+          - generic [ref=f28e127]: $52,300
+        - generic [ref=f28e128]:
+          - generic [ref=f28e129]: "Bought items:"
+          - generic [ref=f28e134]: $1,800
+          - generic [ref=f28e135]: 1 item

@@ -1,0 +1,12 @@
+- generic [ref=f20e4]:
+  - generic [ref=f20e5]:
+    - generic [ref=f20e6]: +
+    - generic [ref=f20e7]: Dakhli
+  - generic [ref=f20e8]:
+    - heading "Sign In" [level=1] [ref=f20e9]
+    - paragraph [ref=f20e10]: Access your personal finance command center
+  - button "Enter Workspace (Demo)" [ref=f20e12] [cursor=pointer]
+  - paragraph [ref=f20e18]:
+    - text: Don't have an account?
+    - link "Register" [ref=f20e19] [cursor=pointer]:
+      - /url: /register
