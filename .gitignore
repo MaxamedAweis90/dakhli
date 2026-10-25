@@ -40,3 +40,5 @@ plan/
 # Tests
 /apitesting
 apitesting/
+/.playwright-mcp
+.playwright-mcp/
