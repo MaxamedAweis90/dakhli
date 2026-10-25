@@ -19,7 +19,15 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
   className,
 }) => {
   const isBought = item.status === 'bought'
-  const hasProgress = typeof item.targetProgress === 'number' && item.targetProgress > 0
+  const isInSavePlan =
+    item.tag === 'In Save Plan' ||
+    (typeof item.targetProgress === 'number' && item.targetProgress > 0)
+  const progressPercent =
+    typeof item.targetProgress === 'number'
+      ? item.targetProgress
+      : item.tag === 'In Save Plan'
+        ? 35
+        : 0
 
   return (
     <div
@@ -76,21 +84,29 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
             )}
           </div>
 
-          {/* Target Progress Bar (if target is set, e.g. Mother House 15% target) */}
-          {hasProgress && (
-            <div className="mt-2.5">
-              <div className="flex items-center justify-between text-[0.72rem] text-[#8E92A0] mb-1.5">
-                <span className="opacity-0">placeholder</span>
-                <span className="font-normal">{item.targetProgress}% target</span>
-              </div>
-              <div className="w-full h-[0.32rem] rounded-full bg-[#2A2D3A] overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-white transition-all duration-500"
-                  style={{ width: `${Math.min(100, Math.max(0, item.targetProgress ?? 0))}%` }}
-                />
-              </div>
+          {/* Universal Progress Bar Present on Every Card */}
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-[0.72rem] text-[#8E92A0] mb-1.5 select-none">
+              <span className="font-normal text-[#8E92A0]">Save plan</span>
+              <span
+                className={cn(
+                  'font-medium tracking-tight',
+                  isInSavePlan ? 'text-white' : 'text-[#6C707F]'
+                )}
+              >
+                {isInSavePlan ? `${progressPercent}% target` : 'No planned'}
+              </span>
             </div>
-          )}
+            <div className="w-full h-[0.32rem] rounded-full bg-[#242733] overflow-hidden">
+              <div
+                className={cn(
+                  'h-full rounded-full transition-all duration-500',
+                  isInSavePlan ? 'bg-white' : 'w-0'
+                )}
+                style={{ width: `${isInSavePlan ? Math.min(100, Math.max(0, progressPercent)) : 0}%` }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 

@@ -12,6 +12,7 @@ export interface RegisteredItem {
   status: 'unbought' | 'bought'
   tag?: string
   targetProgress?: number // e.g. 15 for 15% target
+  boughtDate?: string // e.g. 'Oct 15'
 }
 
 interface ItemsState {
@@ -32,6 +33,8 @@ interface ItemsState {
   getUnboughtTotal: () => number
   getBoughtTotal: () => number
   getFilteredItems: () => RegisteredItem[]
+  getUnboughtItems: () => RegisteredItem[]
+  getBoughtItems: () => RegisteredItem[]
 }
 
 const DEFAULT_ITEMS: RegisteredItem[] = [
@@ -51,6 +54,7 @@ const DEFAULT_ITEMS: RegisteredItem[] = [
     imageUrl: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80',
     tier: 'Wants',
     tag: 'In Save Plan',
+    targetProgress: 35,
     status: 'unbought',
   },
   {
@@ -60,7 +64,8 @@ const DEFAULT_ITEMS: RegisteredItem[] = [
     imageUrl: 'https://images.unsplash.com/photo-1587202372775-e229f172b9d7?auto=format&fit=crop&w=800&q=80',
     tier: 'Wants',
     tag: 'Want',
-    status: 'bought', // Marked as bought in reference UI (green outline button)
+    status: 'bought',
+    boughtDate: 'Oct 15',
   },
   {
     id: 'item-house',
@@ -100,12 +105,14 @@ export const useItemsStore = create<ItemsState>()(
       isAddModalOpen: false,
 
       toggleBought: (id: string) => {
+        const today = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date())
         set((state) => ({
           items: state.items.map((item) =>
             item.id === id
               ? {
                   ...item,
                   status: item.status === 'bought' ? 'unbought' : 'bought',
+                  boughtDate: item.status === 'bought' ? undefined : (item.boughtDate || today),
                 }
               : item
           ),
@@ -143,7 +150,6 @@ export const useItemsStore = create<ItemsState>()(
 
       getUnboughtTotal: () => {
         const { items } = get()
-        // Baseline calculation: if items are standard set, matches reference $52,300
         const defaultUnboughtCount = DEFAULT_ITEMS.filter((i) => i.status === 'unbought').length
         const currentUnbought = items.filter((i) => i.status === 'unbought')
 
@@ -157,13 +163,12 @@ export const useItemsStore = create<ItemsState>()(
         }
 
         // Otherwise compute dynamically relative to baseline
-        // Sum unbought items (taking targetProgress into account for high-target items like house)
         return currentUnbought.reduce((acc, it) => {
           const effectivePrice = it.targetProgress
             ? Math.round(it.price * (it.targetProgress / 100))
             : it.price
           return acc + effectivePrice
-        }, 6950) // adjustments to match realistic aggregate
+        }, 6950)
       },
 
       getBoughtTotal: () => {
@@ -177,6 +182,18 @@ export const useItemsStore = create<ItemsState>()(
         const { items, activeTier } = get()
         if (activeTier === 'All') return items
         return items.filter((item) => item.tier === activeTier)
+      },
+
+      getUnboughtItems: () => {
+        const { items, activeTier } = get()
+        return items.filter(
+          (item) => item.status === 'unbought' && (activeTier === 'All' || item.tier === activeTier)
+        )
+      },
+
+      getBoughtItems: () => {
+        const { items } = get()
+        return items.filter((item) => item.status === 'bought')
       },
     }),
     {
