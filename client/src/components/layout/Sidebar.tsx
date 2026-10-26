@@ -1,13 +1,15 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Search, LogOut } from '@/components/shared/icons'
+import { Search, LogOut, ChevronDown } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from './navItems'
 
 export const Sidebar: React.FC = () => {
   const { user, clearSession } = useAuthStore()
-  const initial = (user?.email?.[0] ?? 'A').toUpperCase()
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const displayName = user?.name || 'Anna Watson'
+  const displayEmail = user?.email || 'arinwatson@...'
 
   return (
     <aside className="hidden lg:flex w-[13.5rem] xl:w-[14.5rem] h-full flex-shrink-0 flex-col justify-between select-none pl-[1.1rem] pr-[1.25rem] pt-[1.5rem] pb-[1.25rem]">
@@ -62,26 +64,62 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Avatar (sign-out appears on hover) */}
-      <div className="group flex items-center gap-[0.75rem] pl-[0.25rem]">
-        <div
-          title={user?.email ?? 'Anna'}
-          className="w-[2.25rem] h-[2.25rem] rounded-full flex items-center justify-center text-[0.875rem] font-semibold text-[#2b2118] bg-gradient-to-br from-[#f3c9a6] to-[#d9a07a] flex-shrink-0"
-        >
-          {initial}
-        </div>
+      {/* Bottom Profile matching setting.png */}
+      <div className="relative pt-2">
         <button
           type="button"
-          onClick={clearSession}
-          title="Sign out"
-          aria-label="Sign out"
-          className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-[#8a8a8a] hover:text-white cursor-pointer"
+          onClick={() => setIsMenuOpen((prev) => !prev)}
+          className="flex items-center justify-between w-full p-1.5 -ml-1 rounded-xl hover:bg-[#1a1b20] transition-colors text-left group cursor-pointer"
         >
-          <LogOut className="w-[1rem] h-[1rem]" />
+          <div className="flex items-center gap-[0.65rem] min-w-0">
+            <img
+              src="/images/avatar.png"
+              alt={displayName}
+              className="w-[2.2rem] h-[2.2rem] rounded-full object-cover flex-shrink-0 border border-white/10"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+            <div className="min-w-0 flex flex-col justify-center">
+              <span className="text-[0.825rem] font-medium leading-tight text-white truncate">
+                {displayName}
+              </span>
+              <span className="text-[0.7rem] text-[#70727a] leading-tight truncate">
+                {displayEmail}
+              </span>
+            </div>
+          </div>
+          <ChevronDown
+            className={cn(
+              'w-[0.85rem] h-[0.85rem] text-[#70727a] group-hover:text-white transition-all duration-200 flex-shrink-0',
+              isMenuOpen && 'rotate-180 text-white'
+            )}
+          />
         </button>
+
+        {/* Dropdown Menu for Logout / Account */}
+        {isMenuOpen && (
+          <div
+            className="absolute bottom-full mb-2 left-0 w-full bg-[#1b1c22] border border-white/10 rounded-xl p-1.5 shadow-xl z-50 backdrop-blur-md"
+            onMouseLeave={() => setIsMenuOpen(false)}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                clearSession()
+                setIsMenuOpen(false)
+              }}
+              className="flex items-center gap-2 w-full px-2.5 py-2 text-xs text-red-400 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors cursor-pointer"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Sign out</span>
+            </button>
+          </div>
+        )}
       </div>
     </aside>
   )
 }
 
 export default Sidebar
+

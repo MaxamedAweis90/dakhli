@@ -1,6 +1,6 @@
 import React from 'react'
 import { useLocation } from 'react-router-dom'
-import { Calendar } from '@/components/shared/icons'
+import { Calendar, Plus } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { useOverheadsStore } from '@/stores/overheadsStore'
 import { MonthNavigator } from '@/components/shared/ui/MonthNavigator'
@@ -18,23 +18,27 @@ export const Header: React.FC = () => {
   const { user } = useAuthStore()
   const { currentMonth, prevMonth, nextMonth } = useOverheadsStore()
 
-  const rawName = user?.email ? user.email.split('@')[0] : 'Anna'
+  const rawName = user?.name || (user?.email ? user.email.split('@')[0] : 'Anna')
   const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1)
   const isOverheads = location.pathname === '/overheads'
+  const isSettings = location.pathname === '/settings'
   const title =
     location.pathname === '/' ? `Hello, ${displayName}!` : (ROUTE_TITLES[location.pathname] ?? 'Overview')
 
   return (
     <>
-      {/* Floating Action Controls: Ask AI + Date, sticky at top-0, background opacity 0 */}
+      {/* Floating Action Controls: Ask AI + Date (+ Save Baseline on settings), sticky at top-0 */}
       <div className="sticky top-0 z-30 pointer-events-none flex items-center justify-end h-14 lg:h-[4.75rem] px-4 lg:px-0 bg-transparent -mb-14 lg:-mb-[4.75rem]">
         <div className="pointer-events-auto flex items-center gap-[0.75rem]">
-          {/* Ask AI: glowing gradient outline pill (no sparkle glyph) */}
+          {/* Ask AI: glowing gradient outline pill with 4-point sparkle */}
           <button
             type="button"
-            className="border-gradient-highlight rounded-full h-[2.2rem] px-[1.1rem] text-[0.78rem] font-medium text-white cursor-pointer hover:brightness-110 transition-all shadow-[0_2px_12px_rgba(0,0,0,0.5)]"
+            className="border-gradient-highlight rounded-full h-[2.2rem] px-[1rem] text-[0.78rem] font-medium text-white cursor-pointer hover:brightness-110 transition-all shadow-[0_2px_12px_rgba(0,0,0,0.5)] flex items-center gap-[0.4rem]"
           >
-            Ask AI
+            <svg viewBox="0 0 24 24" className="w-[0.8rem] h-[0.8rem] fill-current text-white flex-shrink-0" aria-hidden="true">
+              <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
+            </svg>
+            <span>Ask AI</span>
           </button>
 
           {/* Date pill */}
@@ -42,11 +46,23 @@ export const Header: React.FC = () => {
             <Calendar className="w-[0.9rem] h-[0.9rem] text-[#cfcfcf]" />
             <span>December 2025</span>
           </div>
+
+          {/* + Save Baseline Button on Settings route */}
+          {isSettings && (
+            <button
+              type="submit"
+              form="settings-baseline-form"
+              className="flex items-center gap-[0.35rem] h-[2.2rem] px-[1.15rem] rounded-full bg-[#E5A855] hover:bg-[#d89740] active:scale-[0.98] text-[#121316] font-semibold text-[0.825rem] transition-all shadow-[0_2px_12px_rgba(229,168,85,0.25)] cursor-pointer"
+            >
+              <Plus className="w-[0.875rem] h-[0.875rem] stroke-[2.5]" />
+              <span>Save Baseline</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Screen Title: in natural document flow, scrolls with screen to top */}
-      <div className="flex items-center h-14 lg:h-[4.75rem] px-4 lg:px-0 pr-[14rem] lg:pr-[16rem]">
+      <div className="flex items-center h-14 lg:h-[4.75rem] px-4 lg:px-0 pr-[14rem] lg:pr-[22rem]">
         {isOverheads ? (
           <MonthNavigator
             currentMonth={currentMonth}
@@ -62,5 +78,6 @@ export const Header: React.FC = () => {
     </>
   )
 }
+
 
 export default Header

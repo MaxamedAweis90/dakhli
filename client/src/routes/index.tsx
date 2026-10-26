@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute, PublicRoute } from './ProtectedRoute'
 import { AppShell } from '@/components/layout/AppShell'
 
@@ -19,33 +19,45 @@ const ViewFallback: React.FC = () => (
   </div>
 )
 
+export const router = createBrowserRouter([
+  {
+    element: (
+      <Suspense fallback={<ViewFallback />}>
+        <Outlet />
+      </Suspense>
+    ),
+    children: [
+      {
+        element: <PublicRoute />,
+        children: [
+          { path: '/login', element: <LoginPage /> },
+          { path: '/register', element: <RegisterPage /> },
+        ],
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          {
+            element: <AppShell />,
+            children: [
+              { path: '/', element: <DashboardPage /> },
+              { path: '/overheads', element: <OverheadsPage /> },
+              { path: '/daily', element: <DailyPage /> },
+              { path: '/save-plans', element: <SavePlansPage /> },
+              { path: '/items', element: <ItemsPage /> },
+              { path: '/settings', element: <SettingsPage /> },
+            ],
+          },
+        ],
+      },
+      { path: '*', element: <Navigate to="/" replace /> },
+    ],
+  },
+])
+
 export const AppRoutes: React.FC = () => {
-  return (
-    <Suspense fallback={<ViewFallback />}>
-      <Routes>
-        {/* Public / Unauthenticated Routes */}
-        <Route element={<PublicRoute />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
-
-        {/* Protected Application Layout */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppShell />}>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/overheads" element={<OverheadsPage />} />
-            <Route path="/daily" element={<DailyPage />} />
-            <Route path="/save-plans" element={<SavePlansPage />} />
-            <Route path="/items" element={<ItemsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-          </Route>
-        </Route>
-
-        {/* Wildcard redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Suspense>
-  )
+  return null
 }
 
-export default AppRoutes
+export default router
+
