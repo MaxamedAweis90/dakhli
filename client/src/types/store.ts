@@ -2,7 +2,9 @@ export interface AuthUser {
   id: string
   email: string
   name?: string
+  avatar?: string
 }
+
 
 export interface AuthState {
   token: string | null
@@ -27,6 +29,7 @@ export interface LiquidityState {
   currency: string
   isStale: boolean
   setLiquidity: (payload: LiquidityPayload) => void
+  setCurrency: (currency: string) => void
   updateGrossBalance: (newGross: number) => void
   updateTotalSaved: (newSaved: number) => void
   resetLiquidity: () => void

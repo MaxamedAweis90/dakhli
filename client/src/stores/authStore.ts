@@ -61,9 +61,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       // Support 1-click dev demo session
       if (token === 'demo-jwt-token') {
+        await new Promise((resolve) => setTimeout(resolve, 500))
         set({
           token,
-          user: cachedUser || { id: 'demo-user-id', email: 'anna@dakhli.app', name: 'Anna Watson' },
+          user: cachedUser || { id: 'demo-user-id', email: 'demo@dakhli.app', name: 'Demo User' },
           isAuthenticated: true,
           isLoading: false,
         })
@@ -72,7 +73,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       // Rehydrate user session via backend /auth/me
       try {
-        const user = await authApi.getMe()
+        const minDelay = new Promise((resolve) => setTimeout(resolve, 500))
+        const [user] = await Promise.all([authApi.getMe(), minDelay])
         try {
           localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
         } catch {

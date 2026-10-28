@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute, PublicRoute } from './ProtectedRoute'
 import { AppShell } from '@/components/layout/AppShell'
+import { SplashScreen } from '@/components/shared/SplashScreen'
 
 // Lazy loaded page components
 const DashboardPage = lazy(() => import('@/features/dashboard/DashboardPage'))
@@ -10,18 +11,13 @@ const DailyPage = lazy(() => import('@/features/daily/DailyPage'))
 const SavePlansPage = lazy(() => import('@/features/save-plans/SavePlansPage'))
 const ItemsPage = lazy(() => import('@/features/items/ItemsPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
-const AuthPage = lazy(() => import('@/features/auth/AuthPage'))
-
-const ViewFallback: React.FC = () => (
-  <div className="flex items-center justify-center p-12 text-slate-500 text-xs font-mono">
-    Loading view...
-  </div>
-)
+const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
+const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
 
 export const router = createBrowserRouter([
   {
     element: (
-      <Suspense fallback={<ViewFallback />}>
+      <Suspense fallback={<SplashScreen message="Loading..." />}>
         <Outlet />
       </Suspense>
     ),
@@ -29,8 +25,8 @@ export const router = createBrowserRouter([
       {
         element: <PublicRoute />,
         children: [
-          { path: '/login', element: <AuthPage initialMode="signin" /> },
-          { path: '/register', element: <AuthPage initialMode="signup" /> },
+          { path: '/login', element: <LoginPage /> },
+          { path: '/register', element: <RegisterPage /> },
         ],
       },
 

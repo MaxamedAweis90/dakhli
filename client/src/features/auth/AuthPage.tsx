@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Mail,
   Lock,
@@ -8,85 +8,105 @@ import {
   EyeOff,
   AlertCircle,
   Loader2,
-} from '@/components/shared/icons'
-import { useAuthStore } from '@/stores/authStore'
-import { useAuth } from './hooks/useAuth'
-import { cn } from '@/lib/utils'
-import { AuthPromoBanner } from './components/AuthPromoBanner'
+} from "@/components/shared/icons";
+import { useAuthStore } from "@/stores/authStore";
+import { useAuth } from "./hooks/useAuth";
+import { cn } from "@/lib/utils";
+import { AuthPromoBanner } from "./components/AuthPromoBanner";
+import { SplashScreen } from "@/components/shared/SplashScreen";
 
 export interface AuthPageProps {
-  initialMode?: 'login' | 'register' | 'signin' | 'signup'
+  initialMode?: "login" | "register" | "signin" | "signup";
 }
 
 export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const { setSession } = useAuthStore()
-  const { login, register, loginMutation, registerMutation } = useAuth()
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { setSession } = useAuthStore();
+  const { login, register, loginMutation, registerMutation } = useAuth();
 
   // Normalize initial mode to 'login' or 'register'
   const resolveMode = () => {
-    if (initialMode === 'register' || initialMode === 'signup') return 'register'
-    if (initialMode === 'login' || initialMode === 'signin') return 'login'
-    return location.pathname === '/register' ? 'register' : 'login'
-  }
+    if (initialMode === "register" || initialMode === "signup")
+      return "register";
+    if (initialMode === "login" || initialMode === "signin") return "login";
+    return location.pathname === "/register" ? "register" : "login";
+  };
 
-  const [mode, setMode] = useState<'login' | 'register'>(resolveMode)
-  const [showPassword, setShowPassword] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [mode, setMode] = useState<"login" | "register">(resolveMode);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSuccessSplash, setIsSuccessSplash] = useState(false);
+  const [splashMessage, setSplashMessage] = useState("Loading Your Account...");
 
   // Form inputs
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const isLoading = loginMutation.isPending || registerMutation.isPending
+  const isLoading = loginMutation.isPending || registerMutation.isPending;
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setErrorMessage(null)
+    e.preventDefault();
+    setErrorMessage(null);
 
     if (!email.trim() || !password.trim()) {
-      setErrorMessage('Please fill in all required fields.')
-      return
+      setErrorMessage("Please fill in all required fields.");
+      return;
     }
 
-    if (mode === 'register' && !name.trim()) {
-      setErrorMessage('Please enter your full name.')
-      return
+    if (mode === "register" && !name.trim()) {
+      setErrorMessage("Please enter your full name.");
+      return;
     }
 
     try {
-      if (mode === 'login') {
-        await login({ email: email.trim(), password })
+      const destination =
+        (location.state as { from?: Location })?.from?.pathname || "/";
+      if (mode === "login") {
+        await login({ email: email.trim(), password });
+        setSplashMessage("Welcome back! Loading your account...");
       } else {
         await register({
           name: name.trim(),
           email: email.trim(),
           password,
-        })
+        });
+        setSplashMessage("Account created! Setting up your account...");
       }
 
-      const destination = (location.state as { from?: Location })?.from?.pathname || '/'
-      navigate(destination, { replace: true })
+      setIsSuccessSplash(true);
+      setTimeout(() => {
+        navigate(destination, { replace: true });
+      }, 850);
     } catch (err: unknown) {
-      const errObj = err as { message?: string }
+      const errObj = err as { message?: string };
       setErrorMessage(
-        errObj?.message || 'Authentication failed. Please verify your credentials.'
-      )
+        errObj?.message ||
+          "Authentication failed. Please verify your credentials.",
+      );
     }
-  }
+  };
 
   // 1-Click Google / Demo Login
   const handleGoogleLogin = () => {
-    setSession('demo-jwt-token', {
-      id: 'demo-user-id',
-      email: 'anna@dakhli.app',
-      name: 'Anna Watson',
-    })
-    const destination = (location.state as { from?: Location })?.from?.pathname || '/'
-    navigate(destination, { replace: true })
+    setSession("demo-jwt-token", {
+      id: "demo-user-id",
+      email: "demo@dakhli.app",
+      name: "Demo User",
+    });
+    setSplashMessage("Loading your Account...");
+    setIsSuccessSplash(true);
+    setTimeout(() => {
+      const destination =
+        (location.state as { from?: Location })?.from?.pathname || "/";
+      navigate(destination, { replace: true });
+    }, 850);
+  };
+
+  if (isSuccessSplash) {
+    return <SplashScreen message={splashMessage} />;
   }
 
   return (
@@ -104,7 +124,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
               <path d="M12 0L14.59 9.41L24 12L14.59 14.59L12 24L9.41 14.59L0 12L9.41 9.41L12 0Z" />
             </svg>
           </div>
-          <span className="text-sm font-bold tracking-tight text-white">Dakhli</span>
+          <span className="text-sm font-bold tracking-tight text-white">
+            Dakhli
+          </span>
         </div>
 
         {/* Center: Minimalist Form */}
@@ -112,12 +134,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
           {/* Heading */}
           <div className="text-center">
             <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-              {mode === 'login' ? 'Welcome back' : 'Create an account'}
+              {mode === "login" ? "Welcome back" : "Create an account"}
             </h1>
             <p className="text-[11.5px] text-slate-400 mt-1">
-              {mode === 'login'
-                ? 'Enter your credentials to access your financial workspace.'
-                : 'Start tracking liquidity, savings, and overheads in one hub.'}
+              {mode === "login"
+                ? "Enter your credentials to access your financial System."
+                : "Start tracking liquidity, savings, and overheads in one hub."}
             </p>
           </div>
 
@@ -126,14 +148,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
             <button
               type="button"
               onClick={() => {
-                setMode('login')
-                setErrorMessage(null)
+                setMode("login");
+                setErrorMessage(null);
               }}
               className={cn(
-                'py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer',
-                mode === 'login'
-                  ? 'bg-[#272A36] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                "py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer",
+                mode === "login"
+                  ? "bg-[#272A36] text-white shadow-sm"
+                  : "text-slate-400 hover:text-white",
               )}
             >
               Login
@@ -141,14 +163,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
             <button
               type="button"
               onClick={() => {
-                setMode('register')
-                setErrorMessage(null)
+                setMode("register");
+                setErrorMessage(null);
               }}
               className={cn(
-                'py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer',
-                mode === 'register'
-                  ? 'bg-[#272A36] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                "py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer",
+                mode === "register"
+                  ? "bg-[#272A36] text-white shadow-sm"
+                  : "text-slate-400 hover:text-white",
               )}
             >
               Register
@@ -166,7 +188,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
           {/* Input Fields */}
           <form onSubmit={handleSubmit} className="mt-3.5 space-y-2.5">
             {/* Full Name (Register only) */}
-            {mode === 'register' && (
+            {mode === "register" && (
               <div className="space-y-1 animate-in fade-in duration-200">
                 <label className="text-[11px] font-medium text-slate-300">
                   Full Name
@@ -209,19 +231,25 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
               <div className="bg-[#181A22] border border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30 rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors">
                 <Lock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === 'login' ? '••••••••' : 'Minimum 8 characters'}
+                  placeholder={
+                    mode === "login" ? "••••••••" : "Minimum 8 characters"
+                  }
                   className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="text-slate-400 hover:text-white transition-colors cursor-pointer"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  {showPassword ? (
+                    <EyeOff className="w-3.5 h-3.5" />
+                  ) : (
+                    <Eye className="w-3.5 h-3.5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -235,7 +263,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
               {isLoading ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-[#121316]" />
               ) : (
-                <span>{mode === 'login' ? 'Login' : 'Create Account'}</span>
+                <span>{mode === "login" ? "Login" : "Create Account"}</span>
               )}
             </button>
           </form>
@@ -256,7 +284,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
             onClick={handleGoogleLogin}
             className="w-full h-9 sm:h-10 rounded-xl bg-[#181A22] hover:bg-[#20232E] border border-white/10 hover:border-white/20 flex items-center justify-center gap-2.5 text-xs font-medium text-white transition-all cursor-pointer shadow-sm active:scale-[0.99]"
           >
-            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              className="w-3.5 h-3.5 flex-shrink-0"
+              aria-hidden="true"
+            >
               <path
                 fill="#EA4335"
                 d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
@@ -282,9 +314,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         <div className="pt-2.5 border-t border-white/[0.04] flex items-center justify-between text-[11px] text-slate-500 flex-shrink-0">
           <span>© Dakhli</span>
           <div className="flex items-center gap-3">
-            <span className="hover:text-slate-300 transition-colors cursor-pointer">Terms</span>
+            <span className="hover:text-slate-300 transition-colors cursor-pointer">
+              Terms
+            </span>
             <span>·</span>
-            <span className="hover:text-slate-300 transition-colors cursor-pointer">Privacy</span>
+            <span className="hover:text-slate-300 transition-colors cursor-pointer">
+              Privacy
+            </span>
           </div>
         </div>
       </div>
@@ -294,7 +330,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         <AuthPromoBanner />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default AuthPage
+export default AuthPage;

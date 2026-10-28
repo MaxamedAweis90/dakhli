@@ -9,6 +9,7 @@ import itemRoutes from './itemRoutes';
 const apiRouter = Router();
 
 apiRouter.use('/auth', authRoutes);
+apiRouter.use('/baseline', balanceRoutes);
 apiRouter.use('/balance', balanceRoutes);
 apiRouter.use('/overhead', overheadRoutes);
 apiRouter.use('/daily', dailyRoutes);

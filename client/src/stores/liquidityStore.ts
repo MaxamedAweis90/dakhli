@@ -25,6 +25,10 @@ export const useLiquidityStore = create<LiquidityState>((set) => ({
     })
   },
 
+  setCurrency: (currency: string) => {
+    set({ currency })
+  },
+
   updateGrossBalance: (newGross: number) => {
     set((state) => ({
       grossBalance: newGross,

@@ -4,7 +4,6 @@ import {
   ArrowLeftRight,
   PiggyBank,
   ClipboardList,
-  Settings,
 } from '@/components/shared/icons'
 
 export interface NavItem {
@@ -19,5 +18,5 @@ export const NAV_ITEMS: NavItem[] = [
   { name: 'Daily Check-Off', to: '/daily', icon: ArrowLeftRight },
   { name: 'Save Plans', to: '/save-plans', icon: PiggyBank },
   { name: 'Item Registry', to: '/items', icon: ClipboardList },
-  { name: 'Settings', to: '/settings', icon: Settings },
 ]
+

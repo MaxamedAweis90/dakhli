@@ -28,20 +28,45 @@ export const updateBaseline = async (
 ): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { grossBalance, baseMonthlyIncome, paydayAnchor } = req.body;
+    const {
+      grossBalance,
+      baseMonthlyIncome,
+      monthlyIncome,
+      paydayAnchor,
+      paydayAnchorDay,
+      currency,
+    } = req.body;
 
     const updates: Record<string, unknown> = {};
     if (typeof grossBalance === 'number') updates.grossBalance = grossBalance;
-    if (typeof baseMonthlyIncome === 'number') updates.baseMonthlyIncome = baseMonthlyIncome;
-    if (typeof paydayAnchor === 'number') {
-      if (paydayAnchor < 1 || paydayAnchor > 31) {
+
+    const incomeVal =
+      typeof baseMonthlyIncome === 'number'
+        ? baseMonthlyIncome
+        : typeof monthlyIncome === 'number'
+        ? monthlyIncome
+        : undefined;
+    if (incomeVal !== undefined) updates.baseMonthlyIncome = incomeVal;
+
+    const anchorVal =
+      typeof paydayAnchor === 'number'
+        ? paydayAnchor
+        : typeof paydayAnchorDay === 'number'
+        ? paydayAnchorDay
+        : undefined;
+    if (anchorVal !== undefined) {
+      if (anchorVal < 1 || anchorVal > 31) {
         res.status(400).json({
           success: false,
           error: { message: 'paydayAnchor must be between 1 and 31.' },
         });
         return;
       }
-      updates.paydayAnchor = paydayAnchor;
+      updates.paydayAnchor = anchorVal;
+    }
+
+    if (typeof currency === 'string' && currency.trim()) {
+      updates.currency = currency.trim();
     }
 
     const updatedBalance = await Balance.findOneAndUpdate(

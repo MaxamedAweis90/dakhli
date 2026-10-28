@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { Search, LogOut, ChevronDown } from '@/components/shared/icons'
+import { Search, LogOut, ChevronDown, User as UserIcon, Settings } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from './navItems'
@@ -8,8 +8,8 @@ import { NAV_ITEMS } from './navItems'
 export const Sidebar: React.FC = () => {
   const { user, clearSession } = useAuthStore()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const displayName = user?.name || 'Anna Watson'
-  const displayEmail = user?.email || 'arinwatson@...'
+  const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'User')
+  const displayEmail = user?.email || 'user@dakhli.app'
 
   return (
     <aside className="hidden lg:flex w-[13.5rem] xl:w-[14.5rem] h-full flex-shrink-0 flex-col justify-between select-none pl-[1.1rem] pr-[1.25rem] pt-[1.5rem] pb-[1.25rem]">
@@ -68,18 +68,26 @@ export const Sidebar: React.FC = () => {
       <div className="relative pt-2">
         <button
           type="button"
+          aria-label="User profile menu"
+          data-testid="profile-menu-button"
           onClick={() => setIsMenuOpen((prev) => !prev)}
           className="flex items-center justify-between w-full p-1.5 -ml-1 rounded-xl hover:bg-[#1a1b20] transition-colors text-left group cursor-pointer"
         >
           <div className="flex items-center gap-[0.65rem] min-w-0">
-            <img
-              src="/images/avatar.png"
-              alt={displayName}
-              className="w-[2.2rem] h-[2.2rem] rounded-full object-cover flex-shrink-0 border border-white/10"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none'
-              }}
-            />
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={displayName}
+                className="w-[2.2rem] h-[2.2rem] rounded-full object-cover flex-shrink-0 border border-white/10"
+              />
+            ) : (
+              <div
+                aria-label="User placeholder avatar"
+                className="w-[2.2rem] h-[2.2rem] rounded-full bg-[#1e2027] border border-white/10 flex items-center justify-center flex-shrink-0 text-[#8e909a] group-hover:text-white group-hover:border-white/20 transition-colors"
+              >
+                <UserIcon className="w-[1.05rem] h-[1.05rem] text-[#8e909a] group-hover:text-white transition-colors" />
+              </div>
+            )}
             <div className="min-w-0 flex flex-col justify-center">
               <span className="text-[0.825rem] font-medium leading-tight text-white truncate">
                 {displayName}
@@ -103,6 +111,22 @@ export const Sidebar: React.FC = () => {
             className="absolute bottom-full mb-2 left-0 w-full bg-[#1b1c22] border border-white/10 rounded-xl p-1.5 shadow-xl z-50 backdrop-blur-md"
             onMouseLeave={() => setIsMenuOpen(false)}
           >
+            <NavLink
+              to="/settings"
+              onClick={() => setIsMenuOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2.5 w-full px-2.5 py-2 text-xs rounded-lg transition-colors cursor-pointer group',
+                  isActive
+                    ? 'bg-[#272932] text-white font-medium'
+                    : 'text-[#c2c2c2] hover:text-white hover:bg-[#22242c]'
+                )
+              }
+            >
+              <Settings className="w-3.5 h-3.5 text-[#8e909a] group-hover:text-white transition-colors" />
+              <span>Settings</span>
+            </NavLink>
+            <div className="h-[1px] bg-white/[0.06] my-1" />
             <button
               type="button"
               onClick={() => {

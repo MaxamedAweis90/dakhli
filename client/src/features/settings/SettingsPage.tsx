@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useBlocker } from 'react-router-dom'
 import { ConfirmDialog } from '@/components/primitives/ConfirmDialog'
-import { Check, ChevronDown, RefreshCw } from '@/components/shared/icons'
+import { Check, RefreshCw } from '@/components/shared/icons'
 import { useLiquidityStore } from '@/stores/liquidityStore'
-import { api } from '@/lib/api'
 import { queryClient } from '@/lib/query-client'
 import { cn } from '@/lib/utils'
+import type { CurrencyCode } from './types/settings.types'
+import { useBaseline } from './hooks/useBaseline'
 
 interface SettingsFormState {
   grossBalance: number
   baseMonthlyIncome: number
   paydayAnchor: number
-  currency: string
+  currency: CurrencyCode
   autoGenerateOverhead: boolean
   defaultDailyCap: number
   warningThreshold: number
@@ -21,19 +22,11 @@ const DEFAULT_INITIAL_STATE: SettingsFormState = {
   grossBalance: 260375.03,
   baseMonthlyIncome: 8385.0,
   paydayAnchor: 25,
-  currency: 'USD ($)',
+  currency: 'USD',
   autoGenerateOverhead: true,
   defaultDailyCap: 30.0,
   warningThreshold: 80,
 }
-
-const CURRENCY_OPTIONS = [
-  'USD ($)',
-  'EUR (€)',
-  'GBP (£)',
-  'AED (AED)',
-  'CAD ($)',
-]
 
 // Helper to format currency numbers with commas and two decimals
 const formatAmount = (num: number): string => {
@@ -59,23 +52,11 @@ const getDayWithSuffix = (day: number): string => {
 }
 
 export const SettingsPage: React.FC = () => {
-  const { grossBalance, setLiquidity } = useLiquidityStore()
+  const { grossBalance, totalSaved, setLiquidity, setCurrency } = useLiquidityStore()
+  const { baseline, updateBaseline, isUpdating } = useBaseline()
 
   // Baseline data state
   const [initialState, setInitialState] = useState<SettingsFormState>(() => {
-    const saved = localStorage.getItem('dakhli_settings_preferences')
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        return {
-          ...DEFAULT_INITIAL_STATE,
-          ...parsed,
-          grossBalance: grossBalance || DEFAULT_INITIAL_STATE.grossBalance,
-        }
-      } catch {
-        // Fall through
-      }
-    }
     return {
       ...DEFAULT_INITIAL_STATE,
       grossBalance: grossBalance || DEFAULT_INITIAL_STATE.grossBalance,
@@ -85,8 +66,6 @@ export const SettingsPage: React.FC = () => {
   // Form field state
   const [formState, setFormState] = useState<SettingsFormState>(initialState)
   const [activeTab, setActiveTab] = useState<'finance' | 'preferences'>('finance')
-  const [isCurrencyOpen, setIsCurrencyOpen] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false)
 
@@ -98,42 +77,24 @@ export const SettingsPage: React.FC = () => {
 
   // Fetch live baseline from backend on mount
   useEffect(() => {
-    let isMounted = true
-    const fetchBaseline = async () => {
-      try {
-        const res = (await api.get('/balance/overview')) as {
-          success?: boolean
-          data?: {
-            grossBalance?: number
-            baseMonthlyIncome?: number
-            paydayAnchor?: number
-            currency?: string
-          }
-        }
-        if (isMounted && res?.data) {
-          const loaded: SettingsFormState = {
-            ...initialState,
-            grossBalance: res.data.grossBalance ?? initialState.grossBalance,
-            baseMonthlyIncome: res.data.baseMonthlyIncome ?? initialState.baseMonthlyIncome,
-            paydayAnchor: res.data.paydayAnchor ?? initialState.paydayAnchor,
-            currency: res.data.currency ? `${res.data.currency} ($)` : initialState.currency,
-          }
-          setInitialState(loaded)
-          setFormState(loaded)
-          setGrossInput(formatAmount(loaded.grossBalance))
-          setIncomeInput(formatAmount(loaded.baseMonthlyIncome))
-          setPaydayInput(getDayWithSuffix(loaded.paydayAnchor))
-          setDailyCapInput(formatAmount(loaded.defaultDailyCap))
-        }
-      } catch {
-        // Fall back gracefully to initialized state
+    if (baseline) {
+      const loaded: SettingsFormState = {
+        grossBalance: baseline.grossBalance,
+        baseMonthlyIncome: baseline.monthlyIncome,
+        paydayAnchor: baseline.paydayAnchorDay,
+        currency: baseline.currency,
+        autoGenerateOverhead: baseline.overheadAutoGenerate,
+        defaultDailyCap: baseline.defaultDailyCap,
+        warningThreshold: baseline.warningThreshold ?? 80,
       }
+      setInitialState(loaded)
+      setFormState(loaded)
+      setGrossInput(formatAmount(loaded.grossBalance))
+      setIncomeInput(formatAmount(loaded.baseMonthlyIncome))
+      setPaydayInput(getDayWithSuffix(loaded.paydayAnchor))
+      setDailyCapInput(formatAmount(loaded.defaultDailyCap))
     }
-    fetchBaseline()
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  }, [baseline])
 
   // Calculate dirty state
   const isDirty = useMemo(() => {
@@ -148,7 +109,7 @@ export const SettingsPage: React.FC = () => {
     )
   }, [formState, initialState])
 
-  // React Router v7 navigation blocker
+  // React Router navigation blocker for unsaved changes
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       isDirty && currentLocation.pathname !== nextLocation.pathname
@@ -166,43 +127,35 @@ export const SettingsPage: React.FC = () => {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [isDirty])
 
+  // Currency symbol resolution
+  const currencySymbol = useMemo(() => {
+    switch (formState.currency) {
+      case 'SOS':
+        return 'Sh.So.'
+      case 'EUR':
+        return '€'
+      default:
+        return '$'
+    }
+  }, [formState.currency])
+
   // Handle saving baseline
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    setIsSaving(true)
     setSaveSuccess(false)
 
     try {
-      // 1. Persist baseline metrics to backend API
-      const currencyCode = formState.currency.split(' ')[0] || 'USD'
-      await api.patch('/balance/baseline', {
+      await updateBaseline({
         grossBalance: formState.grossBalance,
-        baseMonthlyIncome: formState.baseMonthlyIncome,
-        paydayAnchor: formState.paydayAnchor,
+        monthlyIncome: formState.baseMonthlyIncome,
+        paydayAnchorDay: formState.paydayAnchor,
+        currency: formState.currency,
+        overheadAutoGenerate: formState.autoGenerateOverhead,
+        defaultDailyCap: formState.defaultDailyCap,
+        warningThreshold: formState.warningThreshold,
       })
 
-      // 2. Sync client liquidity store
-      setLiquidity({
-        grossBalance: formState.grossBalance,
-        totalSaved: 0,
-        currency: currencyCode,
-      })
-
-      // 3. Persist preferences locally
-      localStorage.setItem(
-        'dakhli_settings_preferences',
-        JSON.stringify({
-          autoGenerateOverhead: formState.autoGenerateOverhead,
-          defaultDailyCap: formState.defaultDailyCap,
-          warningThreshold: formState.warningThreshold,
-          currency: formState.currency,
-        })
-      )
-
-      // 4. Invalidate related caches
-      queryClient.invalidateQueries({ queryKey: ['balance'] })
-
-      // 5. Update initial reference state to clear isDirty
+      // Update initial reference state to clear isDirty
       setInitialState({ ...formState })
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
@@ -210,14 +163,13 @@ export const SettingsPage: React.FC = () => {
       // Gracefully update local state even if offline
       setLiquidity({
         grossBalance: formState.grossBalance,
-        totalSaved: 0,
-        currency: formState.currency.split(' ')[0],
+        totalSaved: totalSaved || 0,
+        currency: formState.currency,
       })
+      setCurrency(formState.currency)
       setInitialState({ ...formState })
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
-    } finally {
-      setIsSaving(false)
     }
   }
 
@@ -330,13 +282,13 @@ export const SettingsPage: React.FC = () => {
       </div>
 
       {/* Floating Status Notification */}
-      {isSaving && (
+      {isUpdating && (
         <div className="fixed top-5 right-6 z-50 flex items-center gap-2 bg-[#1A1C22] border border-[#E5A855]/40 text-[#E5A855] px-4 py-2.5 rounded-full shadow-2xl text-xs font-semibold animate-pulse">
           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
           <span>Saving baseline...</span>
         </div>
       )}
-      {saveSuccess && !isSaving && (
+      {saveSuccess && !isUpdating && (
         <div className="fixed top-5 right-6 z-50 flex items-center gap-2 bg-[#1A1C22] border border-[#E5A855]/40 text-[#E5A855] px-4 py-2.5 rounded-full shadow-2xl text-xs font-semibold animate-in fade-in slide-in-from-top duration-200">
           <Check className="w-4 h-4 stroke-[2.5]" />
           <span>Baseline saved successfully</span>
@@ -360,7 +312,7 @@ export const SettingsPage: React.FC = () => {
                   Starting Gross Balance
                 </label>
                 <div className="bg-[#1D2028] border border-white/[0.04] focus-within:border-[#E5A855]/50 rounded-xl h-[3.4rem] px-4 flex items-center gap-3 transition-colors">
-                  <span className="text-slate-400 text-lg font-light leading-none">$</span>
+                  <span className="text-slate-400 text-base font-light leading-none">{currencySymbol}</span>
                   <input
                     type="text"
                     value={grossInput}
@@ -378,7 +330,7 @@ export const SettingsPage: React.FC = () => {
                   Base Monthly Income
                 </label>
                 <div className="bg-[#1D2028] border border-white/[0.04] focus-within:border-[#E5A855]/50 rounded-xl h-[3.4rem] px-4 flex items-center gap-3 transition-colors">
-                  <span className="text-slate-400 text-lg font-light leading-none">$</span>
+                  <span className="text-slate-400 text-base font-light leading-none">{currencySymbol}</span>
                   <input
                     type="text"
                     value={incomeInput}
@@ -409,54 +361,6 @@ export const SettingsPage: React.FC = () => {
                   <span className="text-slate-400 text-[0.85rem] font-normal">
                     of the month
                   </span>
-                </div>
-              </div>
-
-              {/* Field 4: Default Currency */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[0.825rem] text-slate-300 font-medium">
-                  Default Currency
-                </label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsCurrencyOpen(!isCurrencyOpen)}
-                    className="w-full bg-[#1D2028] border border-white/[0.04] hover:border-white/10 rounded-xl h-[3.15rem] px-4 flex items-center justify-between text-[0.875rem] font-medium text-white transition-colors cursor-pointer"
-                  >
-                    <span>{formState.currency}</span>
-                    <ChevronDown
-                      className={cn(
-                        'w-4 h-4 text-slate-400 transition-transform duration-200',
-                        isCurrencyOpen && 'rotate-180'
-                      )}
-                    />
-                  </button>
-
-                  {isCurrencyOpen && (
-                    <div className="absolute top-full mt-1.5 left-0 w-full bg-[#1D2028] border border-white/10 rounded-xl shadow-2xl py-1.5 z-40 backdrop-blur-md">
-                      {CURRENCY_OPTIONS.map((cur) => (
-                        <button
-                          key={cur}
-                          type="button"
-                          onClick={() => {
-                            setFormState((prev) => ({ ...prev, currency: cur }))
-                            setIsCurrencyOpen(false)
-                          }}
-                          className={cn(
-                            'w-full text-left px-4 py-2.5 text-xs transition-colors flex items-center justify-between cursor-pointer',
-                            formState.currency === cur
-                              ? 'text-[#E5A855] font-semibold bg-[#E5A855]/10'
-                              : 'text-slate-300 hover:text-white hover:bg-white/[0.04]'
-                          )}
-                        >
-                          <span>{cur}</span>
-                          {formState.currency === cur && (
-                            <Check className="w-3.5 h-3.5 text-[#E5A855]" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -510,7 +414,7 @@ export const SettingsPage: React.FC = () => {
                   Default Daily Cap
                 </label>
                 <div className="bg-[#1D2028] border border-white/[0.04] focus-within:border-[#E5A855]/50 rounded-xl h-[3.4rem] px-4 flex items-center gap-3 transition-colors">
-                  <span className="text-slate-400 text-lg font-light leading-none">$</span>
+                  <span className="text-slate-400 text-base font-light leading-none">{currencySymbol}</span>
                   <input
                     type="text"
                     value={dailyCapInput}
