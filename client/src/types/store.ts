@@ -11,7 +11,7 @@ export interface AuthState {
   isLoading: boolean
   setSession: (token: string, user: AuthUser) => void
   clearSession: () => void
-  initialize: () => void
+  initialize: () => Promise<void> | void
 }
 
 export interface LiquidityPayload {

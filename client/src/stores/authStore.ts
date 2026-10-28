@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { TOKEN_STORAGE_KEY, AUTH_UNAUTHORIZED_EVENT } from '@/lib/api'
 import type { AuthState, AuthUser } from '@/types/store'
+import { authApi } from '@/features/auth/api/authApi'
 
 const USER_STORAGE_KEY = 'dakhli_user'
 
@@ -40,31 +41,72 @@ export const useAuthStore = create<AuthState>((set) => ({
     })
   },
 
-  initialize: () => {
+  initialize: async () => {
+    set({ isLoading: true })
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_STORAGE_KEY) : null
-      const rawUser = typeof window !== 'undefined' ? localStorage.getItem(USER_STORAGE_KEY) : null
-      const user: AuthUser | null = rawUser ? JSON.parse(rawUser) : null
+      if (!token) {
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        })
+        return
+      }
 
-      if (token) {
+      // Fast-path cached user from localStorage
+      const rawUser = typeof window !== 'undefined' ? localStorage.getItem(USER_STORAGE_KEY) : null
+      const cachedUser: AuthUser | null = rawUser ? JSON.parse(rawUser) : null
+
+      // Support 1-click dev demo session
+      if (token === 'demo-jwt-token') {
+        set({
+          token,
+          user: cachedUser || { id: 'demo-user-id', email: 'anna@dakhli.app', name: 'Anna Watson' },
+          isAuthenticated: true,
+          isLoading: false,
+        })
+        return
+      }
+
+      // Rehydrate user session via backend /auth/me
+      try {
+        const user = await authApi.getMe()
+        try {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
+        } catch {
+          // ignore
+        }
         set({
           token,
           user,
           isAuthenticated: true,
           isLoading: false,
         })
-        return
+      } catch {
+        // If rehydration fails or token invalid, purge storage
+        try {
+          localStorage.removeItem(TOKEN_STORAGE_KEY)
+          localStorage.removeItem(USER_STORAGE_KEY)
+        } catch {
+          // ignore
+        }
+        set({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        })
       }
     } catch {
-      // Fallback on corrupt payload
+      set({
+        token: null,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      })
     }
-
-    set({
-      token: null,
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    })
   },
 }))
 

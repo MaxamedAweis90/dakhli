@@ -10,7 +10,7 @@ import {
   Loader2,
 } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
-import { api } from '@/lib/api'
+import { useAuth } from './hooks/useAuth'
 import { cn } from '@/lib/utils'
 import { AuthPromoBanner } from './components/AuthPromoBanner'
 
@@ -22,6 +22,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
   const location = useLocation()
   const navigate = useNavigate()
   const { setSession } = useAuthStore()
+  const { login, register, loginMutation, registerMutation } = useAuth()
 
   // Normalize initial mode to 'login' or 'register'
   const resolveMode = () => {
@@ -32,13 +33,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
 
   const [mode, setMode] = useState<'login' | 'register'>(resolveMode)
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   // Form inputs
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+
+  const isLoading = loginMutation.isPending || registerMutation.isPending
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,53 +57,24 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
       return
     }
 
-    setIsLoading(true)
-
     try {
       if (mode === 'login') {
-        const res = (await api.post('/auth/login', {
-          email: email.trim(),
-          password,
-        })) as {
-          success?: boolean
-          data?: {
-            token: string
-            user: { id: string; email: string; name?: string }
-          }
-        }
-
-        if (res?.data?.token && res?.data?.user) {
-          setSession(res.data.token, res.data.user)
-          navigate('/', { replace: true })
-        }
+        await login({ email: email.trim(), password })
       } else {
-        const res = (await api.post('/auth/register', {
+        await register({
           name: name.trim(),
           email: email.trim(),
           password,
-          initialBalance: 260375.03,
-          baseMonthlyIncome: 8385.0,
-          paydayAnchor: 25,
-        })) as {
-          success?: boolean
-          data?: {
-            token: string
-            user: { id: string; email: string; name?: string }
-          }
-        }
-
-        if (res?.data?.token && res?.data?.user) {
-          setSession(res.data.token, res.data.user)
-          navigate('/', { replace: true })
-        }
+        })
       }
+
+      const destination = (location.state as { from?: Location })?.from?.pathname || '/'
+      navigate(destination, { replace: true })
     } catch (err: unknown) {
       const errObj = err as { message?: string }
       setErrorMessage(
         errObj?.message || 'Authentication failed. Please verify your credentials.'
       )
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -112,7 +85,8 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
       email: 'anna@dakhli.app',
       name: 'Anna Watson',
     })
-    navigate('/', { replace: true })
+    const destination = (location.state as { from?: Location })?.from?.pathname || '/'
+    navigate(destination, { replace: true })
   }
 
   return (

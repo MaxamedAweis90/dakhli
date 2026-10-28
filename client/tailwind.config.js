@@ -10,19 +10,19 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       colors: {
-        canvas: '#111215',
+        canvas: '#0D0E12',
         card: {
-          DEFAULT: '#17181D',
-          elevated: '#1E2027',
+          DEFAULT: '#13151B',
+          elevated: '#1A1D26',
           tile: '#222530',
         },
         border: {
-          subtle: 'rgba(255, 255, 255, 0.02)',
+          subtle: 'rgba(255, 255, 255, 0.05)',
         },
         surface: {
-          card: '#17181D',
-          elevated: '#1E2027',
-          subtle: 'rgba(255, 255, 255, 0.02)',
+          card: '#13151B',
+          elevated: '#1A1D26',
+          subtle: 'rgba(255, 255, 255, 0.05)',
         },
         brand: {
           DEFAULT: '#F59E0B',
