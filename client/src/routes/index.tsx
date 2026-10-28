@@ -10,8 +10,7 @@ const DailyPage = lazy(() => import('@/features/daily/DailyPage'))
 const SavePlansPage = lazy(() => import('@/features/save-plans/SavePlansPage'))
 const ItemsPage = lazy(() => import('@/features/items/ItemsPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
-const LoginPage = lazy(() => import('@/features/auth/LoginPage'))
-const RegisterPage = lazy(() => import('@/features/auth/RegisterPage'))
+const AuthPage = lazy(() => import('@/features/auth/AuthPage'))
 
 const ViewFallback: React.FC = () => (
   <div className="flex items-center justify-center p-12 text-slate-500 text-xs font-mono">
@@ -30,10 +29,11 @@ export const router = createBrowserRouter([
       {
         element: <PublicRoute />,
         children: [
-          { path: '/login', element: <LoginPage /> },
-          { path: '/register', element: <RegisterPage /> },
+          { path: '/login', element: <AuthPage initialMode="signin" /> },
+          { path: '/register', element: <AuthPage initialMode="signup" /> },
         ],
       },
+
       {
         element: <ProtectedRoute />,
         children: [
