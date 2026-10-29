@@ -12,6 +12,7 @@ apiRouter.use('/auth', authRoutes);
 apiRouter.use('/baseline', balanceRoutes);
 apiRouter.use('/balance', balanceRoutes);
 apiRouter.use('/overhead', overheadRoutes);
+apiRouter.use('/overheads', overheadRoutes);
 apiRouter.use('/daily', dailyRoutes);
 apiRouter.use('/save-plans', savePlanRoutes);
 apiRouter.use('/items', itemRoutes);

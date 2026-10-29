@@ -128,3 +128,40 @@ export const markOverheadPaid = async (
     return record;
   }, session);
 };
+
+/**
+ * Marks an overhead monthly record as unpaid and atomically refunds the billedAmount
+ * back to the user's grossBalance.
+ */
+export const markOverheadUnpaid = async (
+  userId: string,
+  overheadItemId: string,
+  monthKey: string,
+  session?: ClientSession
+): Promise<IOverheadMonthlyRecord> => {
+  return withTransaction(async (activeSession) => {
+    const record = await OverheadMonthlyRecord.findOne({
+      userId: new Types.ObjectId(userId),
+      overheadItemId: new Types.ObjectId(overheadItemId),
+      monthKey,
+    }).session(activeSession);
+
+    if (!record) {
+      throw new Error(`[OverheadService] Overhead record not found: ${overheadItemId}`);
+    }
+
+    if (!record.isPaid) {
+      // Already unpaid, no-op
+      return record;
+    }
+
+    record.isPaid = false;
+    record.paidAt = null;
+    await record.save({ session: activeSession });
+
+    // Atomically refund billedAmount back to gross balance
+    await adjustGrossBalance(userId, record.billedAmount, activeSession);
+
+    return record;
+  }, session);
+};

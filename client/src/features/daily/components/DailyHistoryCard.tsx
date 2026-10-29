@@ -1,33 +1,46 @@
 import React from 'react'
 import { Pencil } from 'lucide-react'
-import type { DailyRecord, BudgetStatus } from '@/stores/dailyStore'
+import type { DailyRecord, DailyStatus } from '../types/daily.types'
 import { RecordCheckOffCard } from './RecordCheckOffCard'
+import { useLiquidityStore } from '@/stores/liquidityStore'
+import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
 export interface DailyHistoryCardProps {
-  record: DailyRecord
+  record: DailyRecord & {
+    month?: string
+    dayNum?: string
+    daySuffix?: string
+    plannedCap?: number
+    actualSpend?: number
+    variance?: number
+    notes?: string
+  }
   isEditing: boolean
   onStartEdit: () => void
   onCancelEdit: () => void
-  onSaveEdit: (updates: { plannedCap: number; actualSpend: number; notes: string }) => void
+  onSaveEdit: (updates: { cap: number; spent: number; note: string }) => void
   className?: string
 }
 
-const STATUS_STYLES: Record<BudgetStatus, { bg: string; text: string; border: string }> = {
+const STATUS_STYLES: Record<DailyStatus, { bg: string; text: string; border: string; label: string }> = {
   under_budget: {
     bg: 'bg-[#132E27]',
     text: 'text-[#4ADE80]',
     border: 'border-[#4ADE80]/20',
+    label: 'under_budget',
   },
   over_budget: {
     bg: 'bg-[#2E1818]',
     text: 'text-[#FA8C68]',
     border: 'border-[#FA8C68]/20',
+    label: 'over_budget',
   },
   on_budget: {
     bg: 'bg-[#182622]',
     text: 'text-[#6EE7B7]',
     border: 'border-[#6EE7B7]/20',
+    label: 'on_budget',
   },
 }
 
@@ -39,14 +52,24 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
   onSaveEdit,
   className,
 }) => {
+  const store = useLiquidityStore()
+  const currentCode = (store.currency in CURRENCY_CONFIGS ? store.currency : 'USD') as CurrencyCode
+  const config = CURRENCY_CONFIGS[currentCode]
+  const rate = config.rate ?? 1
+
+  const cap = record.cap ?? record.plannedCap ?? 0
+  const spent = record.spent ?? record.actualSpend ?? 0
+  const savedDelta = record.savedDelta ?? record.variance ?? (cap - spent)
+  const note = record.note ?? record.notes ?? ''
+
   // If in edit mode, render active inline editor with glowing gradient border
   if (isEditing) {
     return (
       <RecordCheckOffCard
-        title={`Edit Check-Off (${record.month} ${record.dayNum}${record.daySuffix ?? ''})`}
-        initialPlannedCap={record.plannedCap}
-        initialActualSpend={record.actualSpend}
-        initialNotes={record.notes}
+        title={`Edit Check-Off (${record.month ?? ''} ${record.dayNum ?? ''}${record.daySuffix ?? ''})`}
+        initialPlannedCap={cap}
+        initialActualSpend={spent}
+        initialNotes={note}
         isEditing={true}
         onSave={onSaveEdit}
         onCancel={onCancelEdit}
@@ -55,23 +78,30 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
     )
   }
 
-  // Calculate variance and status
-  const variance = record.plannedCap - record.actualSpend
-  const status: BudgetStatus =
-    variance > 0 ? 'under_budget' : variance < 0 ? 'over_budget' : 'on_budget'
+  const status: DailyStatus =
+    savedDelta > 0 ? 'under_budget' : savedDelta < 0 ? 'over_budget' : 'on_budget'
   const style = STATUS_STYLES[status]
 
+  const convertedCap = cap * rate
+  const convertedSpend = spent * rate
+  const convertedDelta = savedDelta * rate
+
+  const formatMoney = (n: number) =>
+    new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: 0,
+    }).format(n)
+
   const varianceFormatted =
-    variance > 0
-      ? `+$${variance}`
-      : variance < 0
-      ? `-$${Math.abs(variance)}`
-      : `$0`
+    convertedDelta > 0
+      ? `+${config.symbol}${formatMoney(convertedDelta)}`
+      : convertedDelta < 0
+      ? `-${config.symbol}${formatMoney(Math.abs(convertedDelta))}`
+      : `${config.symbol}0`
 
   const varianceColor =
-    variance > 0
+    convertedDelta > 0
       ? 'text-[#4ADE80]'
-      : variance < 0
+      : convertedDelta < 0
       ? 'text-[#FA8C68]'
       : 'text-white'
 
@@ -102,19 +132,19 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
             style.border
           )}
         >
-          {status}
+          {style.label}
         </div>
 
         {/* Figures Group */}
         <div className="flex items-center gap-6 sm:gap-10">
           {/* Planned Cap */}
           <span className="text-[1.25rem] font-semibold text-white tracking-tight">
-            ${record.plannedCap}
+            {config.symbol}{formatMoney(convertedCap)}
           </span>
 
           {/* Actual Spend */}
           <span className="text-[1.25rem] font-semibold text-white tracking-tight">
-            ${record.actualSpend}
+            {config.symbol}{formatMoney(convertedSpend)}
           </span>
 
           {/* Net Variance */}
@@ -131,7 +161,7 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
 
       {/* Bottom Row: Notes string */}
       <p className="text-[0.82rem] font-normal text-[#8E92A0] tracking-normal line-clamp-1">
-        {record.notes.startsWith('Notes:') ? record.notes : `Notes: ${record.notes}`}
+        {note ? (note.startsWith('Notes:') ? note : `Notes: ${note}`) : 'No notes'}
       </p>
     </div>
   )

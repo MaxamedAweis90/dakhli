@@ -1,4 +1,7 @@
 import React from 'react'
+import { useLiquidityStore } from '@/stores/liquidityStore'
+import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 import { cn } from '@/lib/utils'
 
 export interface CumulativeSavingsCardProps {
@@ -36,6 +39,16 @@ export const CumulativeSavingsCard: React.FC<CumulativeSavingsCardProps> = ({
   points = [8, 12, 11, 18, 16, 21, 20, 35, 27, 31, 35],
   className,
 }) => {
+  const store = useLiquidityStore()
+  const currentCode = (store.currency in CURRENCY_CONFIGS ? store.currency : 'USD') as CurrencyCode
+  const config = CURRENCY_CONFIGS[currentCode]
+  const rate = config.rate ?? 1
+
+  const convertedSavings = savings * rate
+  const isPositive = convertedSavings > 0
+  const isNegative = convertedSavings < 0
+  const prefix = isPositive ? `+${config.symbol}` : isNegative ? `-${config.symbol}` : config.symbol
+
   // SVG Viewport sizing
   const width = 340
   const height = 130
@@ -44,12 +57,13 @@ export const CumulativeSavingsCard: React.FC<CumulativeSavingsCardProps> = ({
   const padBottom = 12
 
   // Map data points into SVG space
-  const minVal = Math.min(0, ...points)
-  const maxVal = Math.max(40, ...points)
+  const safePoints = points.length > 0 ? points : [0, 0]
+  const minVal = Math.min(0, ...safePoints)
+  const maxVal = Math.max(40, ...safePoints)
   const range = maxVal - minVal || 1
 
-  const coords = points.map((val, idx) => {
-    const x = padX + (idx / (points.length - 1)) * (width - padX * 2)
+  const coords = safePoints.map((val, idx) => {
+    const x = padX + (idx / Math.max(1, safePoints.length - 1)) * (width - padX * 2)
     const norm = (val - minVal) / range
     // SVG y goes from top (0) to bottom (height)
     const y = height - padBottom - norm * (height - padTop - padBottom)
@@ -60,16 +74,6 @@ export const CumulativeSavingsCard: React.FC<CumulativeSavingsCardProps> = ({
   const lastCoord = coords[coords.length - 1]
   const firstCoord = coords[0]
   const areaPath = `${linePath} L ${lastCoord.x} ${height} L ${firstCoord.x} ${height} Z`
-
-  // Format savings value e.g. +$35.00 or -$15.00
-  const isPositive = savings > 0
-  const isNegative = savings < 0
-  const absSavings = Math.abs(savings).toFixed(2)
-  const displaySavings = isPositive
-    ? `+$${absSavings}`
-    : isNegative
-    ? `-$${absSavings}`
-    : `$${absSavings}`
 
   return (
     <div className={cn('flex flex-col', className)}>
@@ -86,9 +90,9 @@ export const CumulativeSavingsCard: React.FC<CumulativeSavingsCardProps> = ({
             <span className="block text-[0.85rem] font-medium text-[#D1D5DB] tracking-tight">
               Cumulative Savings:
             </span>
-            <p className="text-[2.15rem] lg:text-[2.35rem] font-semibold text-white tracking-tight leading-none mt-1.5">
-              {displaySavings}
-            </p>
+            <div className="text-[2.15rem] lg:text-[2.35rem] font-semibold text-white tracking-tight leading-none mt-1.5">
+              <AnimatedNumber value={Math.abs(convertedSavings)} prefix={prefix} />
+            </div>
           </div>
 
           {/* Area Sparkline Chart */}

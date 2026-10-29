@@ -1,5 +1,8 @@
 import React from 'react'
 import { Link2, MoreHorizontal } from 'lucide-react'
+import { useLiquidityStore } from '@/stores/liquidityStore'
+import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 import { cn } from '@/lib/utils'
 
 export interface OverheadBillsLedgerBannerProps {
@@ -8,9 +11,6 @@ export interface OverheadBillsLedgerBannerProps {
   totalUnpaid: number
   className?: string
 }
-
-const fmt = (n: number): string =>
-  new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)
 
 /**
  * Section 1: Overhead Bills Ledger Summary Card
@@ -23,6 +23,17 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
   totalUnpaid,
   className,
 }) => {
+  const store = useLiquidityStore()
+  const currentCode = (store.currency in CURRENCY_CONFIGS
+    ? store.currency
+    : 'USD') as CurrencyCode
+  const config = CURRENCY_CONFIGS[currentCode]
+
+  const rate = config.rate ?? 1
+  const convertedTotal = totalOverhead * rate
+  const convertedPaid = totalPaid * rate
+  const convertedUnpaid = totalUnpaid * rate
+
   return (
     <div
       className={cn(
@@ -57,9 +68,9 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
           <span className="block text-[0.84rem] font-normal text-[#8E92A0] mb-2 tracking-normal">
             Total Overhead
           </span>
-          <p className="text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold text-white tracking-tight leading-none">
-            ${fmt(totalOverhead)}
-          </p>
+          <div className="text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold text-white tracking-tight leading-none">
+            <AnimatedNumber value={convertedTotal} prefix={config.symbol} />
+          </div>
         </div>
 
         {/* Paid */}
@@ -67,9 +78,9 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
           <span className="block text-[0.84rem] font-normal text-[#8E92A0] mb-2 tracking-normal">
             Paid
           </span>
-          <p className="text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold text-[#4ADE80] tracking-tight leading-none">
-            ${fmt(totalPaid)}
-          </p>
+          <div className="text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold text-[#4ADE80] tracking-tight leading-none">
+            <AnimatedNumber value={convertedPaid} prefix={config.symbol} />
+          </div>
         </div>
 
         {/* Unpaid */}
@@ -77,9 +88,9 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
           <span className="block text-[0.84rem] font-normal text-[#8E92A0] mb-2 tracking-normal">
             Unpaid
           </span>
-          <p className="text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold text-[#FA8C68] tracking-tight leading-none">
-            ${fmt(totalUnpaid)}
-          </p>
+          <div className="text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold text-[#FA8C68] tracking-tight leading-none">
+            <AnimatedNumber value={convertedUnpaid} prefix={config.symbol} />
+          </div>
         </div>
       </div>
     </div>

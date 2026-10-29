@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
+import { useLiquidityStore } from '@/stores/liquidityStore'
+import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
 export interface RecordCheckOffCardProps {
@@ -8,7 +10,8 @@ export interface RecordCheckOffCardProps {
   initialNotes?: string
   isEditing?: boolean
   title?: string
-  onSave: (data: { plannedCap: number; actualSpend: number; notes: string }) => void
+  isSubmitting?: boolean
+  onSave: (data: { cap: number; spent: number; note: string }) => void
   onCancel?: () => void
   className?: string
 }
@@ -19,10 +22,15 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
   initialNotes = 'Planned cap vs actual spend $20',
   isEditing = false,
   title = 'Record Check-Off',
+  isSubmitting = false,
   onSave,
   onCancel,
   className,
 }) => {
+  const store = useLiquidityStore()
+  const currentCode = (store.currency in CURRENCY_CONFIGS ? store.currency : 'USD') as CurrencyCode
+  const config = CURRENCY_CONFIGS[currentCode]
+
   const [plannedCap, setPlannedCap] = useState(initialPlannedCap.toString())
   const [actualSpend, setActualSpend] = useState(initialActualSpend.toString())
   const [notes, setNotes] = useState(initialNotes)
@@ -32,9 +40,9 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
     const p = parseFloat(plannedCap) || 0
     const a = parseFloat(actualSpend) || 0
     onSave({
-      plannedCap: Math.max(0, p),
-      actualSpend: Math.max(0, a),
-      notes: notes.trim() || `Planned cap vs actual spend $${a}`,
+      cap: Math.max(0, p),
+      spent: Math.max(0, a),
+      note: notes.trim() || `Planned cap vs actual spend $${a}`,
     })
   }
 
@@ -74,14 +82,14 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
               Planned cap
             </label>
             <div className="h-[2.5rem] px-3.5 rounded-xl bg-[#20222B] border border-white/[0.06] flex items-center gap-1 focus-within:border-[#5EEAD4]/50 transition-colors">
-              <span className="text-[1.05rem] font-semibold text-white/90 select-none">$</span>
+              <span className="text-[1.05rem] font-semibold text-white/90 select-none">{config.symbol}</span>
               <input
                 type="number"
                 min="0"
                 step="any"
                 value={plannedCap}
                 onChange={(e) => setPlannedCap(e.target.value)}
-                className="w-14 bg-transparent text-[1.05rem] font-semibold text-white outline-none"
+                className="w-16 bg-transparent text-[1.05rem] font-semibold text-white outline-none"
               />
             </div>
           </div>
@@ -97,14 +105,14 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
               Actual spend
             </label>
             <div className="h-[2.5rem] px-3.5 rounded-xl bg-[#20222B] border border-white/[0.06] flex items-center gap-1 focus-within:border-[#5EEAD4]/50 transition-colors">
-              <span className="text-[1.05rem] font-semibold text-white/90 select-none">$</span>
+              <span className="text-[1.05rem] font-semibold text-white/90 select-none">{config.symbol}</span>
               <input
                 type="number"
                 min="0"
                 step="any"
                 value={actualSpend}
                 onChange={(e) => setActualSpend(e.target.value)}
-                className="w-14 bg-transparent text-[1.05rem] font-semibold text-white outline-none"
+                className="w-16 bg-transparent text-[1.05rem] font-semibold text-white outline-none"
               />
             </div>
           </div>
@@ -114,8 +122,9 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
             {isEditing && onCancel && (
               <button
                 type="button"
+                disabled={isSubmitting}
                 onClick={onCancel}
-                className="h-[2.45rem] px-4 rounded-xl bg-[#20222B] text-[#A1A1AA] hover:text-white font-medium text-[0.825rem] border border-white/[0.06] hover:bg-[#282B37] active:scale-95 transition-all cursor-pointer"
+                className="h-[2.45rem] px-4 rounded-xl bg-[#20222B] text-[#A1A1AA] hover:text-white font-medium text-[0.825rem] border border-white/[0.06] hover:bg-[#282B37] active:scale-95 transition-all cursor-pointer disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -123,9 +132,10 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
 
             <button
               type="submit"
-              className="h-[2.45rem] px-5 sm:px-6 rounded-xl bg-gradient-to-r from-[#7EFAD7] to-[#5EEAD4] text-[#121316] font-semibold text-[0.875rem] shadow-[0_0_18px_rgba(94,234,212,0.35)] hover:brightness-105 active:scale-95 transition-all cursor-pointer tracking-tight"
+              disabled={isSubmitting}
+              className="h-[2.45rem] px-5 sm:px-6 rounded-xl bg-gradient-to-r from-[#7EFAD7] to-[#5EEAD4] text-[#121316] font-semibold text-[0.875rem] shadow-[0_0_18px_rgba(94,234,212,0.35)] hover:brightness-105 active:scale-95 transition-all cursor-pointer tracking-tight disabled:opacity-50"
             >
-              {isEditing ? 'Save' : 'Record'}
+              {isSubmitting ? 'Saving...' : isEditing ? 'Save' : 'Record'}
             </button>
           </div>
         </div>

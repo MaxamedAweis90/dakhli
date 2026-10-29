@@ -3,6 +3,8 @@ import React, { useEffect, useRef, useState } from 'react'
 export interface AnimatedNumberProps {
   value: number
   duration?: number
+  prefix?: string
+  suffix?: string
   className?: string
   formatOptions?: Intl.NumberFormatOptions
 }
@@ -10,6 +12,8 @@ export interface AnimatedNumberProps {
 export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   value,
   duration = 650,
+  prefix = '',
+  suffix = '',
   className,
   formatOptions = {
     minimumFractionDigits: 2,
@@ -59,7 +63,13 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
 
   const formatted = new Intl.NumberFormat('en-US', formatOptions).format(displayValue)
 
-  return <span className={className}>{formatted}</span>
+  return (
+    <span className={className}>
+      {prefix}
+      {formatted}
+      {suffix}
+    </span>
+  )
 }
 
 export default AnimatedNumber

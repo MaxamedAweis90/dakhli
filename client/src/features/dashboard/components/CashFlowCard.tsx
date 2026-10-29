@@ -1,4 +1,9 @@
 import React, { useId } from "react";
+import { useLiquidityStore } from "@/stores/liquidityStore";
+import { useBaseline } from "@/features/settings/hooks/useBaseline";
+import { useOverheads } from "@/features/overheads/hooks/useOverheads";
+import { useDaily } from "@/features/daily/hooks/useDaily";
+import { CURRENCY_CONFIGS, type CurrencyCode } from "@/features/settings/types/settings.types";
 import { cn } from "@/lib/utils";
 
 export interface CashFlowCardProps {
@@ -79,13 +84,48 @@ const Sparkline: React.FC<SparklineProps> = ({
 };
 
 export const CashFlowCard: React.FC<CashFlowCardProps> = ({
-  income = 8385,
-  expenses = 2200,
-  limit = 82300,
-  usedPercent = 67,
+  income: propIncome,
+  expenses: propExpenses,
+  limit: propLimit,
+  usedPercent: propUsedPercent,
   className,
 }) => {
+  const { baseline } = useBaseline();
+  const { summary: overheadSummary } = useOverheads();
+  const { logs: dailyLogs } = useDaily();
+  const store = useLiquidityStore();
+
+  const currentCode = (store.currency in CURRENCY_CONFIGS
+    ? store.currency
+    : "USD") as CurrencyCode;
+  const config = CURRENCY_CONFIGS[currentCode];
+  const rate = config.rate ?? 1;
+
+  // Base raw amounts
+  const rawIncome =
+    propIncome ?? (baseline?.monthlyIncome && baseline.monthlyIncome > 0 ? baseline.monthlyIncome : 8385);
+
+  const liveSpent = dailyLogs.reduce((sum, l) => sum + (l.spent || 0), 0);
+  const liveOverheadPaid = overheadSummary.totalPaid || 0;
+  const totalRecordedExpenses = liveSpent + liveOverheadPaid;
+
+  const rawExpenses =
+    propExpenses ?? (totalRecordedExpenses > 0 ? totalRecordedExpenses : 2200);
+
+  const rawLimit = propLimit ?? (rawIncome ? Math.round(rawIncome * 0.9) : 82300);
+
+  // Converted amounts
+  const income = rawIncome * rate;
+  const expenses = rawExpenses * rate;
+  const limit = rawLimit * rate;
   const net = income - expenses;
+
+  const usedPercent =
+    propUsedPercent ??
+    (limit > 0 ? Math.min(100, Math.round((expenses / limit) * 100)) : 67);
+
+  const isNetPositive = net >= 0;
+  const netSign = isNetPositive ? "+" : "-";
 
   return (
     <div
@@ -117,7 +157,7 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
               Income
             </p>
             <p className="mt-[0.45rem] text-[1.35rem] leading-none font-semibold tracking-tight text-white">
-              ${fmt(income)}
+              {config.symbol}{fmt(income)}
             </p>
           </div>
           <Sparkline
@@ -136,7 +176,7 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
               Expenses
             </p>
             <p className="mt-[0.45rem] text-[1.35rem] leading-none font-semibold tracking-tight text-white">
-              ${fmt(expenses)}
+              {config.symbol}{fmt(expenses)}
             </p>
           </div>
           <Sparkline
@@ -150,7 +190,7 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
 
         {/* Floating net pill centered over the seam */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 h-[1.75rem] min-w-[3.8rem] px-[0.85rem] rounded-full bg-white text-[#15161A] text-[0.78rem] font-semibold flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.5)]">
-          +${fmt(net)}
+          {netSign}{config.symbol}{fmt(Math.abs(net))}
         </div>
       </div>
 
@@ -161,7 +201,7 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
             Expenses limit
           </span>
           <span className="text-[1.45rem] leading-none font-semibold tracking-tight text-white">
-            ${fmt(limit)}
+            {config.symbol}{fmt(limit)}
           </span>
         </div>
         <div className="relative mt-[0.7rem] w-full h-[3.4rem]">
