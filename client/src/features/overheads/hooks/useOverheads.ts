@@ -19,13 +19,17 @@ export const useOverheads = (monthKey?: string) => {
     staleTime: 60 * 1000,
   })
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: OVERHEADS_QUERY_KEY })
+    queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    queryClient.invalidateQueries({ queryKey: ['balance'] })
+    queryClient.invalidateQueries({ queryKey: ['cashflow'] })
+  }
+
   const createMutation = useMutation({
     mutationFn: (payload: CreateOverheadPayload) => overheadsApi.createOverhead(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: OVERHEADS_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: ['balance'] })
-    },
+    onSuccess: invalidateAll,
   })
 
   const updateStatusMutation = useMutation({
@@ -38,20 +42,12 @@ export const useOverheads = (monthKey?: string) => {
       status: OverheadStatus
       targetMonth?: string
     }) => overheadsApi.updateOverheadStatus(id, status, targetMonth || monthKey),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: OVERHEADS_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: ['balance'] })
-    },
+    onSuccess: invalidateAll,
   })
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => overheadsApi.deleteOverhead(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: OVERHEADS_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
-      queryClient.invalidateQueries({ queryKey: ['balance'] })
-    },
+    onSuccess: invalidateAll,
   })
 
   return {
@@ -76,3 +72,5 @@ export const useOverheads = (monthKey?: string) => {
     isDeleting: deleteMutation.isPending,
   }
 }
+
+export const useOverheadsQuery = useOverheads

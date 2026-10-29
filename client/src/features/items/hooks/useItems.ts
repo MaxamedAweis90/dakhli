@@ -76,6 +76,7 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
     queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
     queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
     queryClient.invalidateQueries({ queryKey: SAVE_PLANS_QUERY_KEY })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     queryClient.invalidateQueries({ queryKey: ['balance'] })
   }
 
@@ -174,4 +175,6 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
       deleteMutation.isPending,
   }
 }
+
+export const useItemsQuery = useItems
 

@@ -48,7 +48,10 @@ export const UpcomingOverheadCard: React.FC<UpcomingOverheadCardProps> = ({
     : 'USD') as CurrencyCode
   const config = CURRENCY_CONFIGS[currentCode]
 
-  // Map live bills if available
+  const todayDay = new Date().getDate()
+  const monthShort = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date())
+
+  // Map live bills if available, sorted by proximity to current day of the month
   const displayItems: UpcomingOverheadItem[] = propItems ?? (
     bills.length > 0
       ? [...bills]
@@ -56,19 +59,21 @@ export const UpcomingOverheadCard: React.FC<UpcomingOverheadCardProps> = ({
             if (a.status !== b.status) {
               return a.status === 'unpaid' ? -1 : 1
             }
-            return a.dueDay - b.dueDay
+            const distA = (a.dueDay - todayDay + 31) % 31
+            const distB = (b.dueDay - todayDay + 31) % 31
+            return distA - distB
           })
           .slice(0, 4)
           .map((b) => {
             let iconType: 'home' | 'dumbbell' | 'wifi' | 'check' = 'home'
-            if (b.iconKey === 'dumbbell' || b.title.toLowerCase().includes('gym')) iconType = 'dumbbell'
+            if (b.status === 'paid') iconType = 'check'
+            else if (b.iconKey === 'dumbbell' || b.title.toLowerCase().includes('gym')) iconType = 'dumbbell'
             else if (b.iconKey === 'wifi' || b.title.toLowerCase().includes('internet')) iconType = 'wifi'
-            else if (b.status === 'paid') iconType = 'check'
 
             return {
               id: b.id,
               name: b.title,
-              date: `${b.dueDay}${getOrdinal(b.dueDay)} of month`,
+              date: `${b.dueDay}${getOrdinal(b.dueDay)} ${monthShort}`,
               amount: b.amount * (config.rate ?? 1),
               icon: iconType,
               done: b.status === 'paid',

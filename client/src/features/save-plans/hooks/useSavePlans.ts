@@ -59,6 +59,8 @@ export const useSavePlans = () => {
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: SAVE_PLANS_QUERY_KEY })
     queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    queryClient.invalidateQueries({ queryKey: ['items'] })
     queryClient.invalidateQueries({ queryKey: ['balance'] })
   }
 
@@ -165,4 +167,6 @@ export const useSavePlans = () => {
       deleteMutation.isPending,
   }
 }
+
+export const useSavePlansQuery = useSavePlans
 

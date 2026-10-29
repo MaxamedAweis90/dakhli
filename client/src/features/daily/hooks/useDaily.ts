@@ -26,6 +26,7 @@ export const useDaily = (monthKey?: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: DAILY_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['balance'] })
       queryClient.invalidateQueries({ queryKey: ['cashflow'] })
     },
@@ -53,3 +54,5 @@ export const useDaily = (monthKey?: string) => {
     isRecording: checkOffMutation.isPending,
   }
 }
+
+export const useDailyHistoryQuery = useDaily

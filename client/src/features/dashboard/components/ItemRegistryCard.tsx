@@ -9,6 +9,7 @@ import {
 } from '@/components/shared/RegistryItemCard'
 import { useItems } from '@/features/items/hooks/useItems'
 import { useItemsStore } from '@/stores/itemsStore'
+import { AddItemModal } from '@/features/items/components/AddItemModal'
 import { cn } from '@/lib/utils'
 
 export interface ItemRegistryCardProps {
@@ -164,9 +165,10 @@ const mapTabToStoreTier = (tab: TierKey): 'Essentials' | 'Future Needs' | 'Wants
 
 export const ItemRegistryCard: React.FC<ItemRegistryCardProps> = ({ className }) => {
   const [tab, setTab] = useState<TierKey>('essentials')
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const navigate = useNavigate()
-  const { allUnboughtItems } = useItems()
-  const { setActiveTier, openAddModal } = useItemsStore()
+  const { allUnboughtItems, createItem, isCreating } = useItems()
+  const { setActiveTier } = useItemsStore()
 
   const contractTier = mapTabToContractTier(tab)
 
@@ -197,8 +199,7 @@ export const ItemRegistryCard: React.FC<ItemRegistryCardProps> = ({ className })
 
   const handleAddClick = () => {
     setActiveTier(mapTabToStoreTier(tab))
-    openAddModal()
-    navigate('/items')
+    setIsAddModalOpen(true)
   }
 
   return (
@@ -252,6 +253,14 @@ export const ItemRegistryCard: React.FC<ItemRegistryCardProps> = ({ className })
         ))}
         <AddRegistryItemCard onClick={handleAddClick} />
       </div>
+
+      {/* Quick Add Item Modal */}
+      <AddItemModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={createItem}
+        isSubmitting={isCreating}
+      />
     </div>
   )
 }

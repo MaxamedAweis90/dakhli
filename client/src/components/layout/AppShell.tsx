@@ -5,7 +5,7 @@ import { Header } from './Header'
 import { NAV_ITEMS } from './navItems'
 import { cn } from '@/lib/utils'
 
-export const AppShell: React.FC = () => {
+export const AppShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   return (
     <div className="w-screen h-screen overflow-hidden bg-[#111215] text-white flex">
       {/* Left rail (desktop) */}
@@ -35,7 +35,7 @@ export const AppShell: React.FC = () => {
             ))}
           </nav>
 
-          <Outlet />
+          {children || <Outlet />}
         </main>
       </div>
     </div>

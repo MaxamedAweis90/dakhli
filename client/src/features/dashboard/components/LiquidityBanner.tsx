@@ -1,8 +1,12 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLiquidityStore } from '@/stores/liquidityStore'
 import { useBaseline } from '@/features/settings/hooks/useBaseline'
+import { saveStoredPreferences } from '@/features/settings/api/settingsApi'
+import { useSavePlans } from '@/features/save-plans/hooks/useSavePlans'
+import { useDaily } from '@/features/daily/hooks/useDaily'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 
 export interface LiquidityBannerProps {
   grossBalance?: number
@@ -26,7 +30,10 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
   netSpendable: propNet,
   className,
 }) => {
-  useBaseline()
+  const navigate = useNavigate()
+  const { baseline } = useBaseline()
+  const { pinnedPlans, totalSaved: liveSavedFromPlans } = useSavePlans()
+  const { summary: dailySummary } = useDaily()
   const store = useLiquidityStore()
 
   const currentCode = (store.currency in CURRENCY_INFO
@@ -39,20 +46,38 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
     const nextIndex = (currentIndex + 1) % CURRENCY_ORDER.length
     const nextCode = CURRENCY_ORDER[nextIndex]
     store.setCurrency(nextCode)
+    saveStoredPreferences({ currency: nextCode })
   }
 
   const baseGross = propGross ?? store.grossBalance
-  const baseSaved = propSaved ?? store.totalSaved
+  const baseSaved = propSaved ?? (liveSavedFromPlans > 0 ? liveSavedFromPlans : store.totalSaved)
   const baseNet =
     propNet ??
     (propGross !== undefined && propSaved !== undefined
       ? propGross - propSaved
-      : store.netSpendable)
+      : baseGross - baseSaved)
 
   // Compute animated converted amounts
   const convertedGross = baseGross * currentConfig.rate
   const convertedSaved = baseSaved * currentConfig.rate
   const convertedNet = baseNet * currentConfig.rate
+
+  // Primary active target or spend cap status for the nested "Active" capsule
+  const primaryActivePlan = pinnedPlans.find((p) => p.status === 'active')
+  const todayRecord = dailySummary.todayRecord
+  const defaultCap = baseline?.defaultDailyCap ?? 30
+
+  const activeHighlightTitle = todayRecord
+    ? todayRecord.status === 'over_budget'
+      ? 'Over Cap Today'
+      : 'Active • On Track'
+    : 'Active'
+
+  const activeHighlightSubtitle = primaryActivePlan
+    ? `${primaryActivePlan.title} • ${primaryActivePlan.percentage}% funded`
+    : todayRecord
+      ? `Today: ${formatCurrency(todayRecord.spent, currentCode)} / ${formatCurrency(todayRecord.cap, currentCode)} cap`
+      : `Daily Cap: ${formatCurrency(defaultCap, currentCode)}/day`
 
   return (
     <div
@@ -110,14 +135,19 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
 
       {/* Active highlight */}
       <div className="border-gradient-highlight rounded-[0.9rem] h-[3.5625rem] pl-[0.8rem] pr-[0.6rem] flex items-center justify-between">
-        <div>
-          <span className="block text-[0.78rem] leading-4 font-normal text-[#aee69a]">Active</span>
-          <p className="mt-[0.15rem] text-[0.66rem] leading-4 text-[#9a9a9a]">Visual card highlight</p>
+        <div className="min-w-0 pr-2">
+          <span className="block text-[0.78rem] leading-4 font-normal text-[#aee69a]">
+            {activeHighlightTitle}
+          </span>
+          <p className="mt-[0.15rem] text-[0.66rem] leading-4 text-[#9a9a9a] truncate">
+            {activeHighlightSubtitle}
+          </p>
         </div>
         <button
           type="button"
+          onClick={() => navigate(primaryActivePlan ? '/save-plans' : '/daily')}
           aria-label="Options"
-          className="w-[1.5rem] h-[1.5rem] rounded-[0.5rem] bg-[#2a2a2a] hover:bg-[#333] flex items-center justify-center gap-[0.1rem] cursor-pointer transition-colors"
+          className="w-[1.5rem] h-[1.5rem] shrink-0 rounded-[0.5rem] bg-[#2a2a2a] hover:bg-[#333] flex items-center justify-center gap-[0.1rem] cursor-pointer transition-colors"
         >
           <span className="w-[0.14rem] h-[0.14rem] rounded-full bg-white" />
           <span className="w-[0.14rem] h-[0.14rem] rounded-full bg-white" />

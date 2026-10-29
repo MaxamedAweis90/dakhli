@@ -59,9 +59,12 @@ export const OverheadBillsCard: React.FC<OverheadBillsCardProps> = ({
   const convertedUnpaid = liveUnpaid * rate
   const convertedPaid = livePaid * rate
 
+  const recurringBills = bills.filter((b) => b.isRecurring !== false)
+  const sourceBills = recurringBills.length > 0 ? recurringBills : bills
+
   const displayItems: QuickBillItem[] = propItems ?? (
-    bills.length > 0
-      ? bills.slice(0, 3).map((b) => {
+    sourceBills.length > 0
+      ? sourceBills.slice(0, 3).map((b) => {
           let iconType: 'home' | 'wifi' | 'dumbbell' | 'flash' | 'shield' = 'home'
           if (b.iconKey === 'dumbbell' || b.title.toLowerCase().includes('gym')) iconType = 'dumbbell'
           else if (b.iconKey === 'wifi' || b.title.toLowerCase().includes('internet')) iconType = 'wifi'

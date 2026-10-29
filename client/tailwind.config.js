@@ -7,7 +7,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        serif: ['Newsreader', 'Georgia', 'serif'],
         sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       colors: {
         canvas: '#0D0E12',

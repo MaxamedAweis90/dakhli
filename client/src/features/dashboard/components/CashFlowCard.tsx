@@ -103,16 +103,29 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
 
   // Base raw amounts
   const rawIncome =
-    propIncome ?? (baseline?.monthlyIncome && baseline.monthlyIncome > 0 ? baseline.monthlyIncome : 8385);
+    propIncome ?? (baseline?.monthlyIncome !== undefined && baseline.monthlyIncome > 0 ? baseline.monthlyIncome : 8385);
 
   const liveSpent = dailyLogs.reduce((sum, l) => sum + (l.spent || 0), 0);
-  const liveOverheadPaid = overheadSummary.totalPaid || 0;
-  const totalRecordedExpenses = liveSpent + liveOverheadPaid;
+  const liveOverheadObligations =
+    overheadSummary.totalMonthly ||
+    (overheadSummary.totalPaid || 0) + (overheadSummary.totalUnpaid || 0);
+  const totalRecordedExpenses = liveSpent + liveOverheadObligations;
 
   const rawExpenses =
     propExpenses ?? (totalRecordedExpenses > 0 ? totalRecordedExpenses : 2200);
 
-  const rawLimit = propLimit ?? (rawIncome ? Math.round(rawIncome * 0.9) : 82300);
+  const dailySpendCeiling =
+    baseline?.defaultDailyCap && baseline.defaultDailyCap > 0
+      ? baseline.defaultDailyCap * 30
+      : 0;
+
+  const rawLimit =
+    propLimit ??
+    (dailySpendCeiling > 0
+      ? dailySpendCeiling + liveOverheadObligations
+      : rawIncome
+      ? Math.round(rawIncome * 0.9)
+      : 82300);
 
   // Converted amounts
   const income = rawIncome * rate;

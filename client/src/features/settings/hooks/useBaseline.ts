@@ -44,6 +44,7 @@ export const useBaseline = () => {
 
       // 2. Invalidate caches
       queryClient.setQueryData(BASELINE_QUERY_KEY, updatedData)
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['balance'] })
       queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
     },
@@ -59,3 +60,5 @@ export const useBaseline = () => {
     isUpdating: updateMutation.isPending,
   }
 }
+
+export const useBaselineQuery = useBaseline
