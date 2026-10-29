@@ -21,6 +21,7 @@ interface ItemsState {
   isAddModalOpen: boolean
 
   // Actions
+  setItems: (items: RegisteredItem[]) => void
   toggleBought: (id: string) => void
   removeItem: (id: string) => void
   addItem: (item: Omit<RegisteredItem, 'id'>) => void
@@ -103,6 +104,8 @@ export const useItemsStore = create<ItemsState>()(
       items: DEFAULT_ITEMS,
       activeTier: 'Wants', // 'Wants' is the active tab in reference UI
       isAddModalOpen: false,
+
+      setItems: (items) => set({ items }),
 
       toggleBought: (id: string) => {
         const today = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date())

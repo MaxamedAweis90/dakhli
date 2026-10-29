@@ -1,11 +1,20 @@
 import React from "react";
+import { Link } from "react-router-dom";
+import { ChevronRight } from "@/components/shared/icons";
 import { useSavingsStore, type SavePlanItem } from "@/stores/savingsStore";
+import { useSavePlans } from "@/features/save-plans/hooks/useSavePlans";
 import { cn } from "@/lib/utils";
 
 export interface SavingPlanCardProps {
   plans?: SavePlanItem[];
   className?: string;
 }
+
+const FALLBACK_DISPLAY_PLANS: Array<{ id: string; name: string; percentage: number }> = [
+  { id: "fallback-1", name: "General Savings", percentage: 0 },
+  { id: "fallback-2", name: "Emergency Fund", percentage: 0 },
+  { id: "fallback-3", name: "Target Goal", percentage: 0 },
+];
 
 // Hairline tally ticks, as in the reference
 const TOTAL_TICKS = 44;
@@ -81,8 +90,24 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
   plans: propPlans,
   className,
 }) => {
+  const { pinnedPlans } = useSavePlans();
   const store = useSavingsStore();
-  const displayPlans = propPlans ?? store.getPinnedPlans();
+
+  const livePlans =
+    propPlans ??
+    (pinnedPlans.length > 0
+      ? pinnedPlans.map((p) => ({
+          id: p.id,
+          name: p.title || p.name,
+          percentage: p.percentage,
+        }))
+      : store.getPinnedPlans().length > 0
+      ? store.getPinnedPlans().map((p) => ({
+          id: p.id,
+          name: p.title || p.name,
+          percentage: p.percentage,
+        }))
+      : FALLBACK_DISPLAY_PLANS);
 
   return (
     <div
@@ -91,13 +116,19 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
         className,
       )}
     >
-      <h3 className="text-[0.78rem] leading-4 font-normal text-white">
-        Saving plan
-      </h3>
+      <div className="flex items-center justify-between">
+        <Link
+          to="/save-plans"
+          className="text-[0.78rem] leading-4 font-normal text-white hover:text-white/90 flex items-center gap-1 group transition-colors"
+        >
+          <span>Saving plan</span>
+          <ChevronRight className="w-3 h-3 text-white/50 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+        </Link>
+      </div>
 
       {/* Rows are spread evenly; hairline dividers sit between them */}
       <div className="flex-1 flex flex-col justify-between gap-[0.75rem]">
-        {displayPlans.map((plan, idx) => (
+        {livePlans.map((plan, idx) => (
           <React.Fragment key={plan.id}>
             {idx > 0 && <div className="h-px bg-white/[0.05]" />}
             <div>

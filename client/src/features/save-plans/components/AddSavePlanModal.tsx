@@ -5,18 +5,25 @@ import {
   type SavePlanType,
   useSavingsStore,
 } from '@/stores/savingsStore'
+import type { CreateSavePlanPayload } from '../types/savePlan.types'
 import { useItemsStore } from '@/stores/itemsStore'
+import { useItems } from '@/features/items/hooks/useItems'
 import { cn } from '@/lib/utils'
 
 interface AddSavePlanModalProps {
   isOpen: boolean
   onClose: () => void
+  onAdd?: (payload: CreateSavePlanPayload) => Promise<any> | void
+  isSubmitting?: boolean
 }
 
 export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
   isOpen,
   onClose,
+  onAdd,
+  isSubmitting = false,
 }) => {
+  useItems()
   const { addPlan } = useSavingsStore()
   const { items } = useItemsStore()
 
@@ -42,30 +49,49 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim()) return
 
     const saved = parseFloat(initialSaved) || 0
-    const target = parseFloat(targetAmount) || 1000
+    const target =
+      planType === 'general_life'
+        ? parseFloat(targetAmount) || 25000
+        : parseFloat(targetAmount) || 1000
     const monthly = parseFloat(monthlyContribution) || 200
 
     const linkedItem = selectedItemId
       ? items.find((i) => i.id === selectedItemId)
       : undefined
 
-    addPlan({
-      name: name.trim(),
-      type: planType,
-      category,
-      status: 'active',
-      currentSaved: saved,
-      targetAmount: target,
-      monthlyContribution: planType === 'general_life' ? monthly : undefined,
-      linkedItemId: selectedItemId || undefined,
-      linkedItemName: linkedItem?.name,
-      isPinned: false,
-    })
+    if (onAdd) {
+      await onAdd({
+        title: name.trim(),
+        name: name.trim(),
+        type: planType,
+        category: planType === 'general_life' ? 'general' : category,
+        targetAmount: target,
+        initialDeposit: saved,
+        currentAmount: saved,
+        monthlyContribution: planType === 'general_life' ? monthly : undefined,
+        linkedItemId: selectedItemId || undefined,
+        linkedItemName: linkedItem?.name,
+        isPinned: true,
+      })
+    } else {
+      addPlan({
+        name: name.trim(),
+        type: planType,
+        category,
+        status: 'active',
+        currentSaved: saved,
+        targetAmount: target,
+        monthlyContribution: planType === 'general_life' ? monthly : undefined,
+        linkedItemId: selectedItemId || undefined,
+        linkedItemName: linkedItem?.name,
+        isPinned: true,
+      })
+    }
 
     // Reset and close
     setName('')
@@ -282,9 +308,10 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-[#F7B668] hover:bg-[#ffc47d] text-[#111215] font-semibold text-xs tracking-tight shadow-md transition-all cursor-pointer"
+              disabled={isSubmitting}
+              className="px-5 py-2 rounded-xl bg-[#F7B668] hover:bg-[#ffc47d] text-[#111215] font-semibold text-xs tracking-tight shadow-md transition-all cursor-pointer disabled:opacity-50"
             >
-              Create Save Plan
+              {isSubmitting ? 'Creating...' : 'Create Save Plan'}
             </button>
           </div>
         </form>

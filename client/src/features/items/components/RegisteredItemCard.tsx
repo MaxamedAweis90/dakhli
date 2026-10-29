@@ -1,31 +1,51 @@
 import React from 'react'
 import type { RegisteredItem } from '@/stores/itemsStore'
+import type { RegistryItem } from '../types/item.types'
+import { useLiquidityStore } from '@/stores/liquidityStore'
+import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
 export interface RegisteredItemCardProps {
-  item: RegisteredItem
+  item: RegistryItem | RegisteredItem
   onToggleBought: (id: string) => void
   onRemove: (id: string) => void
+  isMutating?: boolean
   className?: string
 }
 
 const fmt = (n: number): string =>
-  new Intl.NumberFormat('en-US').format(n)
+  new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)
 
 export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
   item,
   onToggleBought,
   onRemove,
+  isMutating = false,
   className,
 }) => {
+  const liquidityStore = useLiquidityStore()
+  const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS
+    ? liquidityStore.currency
+    : 'USD') as CurrencyCode
+  const currencyConfig = CURRENCY_CONFIGS[currentCode]
+  const rate = currencyConfig.rate ?? 1
+
+  const displayName = ('title' in item && item.title) ? item.title : item.name
+  const rawPrice =
+    ('targetPrice' in item && item.targetPrice !== undefined)
+      ? item.targetPrice
+      : item.price
+  const convertedPrice = rawPrice * rate
+
   const isBought = item.status === 'bought'
   const isInSavePlan =
+    ('inSavePlan' in item && item.inSavePlan) ||
     item.tag === 'In Save Plan' ||
     (typeof item.targetProgress === 'number' && item.targetProgress > 0)
   const progressPercent =
     typeof item.targetProgress === 'number'
       ? item.targetProgress
-      : item.tag === 'In Save Plan'
+      : isInSavePlan
         ? 35
         : 0
 
@@ -44,13 +64,13 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
 
           {/* Title Overlay on top-left of image */}
           <h3 className="absolute top-3 left-3 text-[1.02rem] sm:text-[1.05rem] font-medium text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] z-20">
-            {item.name}
+            {displayName}
           </h3>
 
           {/* Photo */}
           <img
             src={item.imageUrl}
-            alt={item.name}
+            alt={displayName}
             loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             onError={(e) => {
@@ -64,7 +84,7 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
         <div className="mt-3.5">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[1.38rem] sm:text-[1.45rem] font-semibold text-white tracking-tight leading-none">
-              ${fmt(item.price)}
+              {currencyConfig.symbol}{fmt(convertedPrice)}
             </span>
 
             {/* Tag Pill */}
@@ -114,17 +134,19 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
       <div className="grid grid-cols-2 gap-2.5 mt-4 pt-1">
         <button
           type="button"
+          disabled={isMutating}
           onClick={() => onRemove(item.id)}
-          className="h-[2.25rem] rounded-xl bg-[#22242D] hover:bg-[#2C2F3C] active:scale-95 text-[#C5C8D4] hover:text-white text-[0.82rem] font-medium flex items-center justify-center transition-all cursor-pointer border border-white/[0.04]"
+          className="h-[2.25rem] rounded-xl bg-[#22242D] hover:bg-[#2C2F3C] active:scale-95 text-[#C5C8D4] hover:text-white text-[0.82rem] font-medium flex items-center justify-center transition-all cursor-pointer border border-white/[0.04] disabled:opacity-50"
         >
           Remove
         </button>
 
         <button
           type="button"
+          disabled={isMutating}
           onClick={() => onToggleBought(item.id)}
           className={cn(
-            'h-[2.25rem] rounded-xl font-semibold text-[0.82rem] flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95',
+            'h-[2.25rem] rounded-xl font-semibold text-[0.82rem] flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50',
             isBought
               ? 'border border-[#4ADE80]/50 text-[#86EFAC] bg-[#16271E] hover:bg-[#1D3528]'
               : 'bg-[#D4A359] hover:bg-[#DEB066] text-[#18191E]'

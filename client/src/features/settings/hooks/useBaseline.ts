@@ -21,7 +21,10 @@ export const useBaseline = () => {
     if (query.data) {
       setLiquidity({
         grossBalance: query.data.grossBalance,
-        totalSaved: useLiquidityStore.getState().totalSaved,
+        totalSaved:
+          query.data.totalSaved !== undefined
+            ? query.data.totalSaved
+            : useLiquidityStore.getState().totalSaved,
         currency: query.data.currency,
       })
       setCurrency(query.data.currency)

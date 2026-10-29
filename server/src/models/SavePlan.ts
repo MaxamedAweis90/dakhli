@@ -1,14 +1,22 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 export type SavePlanCategory = 'emergency' | 'general' | 'item_funding';
-export type SavePlanStatus = 'active' | 'completed' | 'canceled';
+export type SavePlanStatus = 'active' | 'completed' | 'canceled' | 'cancelled' | 'deactivated';
+export type SavePlanType = 'targeted' | 'general_life';
 
 export interface ISavePlan extends Document {
   userId: Types.ObjectId;
   title: string;
   category: SavePlanCategory;
+  type?: SavePlanType;
   targetAmount: number;
   currentSaved: number;
+  monthlyContribution?: number;
+  iconKey?: string;
+  targetDate?: string;
+  isPinned?: boolean;
+  linkedItemId?: string;
+  linkedItemName?: string;
   status: SavePlanStatus;
   completedAt?: Date | null;
   createdAt: Date;
@@ -30,11 +38,17 @@ const savePlanSchema = new Schema<ISavePlan>(
     },
     category: {
       type: String,
-      required: [true, 'Category is required'],
+      required: true,
+      default: 'general',
       enum: {
         values: ['emergency', 'general', 'item_funding'],
         message: '{VALUE} is not a valid save plan category',
       },
+    },
+    type: {
+      type: String,
+      default: 'targeted',
+      enum: ['targeted', 'general_life'],
     },
     targetAmount: {
       type: Number,
@@ -47,12 +61,36 @@ const savePlanSchema = new Schema<ISavePlan>(
       default: 0,
       min: [0, 'Current saved cannot be negative'],
     },
+    monthlyContribution: {
+      type: Number,
+      default: undefined,
+    },
+    iconKey: {
+      type: String,
+      default: undefined,
+    },
+    targetDate: {
+      type: String,
+      default: undefined,
+    },
+    isPinned: {
+      type: Boolean,
+      default: true,
+    },
+    linkedItemId: {
+      type: String,
+      default: undefined,
+    },
+    linkedItemName: {
+      type: String,
+      default: undefined,
+    },
     status: {
       type: String,
       required: true,
       default: 'active',
       enum: {
-        values: ['active', 'completed', 'canceled'],
+        values: ['active', 'completed', 'canceled', 'cancelled', 'deactivated'],
         message: '{VALUE} is not a valid save plan status',
       },
     },

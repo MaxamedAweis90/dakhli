@@ -1,12 +1,14 @@
 import React, { useState } from 'react'
 import { X } from 'lucide-react'
-import type { ItemTier, RegisteredItem } from '@/stores/itemsStore'
+import type { ItemTier } from '@/stores/itemsStore'
+import type { CreateItemPayload } from '../types/item.types'
 import { cn } from '@/lib/utils'
 
 export interface AddItemModalProps {
   isOpen: boolean
   onClose: () => void
-  onAdd: (item: Omit<RegisteredItem, 'id'>) => void
+  onAdd: (payload: CreateItemPayload) => Promise<any> | void
+  isSubmitting?: boolean
 }
 
 const PRESET_IMAGES = [
@@ -22,6 +24,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   isOpen,
   onClose,
   onAdd,
+  isSubmitting = false,
 }) => {
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
@@ -32,18 +35,19 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
 
   if (!isOpen) return null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const numPrice = parseFloat(price)
     if (!name.trim() || isNaN(numPrice) || numPrice <= 0) return
 
-    onAdd({
+    await onAdd({
+      title: name.trim(),
       name: name.trim(),
+      targetPrice: numPrice,
       price: numPrice,
       imageUrl: imageUrl.trim() || PRESET_IMAGES[0].url,
       tier,
-      status: 'unbought',
-      tag: tier === 'Wants' ? 'Wants' : tier,
+      tag: hasTarget ? 'In Save Plan' : tier,
       targetProgress: hasTarget ? Math.min(100, Math.max(0, parseInt(targetProgress, 10) || 15)) : undefined,
     })
 
@@ -53,6 +57,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     setTier('Wants')
     setImageUrl(PRESET_IMAGES[0].url)
     setHasTarget(false)
+    onClose()
   }
 
   return (
@@ -203,9 +208,10 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
 
             <button
               type="submit"
-              className="h-[2.3rem] px-5 rounded-xl bg-[#D4A359] hover:bg-[#DEB066] active:scale-95 text-[#18191E] text-[0.825rem] font-semibold transition-all cursor-pointer shadow-sm"
+              disabled={isSubmitting}
+              className="h-[2.3rem] px-5 rounded-xl bg-[#D4A359] hover:bg-[#DEB066] active:scale-95 text-[#18191E] text-[0.825rem] font-semibold transition-all cursor-pointer shadow-sm disabled:opacity-50"
             >
-              Add Item
+              {isSubmitting ? 'Adding...' : 'Add Item'}
             </button>
           </div>
         </form>

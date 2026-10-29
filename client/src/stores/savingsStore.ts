@@ -8,16 +8,20 @@ export type SavePlanCategory = 'emergency' | 'general' | 'item_funding'
 export interface SavePlanItem {
   id: string
   name: string
+  title?: string
   type: SavePlanType
   category: SavePlanCategory
   status: SavePlanStatus
   currentSaved: number
+  currentAmount?: number
   targetAmount?: number
   monthlyContribution?: number
   percentage: number
   linkedItemId?: string
   linkedItemName?: string
   isPinned: boolean
+  iconKey?: string
+  targetDate?: string
 }
 
 interface SavingsState {

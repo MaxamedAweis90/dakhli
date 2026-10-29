@@ -9,6 +9,8 @@ const PREFERENCES_STORAGE_KEY = 'dakhli_settings_preferences'
 
 export interface BaselineData {
   grossBalance?: number
+  totalSaved?: number
+  netSpendableBalance?: number
   baseMonthlyIncome?: number
   monthlyIncome?: number
   paydayAnchor?: number
@@ -67,6 +69,8 @@ export const settingsApi = {
 
     return {
       grossBalance: data.grossBalance ?? 0,
+      totalSaved: data.totalSaved,
+      netSpendableBalance: data.netSpendableBalance,
       monthlyIncome: data.baseMonthlyIncome ?? data.monthlyIncome ?? 0,
       paydayAnchorDay: data.paydayAnchor ?? data.paydayAnchorDay ?? 25,
       currency,

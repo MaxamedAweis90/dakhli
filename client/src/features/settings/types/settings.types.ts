@@ -21,6 +21,8 @@ export const CURRENCY_CONFIGS: Record<CurrencyCode, CurrencyConfig> = {
 
 export interface FinancialBaseline {
   grossBalance: number;
+  totalSaved?: number;
+  netSpendableBalance?: number;
   monthlyIncome: number;
   paydayAnchorDay: number; // 1 to 31
   currency: CurrencyCode;

@@ -4,57 +4,62 @@ import {
   Item,
   SavePlan,
   SavePlanCategory,
+  SavePlanStatus,
+  SavePlanType,
 } from '../models';
-import { adjustGrossBalance, getFinancialOverview } from './balanceService';
+import { adjustGrossBalance } from './balanceService';
 import { withTransaction } from './transactionHelper';
 
 export interface CreateSavePlanDTO {
   title: string;
-  category: SavePlanCategory;
+  category?: SavePlanCategory;
+  type?: SavePlanType;
   targetAmount: number;
   initialDeposit?: number;
+  monthlyContribution?: number;
+  iconKey?: string;
+  targetDate?: string;
+  isPinned?: boolean;
+  linkedItemId?: string;
+  linkedItemName?: string;
   linkedItemIds?: string[];
 }
 
 /**
- * Creates a new save plan.
- * Validates that initial deposit does not exceed available Net Spendable Balance.
- * Links registry items if specified.
+ * Creates a new save plan and links registry items if specified.
  */
 export const createSavePlan = async (
   userId: string,
   data: CreateSavePlanDTO,
   session?: ClientSession
 ): Promise<ISavePlan> => {
-  const initialDeposit = data.initialDeposit || 0;
+  const initialDeposit = Number(data.initialDeposit || 0);
 
   if (initialDeposit < 0) {
     throw new Error('[SavePlanService] Initial deposit cannot be negative.');
   }
 
-  if (data.targetAmount < 1) {
+  const targetAmount = Number(data.targetAmount || 1000);
+  if (targetAmount < 1) {
     throw new Error('[SavePlanService] Target amount must be at least 1 cent.');
   }
 
   return withTransaction(async (activeSession) => {
-    // Guardrail: Ensure initial deposit does not exceed net spendable balance
-    if (initialDeposit > 0) {
-      const { netSpendableBalance } = await getFinancialOverview(userId, activeSession);
-      if (initialDeposit > netSpendableBalance) {
-        throw new Error(
-          `[SavePlanService] Insufficient spendable funds: Initial deposit (${initialDeposit}) exceeds Net Spendable Balance (${netSpendableBalance}).`
-        );
-      }
-    }
-
     const createdPlans = await SavePlan.create(
       [
         {
           userId: new Types.ObjectId(userId),
-          title: data.title,
-          category: data.category,
-          targetAmount: data.targetAmount,
+          title: data.title.trim(),
+          category: data.category || 'general',
+          type: data.type || 'targeted',
+          targetAmount,
           currentSaved: initialDeposit,
+          monthlyContribution: data.monthlyContribution,
+          iconKey: data.iconKey,
+          targetDate: data.targetDate,
+          isPinned: data.isPinned !== undefined ? data.isPinned : true,
+          linkedItemId: data.linkedItemId,
+          linkedItemName: data.linkedItemName,
           status: 'active',
           completedAt: null,
         },
@@ -64,11 +69,15 @@ export const createSavePlan = async (
 
     const plan = createdPlans[0];
 
-    // Link registry items if provided
-    if (data.linkedItemIds && data.linkedItemIds.length > 0) {
+    // Link registry items if provided and valid ObjectIds
+    const validItemIds = (data.linkedItemIds || [])
+      .concat(data.linkedItemId ? [data.linkedItemId] : [])
+      .filter((id) => Types.ObjectId.isValid(id));
+
+    if (validItemIds.length > 0) {
       await Item.updateMany(
         {
-          _id: { $in: data.linkedItemIds.map((id) => new Types.ObjectId(id)) },
+          _id: { $in: validItemIds.map((id) => new Types.ObjectId(id)) },
           userId: new Types.ObjectId(userId),
         },
         {
@@ -84,9 +93,8 @@ export const createSavePlan = async (
 };
 
 /**
- * Funds an active save plan.
- * Guardrail: Verifies amount <= Net Spendable Balance.
- * Automatically marks completed and deducts cash from gross balance if target is fulfilled.
+ * Funds / deposits into an active save plan.
+ * Allocates funds into currentSaved (which increases totalSaved and reduces netSpendable).
  */
 export const fundSavePlan = async (
   userId: string,
@@ -99,13 +107,6 @@ export const fundSavePlan = async (
   }
 
   return withTransaction(async (activeSession) => {
-    const { netSpendableBalance } = await getFinancialOverview(userId, activeSession);
-    if (amount > netSpendableBalance) {
-      throw new Error(
-        `[SavePlanService] Insufficient spendable funds: Deposit (${amount}) exceeds Net Spendable Balance (${netSpendableBalance}).`
-      );
-    }
-
     const plan = await SavePlan.findOne({
       _id: new Types.ObjectId(planId),
       userId: new Types.ObjectId(userId),
@@ -115,18 +116,12 @@ export const fundSavePlan = async (
       throw new Error(`[SavePlanService] Save plan not found: ${planId}`);
     }
 
-    if (plan.status !== 'active') {
+    if (plan.status === 'canceled' || plan.status === 'cancelled' || plan.status === 'completed') {
       throw new Error(`[SavePlanService] Cannot fund plan with status: "${plan.status}".`);
     }
 
-    plan.currentSaved += amount;
-
-    // Auto-complete check: If goal is met, transition to completed and cash out from gross balance
-    if (plan.currentSaved >= plan.targetAmount) {
-      plan.status = 'completed';
-      plan.completedAt = new Date();
-      await adjustGrossBalance(userId, -plan.currentSaved, activeSession);
-    }
+    plan.currentSaved += Number(amount);
+    plan.status = 'active';
 
     await plan.save({ session: activeSession });
     return plan;
@@ -151,10 +146,6 @@ export const cancelSavePlan = async (
 
     if (!plan) {
       throw new Error(`[SavePlanService] Save plan not found: ${planId}`);
-    }
-
-    if (plan.status !== 'active') {
-      throw new Error(`[SavePlanService] Only active plans can be canceled (current: ${plan.status}).`);
     }
 
     plan.status = 'canceled';
@@ -196,8 +187,8 @@ export const completeSavePlan = async (
       throw new Error(`[SavePlanService] Save plan not found: ${planId}`);
     }
 
-    if (plan.status !== 'active') {
-      throw new Error(`[SavePlanService] Only active plans can be completed (current: ${plan.status}).`);
+    if (plan.status === 'completed') {
+      return plan;
     }
 
     plan.status = 'completed';
@@ -210,4 +201,39 @@ export const completeSavePlan = async (
 
     return plan;
   }, session);
+};
+
+/**
+ * Updates save plan fields (status toggle, isPinned, title, targetAmount, etc.).
+ */
+export const updateSavePlan = async (
+  userId: string,
+  planId: string,
+  updates: Partial<{
+    title: string;
+    targetAmount: number;
+    currentSaved: number;
+    status: SavePlanStatus;
+    isPinned: boolean;
+    iconKey: string;
+    targetDate: string;
+    category: SavePlanCategory;
+    type: SavePlanType;
+    monthlyContribution: number;
+  }>
+): Promise<ISavePlan> => {
+  const plan = await SavePlan.findOneAndUpdate(
+    {
+      _id: new Types.ObjectId(planId),
+      userId: new Types.ObjectId(userId),
+    },
+    { $set: updates },
+    { new: true, runValidators: true }
+  );
+
+  if (!plan) {
+    throw new Error(`[SavePlanService] Save plan not found: ${planId}`);
+  }
+
+  return plan;
 };

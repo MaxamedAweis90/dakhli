@@ -4,28 +4,45 @@ import { RegisteredItemCard } from './components/RegisteredItemCard'
 import { BoughtItemsList } from './components/BoughtItemsList'
 import { AddItemModal } from './components/AddItemModal'
 import { useItemsStore } from '@/stores/itemsStore'
+import { useItems } from './hooks/useItems'
+import { useBaseline } from '@/features/settings/hooks/useBaseline'
+import { useSavePlans } from '@/features/save-plans/hooks/useSavePlans'
+import { useLiquidityStore } from '@/stores/liquidityStore'
+import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 
 const fmt = (n: number): string =>
-  new Intl.NumberFormat('en-US').format(n)
+  new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)
 
 export const ItemsPage: React.FC = () => {
+  useBaseline()
+  useSavePlans()
+
   const {
     activeTier,
     isAddModalOpen,
     setActiveTier,
     openAddModal,
     closeAddModal,
-    toggleBought,
-    removeItem,
-    addItem,
-    getUnboughtTotal,
-    getUnboughtItems,
-    getBoughtItems,
   } = useItemsStore()
 
-  const unboughtItems = getUnboughtItems()
-  const boughtItems = getBoughtItems()
-  const unboughtTotal = getUnboughtTotal()
+  const {
+    unboughtItems,
+    boughtItems,
+    unboughtTotal,
+    createItem,
+    toggleBought,
+    removeItem,
+    isCreating,
+    isMutating,
+  } = useItems(activeTier)
+
+  const liquidityStore = useLiquidityStore()
+  const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS
+    ? liquidityStore.currency
+    : 'USD') as CurrencyCode
+  const currencyConfig = CURRENCY_CONFIGS[currentCode]
+  const rate = currencyConfig.rate ?? 1
+  const convertedUnboughtTotal = unboughtTotal * rate
 
   return (
     <div className="flex flex-col gap-6 pb-14 pt-1 select-none">
@@ -45,6 +62,7 @@ export const ItemsPage: React.FC = () => {
               item={item}
               onToggleBought={toggleBought}
               onRemove={removeItem}
+              isMutating={isMutating}
             />
           ))}
 
@@ -66,7 +84,7 @@ export const ItemsPage: React.FC = () => {
         <div className="mt-5 flex items-center text-[0.92rem] text-[#8E92A0] select-none">
           <span>Unbought totals:</span>
           <span className="text-white font-semibold text-[1.05rem] font-mono ml-2 tracking-tight">
-            ${fmt(unboughtTotal)}
+            {currencyConfig.symbol}{fmt(convertedUnboughtTotal)}
           </span>
         </div>
       </div>
@@ -77,6 +95,7 @@ export const ItemsPage: React.FC = () => {
           items={boughtItems}
           onUndoBought={toggleBought}
           onRemove={removeItem}
+          isMutating={isMutating}
         />
       </div>
 
@@ -84,7 +103,8 @@ export const ItemsPage: React.FC = () => {
       <AddItemModal
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
-        onAdd={addItem}
+        onAdd={createItem}
+        isSubmitting={isCreating}
       />
     </div>
   )

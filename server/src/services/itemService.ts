@@ -1,5 +1,5 @@
 import { ClientSession, Types } from 'mongoose';
-import { IItem, Item, ItemTier, SavePlan } from '../models';
+import { IItem, Item, SavePlan } from '../models';
 import { adjustGrossBalance } from './balanceService';
 import { withTransaction } from './transactionHelper';
 
@@ -71,13 +71,62 @@ export const markItemBought = async (
 };
 
 /**
+ * Reverts a bought registry item back to planned status and refunds gross balance.
+ */
+export const markItemUnbought = async (
+  userId: string,
+  itemId: string,
+  session?: ClientSession
+): Promise<IItem> => {
+  return withTransaction(async (activeSession) => {
+    const item = await Item.findOne({
+      _id: new Types.ObjectId(itemId),
+      userId: new Types.ObjectId(userId),
+    }).session(activeSession);
+
+    if (!item) {
+      throw new Error(`[ItemService] Registry item not found: ${itemId}`);
+    }
+
+    if (item.status !== 'bought') {
+      return item;
+    }
+
+    let coveredByCompletedPlan = false;
+    if (item.savePlanId) {
+      const plan = await SavePlan.findById(item.savePlanId).session(activeSession);
+      if (plan && plan.status === 'completed') {
+        coveredByCompletedPlan = true;
+      }
+    }
+
+    if (!coveredByCompletedPlan && item.estimatedPrice > 0) {
+      await adjustGrossBalance(userId, item.estimatedPrice, activeSession);
+    }
+
+    item.status = 'planned';
+    item.boughtAt = null;
+    await item.save({ session: activeSession });
+
+    return item;
+  }, session);
+};
+
+const toSummaryBucketKey = (tier: string): 'essential' | 'future_need' | 'want' => {
+  const lower = (tier || '').toLowerCase();
+  if (lower.startsWith('essential')) return 'essential';
+  if (lower.startsWith('future')) return 'future_need';
+  return 'want';
+};
+
+/**
  * Aggregates registry items grouped by tiers ('essential', 'future_need', 'want').
  * Returns counts and total costs per tier as well as overall unbought figures.
  */
 export const getRegistrySummary = async (userId: string): Promise<RegistrySummary> => {
   const items = await Item.find({
     userId: new Types.ObjectId(userId),
-    status: { $ne: 'removed' },
+    status: { $nin: ['removed', 'cancelled'] },
   });
 
   const createInitialTierSummary = (): TierSummary => ({
@@ -102,17 +151,15 @@ export const getRegistrySummary = async (userId: string): Promise<RegistrySummar
   };
 
   for (const item of items) {
-    const tier = item.tier as ItemTier;
-    const isUnbought = item.status === 'planned';
+    const bucket = toSummaryBucketKey(item.tier);
+    const isUnbought = item.status === 'planned' || item.status === 'unbought';
 
-    if (summary[tier]) {
-      summary[tier].count += 1;
-      summary[tier].totalCost += item.estimatedPrice;
+    summary[bucket].count += 1;
+    summary[bucket].totalCost += item.estimatedPrice;
 
-      if (isUnbought) {
-        summary[tier].unboughtCount += 1;
-        summary[tier].unboughtCost += item.estimatedPrice;
-      }
+    if (isUnbought) {
+      summary[bucket].unboughtCount += 1;
+      summary[bucket].unboughtCost += item.estimatedPrice;
     }
 
     summary.overallTotal.count += 1;

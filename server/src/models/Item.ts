@@ -1,7 +1,13 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
-export type ItemTier = 'essential' | 'future_need' | 'want';
-export type ItemStatus = 'planned' | 'bought' | 'removed';
+export type ItemTier =
+  | 'essential'
+  | 'future_need'
+  | 'want'
+  | 'essentials'
+  | 'future_needs'
+  | 'wants';
+export type ItemStatus = 'planned' | 'bought' | 'removed' | 'cancelled' | 'unbought';
 
 export interface IItem extends Document {
   userId: Types.ObjectId;
@@ -9,6 +15,11 @@ export interface IItem extends Document {
   estimatedPrice: number;
   tier: ItemTier;
   status: ItemStatus;
+  imageUrl?: string;
+  iconKey?: string;
+  notes?: string;
+  tag?: string;
+  targetProgress?: number;
   inSavePlan: boolean;
   savePlanId?: Types.ObjectId | null;
   boughtAt?: Date | null;
@@ -38,7 +49,14 @@ const itemSchema = new Schema<IItem>(
       type: String,
       required: [true, 'Tier is required'],
       enum: {
-        values: ['essential', 'future_need', 'want'],
+        values: [
+          'essential',
+          'future_need',
+          'want',
+          'essentials',
+          'future_needs',
+          'wants',
+        ],
         message: '{VALUE} is not a valid item tier',
       },
     },
@@ -47,9 +65,29 @@ const itemSchema = new Schema<IItem>(
       required: true,
       default: 'planned',
       enum: {
-        values: ['planned', 'bought', 'removed'],
+        values: ['planned', 'bought', 'removed', 'cancelled', 'unbought'],
         message: '{VALUE} is not a valid item status',
       },
+    },
+    imageUrl: {
+      type: String,
+      default: undefined,
+    },
+    iconKey: {
+      type: String,
+      default: undefined,
+    },
+    notes: {
+      type: String,
+      default: undefined,
+    },
+    tag: {
+      type: String,
+      default: undefined,
+    },
+    targetProgress: {
+      type: Number,
+      default: undefined,
     },
     inSavePlan: {
       type: Boolean,
