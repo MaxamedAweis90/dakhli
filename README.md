@@ -6,11 +6,11 @@
 
 ## 📊 Project Status
 
-| Metric | Current State |
-| :--- | :--- |
-| **Project Status** | 🟡 **Planning** |
-| **Progress** | **28%** |
-| **Milestone** | Architecture & Specifications Ready → Core Scaffolding |
+| Metric             | Current State                                          |
+| :----------------- | :----------------------------------------------------- |
+| **Project Status** | 🟡 **Planning**                                        |
+| **Progress**       | **28%**                                                |
+| **Milestone**      | Architecture & Specifications Ready → Core Scaffolding |
 
 ```text
 Progress: [██████░░░░░░░░░░░░░░] 28%
@@ -23,18 +23,21 @@ Progress: [██████░░░░░░░░░░░░░░] 28%
 Dakhli is engineered around deterministic financial rules rather than passive retroactive tracking. The platform operates on four foundational pillars:
 
 ### 1. Liquidity Isolation (Net Spendable vs. Gross Balance)
+
 - **Net Spendable Balance (Default View):** Real spendable liquidity calculated as:
   $$\text{Net Spendable Balance} = \text{Gross Balance} - \sum(\text{Active Savings Plans})$$
 - **Gross Balance View:** Available via an instant toggle on the primary balance card for total asset visibility.
 - **Save Shortcut:** Direct summary badge providing zero-click access into allocated reserve funds.
 
 ### 2. Payday Anchors & Income Cycles
+
 - **Custom Payday Alignment:** Supports mid-month or offset paydays (e.g., 25th of prior month or 5th of current month) directly mapped to fund a designated budget calendar month.
 - **Targeted Cash Injections:**
-  - *One-time adjustments* (bonuses, unexpected inflows) modify strictly the active cycle.
-  - *Recurring base salary changes* apply cleanly to future billing cycles without mutating in-flight budgets.
+  - _One-time adjustments_ (bonuses, unexpected inflows) modify strictly the active cycle.
+  - _Recurring base salary changes_ apply cleanly to future billing cycles without mutating in-flight budgets.
 
 ### 3. Daily Spending Caps with Zero-Double-Counting
+
 - **Day-Specific Expense Templates:** Custom caps assigned to weekdays vs. weekends.
 - **End-of-Day Reconciliation:**
   - **Under Cap:** Preserves unspent cash in the main balance and logs positive discipline into a **"Daily Savings"** tracker.
@@ -42,6 +45,7 @@ Dakhli is engineered around deterministic financial rules rather than passive re
   - **Zero-Double-Count Metric:** The Daily Savings pool operates as a preview/performance metric; it does not freeze cash already tracked in the main balance.
 
 ### 4. Reserve Pools & 3-Tier Registry Synchronization
+
 - **Active Saving Plans:** Concrete reserve allocations (Emergency Rent/Job-Loss, General Savings, or Specific Planned Purchases) that lock liquidity out of the Net Spendable balance.
 - **3-Tier Registry (`Essentials`, `Future Needs`, `Wants`):**
   - Items are zero-impact until explicitly funded or purchased.
@@ -53,6 +57,7 @@ Dakhli is engineered around deterministic financial rules rather than passive re
 ## 💻 Tech Stack
 
 ### Frontend Client (`/client`)
+
 - **Core Framework:** React 18+ with TypeScript via Vite
 - **Styling & Design Tokens:** TailwindCSS
 - **Motion & Micro-interactions:** Motion (Framer Motion)
@@ -61,6 +66,7 @@ Dakhli is engineered around deterministic financial rules rather than passive re
 - **Iconography:** Lucide React
 
 ### Backend Service (`/server`)
+
 - **Runtime:** Node.js (LTS)
 - **Application Framework:** Express with strict TypeScript compilation
 - **Database & ODM:** MongoDB with Mongoose schema validation
@@ -98,22 +104,24 @@ dakhli/
 ## 🚀 Environment & Setup
 
 ### Prerequisites
+
 - **Node.js:** `>= 18.x`
 - **npm:** `>= 9.x`
 - **MongoDB:** Active local daemon or MongoDB Atlas cluster connection string
 
 ### Environment Variables
+
 Copy `.env.example` into `server/.env` and supply your secrets:
 
 ```bash
 cp .env.example server/.env
 ```
 
-| Variable | Description | Example / Default |
-| :--- | :--- | :--- |
-| `PORT` | API Server listening port | `5000` |
-| `NODE_ENV` | Runtime environment mode | `development` |
-| `MONGODB_URI` | MongoDB connection URI | `mongodb+srv://...` |
-| `JWT_SECRET` | Secret key used for signing auth tokens | `your_jwt_super_secret_key` |
-| `JWT_EXPIRES_IN` | Token expiration duration | `7d` |
-| `CLIENT_URL` | Permitted origin for CORS | `http://localhost:5173` |
+| Variable         | Description                             | Example / Default           |
+| :--------------- | :-------------------------------------- | :-------------------------- |
+| `PORT`           | API Server listening port               | `5000`                      |
+| `NODE_ENV`       | Runtime environment mode                | `development`               |
+| `MONGODB_URI`    | MongoDB connection URI                  | `mongodb+srv://...`         |
+| `JWT_SECRET`     | Secret key used for signing auth tokens | `your_jwt_super_secret_key` |
+| `JWT_EXPIRES_IN` | Token expiration duration               | `7d`                        |
+| `CLIENT_URL`     | Permitted origin for CORS               | `http://localhost:5173`     |
