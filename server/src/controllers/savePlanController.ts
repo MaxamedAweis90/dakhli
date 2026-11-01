@@ -12,7 +12,7 @@ import {
 
 const formatSavePlan = (plan: ISavePlan) => {
   const targetAmount = Number(plan.targetAmount || 1);
-  const currentAmount = Number(plan.currentSaved || 0);
+  const currentAmount = Number(plan.cumulativeTotal !== undefined && plan.isSystemDefault ? plan.cumulativeTotal : plan.currentSaved || 0);
   const percentage = Math.min(100, Math.round((currentAmount / targetAmount) * 100));
 
   return {
@@ -35,6 +35,12 @@ const formatSavePlan = (plan: ISavePlan) => {
     linkedItemName: plan.linkedItemName,
     status: plan.status,
     completedAt: plan.completedAt,
+    isSystemDefault: Boolean(plan.isSystemDefault),
+    isRemovable: plan.isRemovable !== undefined ? Boolean(plan.isRemovable) : !plan.isSystemDefault,
+    monthlyDeduction: Number(plan.monthlyDeduction ?? plan.monthlyContribution ?? 0),
+    targetCycleWindow: plan.targetCycleWindow ?? 'PERPETUAL',
+    sourceBalance: plan.sourceBalance || 'BASELINE_INCOME',
+    cumulativeTotal: Number(plan.cumulativeTotal ?? plan.currentSaved ?? 0),
     createdAt: plan.createdAt ? plan.createdAt.toISOString() : new Date().toISOString(),
     updatedAt: plan.updatedAt ? plan.updatedAt.toISOString() : new Date().toISOString(),
   };
@@ -49,6 +55,53 @@ export const listSavePlans = async (
     const userId = req.userId!;
     const status = req.query.status as string | undefined;
 
+    // Check if user already has a system baseline reserve
+    let systemReserve = await SavePlan.findOne({
+      userId: new Types.ObjectId(userId),
+      isSystemDefault: true,
+    });
+
+    if (!systemReserve) {
+      // Check if legacy general_life exists and upgrade it
+      const legacyGeneral = await SavePlan.findOne({
+        userId: new Types.ObjectId(userId),
+        type: 'general_life',
+      });
+
+      if (legacyGeneral) {
+        legacyGeneral.isSystemDefault = true;
+        legacyGeneral.isRemovable = false;
+        legacyGeneral.monthlyDeduction = legacyGeneral.monthlyDeduction ?? legacyGeneral.monthlyContribution ?? 300;
+        legacyGeneral.cumulativeTotal = legacyGeneral.cumulativeTotal ?? legacyGeneral.currentSaved ?? 0;
+        legacyGeneral.sourceBalance = legacyGeneral.sourceBalance || 'BASELINE_INCOME';
+        legacyGeneral.targetCycleWindow = legacyGeneral.targetCycleWindow || 'PERPETUAL';
+        if (legacyGeneral.status === 'active') {
+          legacyGeneral.status = 'ACTIVE';
+        }
+        await legacyGeneral.save();
+        systemReserve = legacyGeneral;
+      } else {
+        // Create initial default system baseline reserve for this user
+        systemReserve = await SavePlan.create({
+          userId: new Types.ObjectId(userId),
+          title: 'Cumulative Baseline Reserve',
+          category: 'general',
+          type: 'general_life',
+          targetAmount: 25000,
+          currentSaved: 0,
+          cumulativeTotal: 0,
+          monthlyDeduction: 300,
+          monthlyContribution: 300,
+          isSystemDefault: true,
+          isRemovable: false,
+          isPinned: true,
+          status: 'ACTIVE',
+          sourceBalance: 'BASELINE_INCOME',
+          targetCycleWindow: 'PERPETUAL',
+        });
+      }
+    }
+
     const query: Record<string, unknown> = {
       userId: new Types.ObjectId(userId),
     };
@@ -57,7 +110,7 @@ export const listSavePlans = async (
       query.status = status;
     }
 
-    const plans = await SavePlan.find(query).sort({ createdAt: -1 });
+    const plans = await SavePlan.find(query).sort({ isSystemDefault: -1, createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -226,6 +279,10 @@ export const patchPlan = async (
       category,
       type,
       monthlyContribution,
+      monthlyDeduction,
+      targetCycleWindow,
+      sourceBalance,
+      cumulativeTotal,
     } = req.body;
 
     const updates: Record<string, any> = {};
@@ -234,13 +291,32 @@ export const patchPlan = async (
     if (currentAmount !== undefined || currentSaved !== undefined) {
       updates.currentSaved = Number(currentAmount ?? currentSaved);
     }
+    if (cumulativeTotal !== undefined) {
+      updates.cumulativeTotal = Number(cumulativeTotal);
+      if (currentAmount === undefined && currentSaved === undefined) {
+        updates.currentSaved = Number(cumulativeTotal);
+      }
+    }
     if (status !== undefined) updates.status = status;
     if (isPinned !== undefined) updates.isPinned = Boolean(isPinned);
     if (iconKey !== undefined) updates.iconKey = iconKey;
     if (targetDate !== undefined) updates.targetDate = targetDate;
     if (category !== undefined) updates.category = category;
     if (type !== undefined) updates.type = type;
-    if (monthlyContribution !== undefined) updates.monthlyContribution = Number(monthlyContribution);
+    if (monthlyDeduction !== undefined) {
+      updates.monthlyDeduction = Number(monthlyDeduction);
+      if (monthlyContribution === undefined) {
+        updates.monthlyContribution = Number(monthlyDeduction);
+      }
+    }
+    if (monthlyContribution !== undefined) {
+      updates.monthlyContribution = Number(monthlyContribution);
+      if (monthlyDeduction === undefined) {
+        updates.monthlyDeduction = Number(monthlyContribution);
+      }
+    }
+    if (targetCycleWindow !== undefined) updates.targetCycleWindow = targetCycleWindow;
+    if (sourceBalance !== undefined) updates.sourceBalance = sourceBalance;
 
     const plan = await updateSavePlan(userId, id, updates);
 
@@ -262,9 +338,30 @@ export const deletePlan = async (
     const userId = req.userId!;
     const id = req.params.id as string;
 
-    await SavePlan.findOneAndDelete({
+    const plan = await SavePlan.findOne({
       _id: new Types.ObjectId(id),
       userId: new Types.ObjectId(userId),
+    });
+
+    if (!plan) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'Save plan not found' },
+      });
+      return;
+    }
+
+    if (plan.isSystemDefault || plan.isRemovable === false) {
+      res.status(403).json({
+        success: false,
+        error: { message: '403 Forbidden: System baseline reserve cannot be removed' },
+      });
+      return;
+    }
+
+    await SavePlan.findOneAndDelete({
+      _id: plan._id,
+      userId: plan.userId,
     });
 
     res.status(200).json({

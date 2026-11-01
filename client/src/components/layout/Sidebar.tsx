@@ -1,15 +1,31 @@
 import React, { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { Search, LogOut, ChevronDown, User as UserIcon, Settings } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
+import { SplashScreen } from '@/components/shared/SplashScreen'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from './navItems'
 
 export const Sidebar: React.FC = () => {
   const { user, clearSession } = useAuthStore()
+  const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
   const displayName = user?.name || (user?.email ? user.email.split('@')[0] : 'User')
   const displayEmail = user?.email || 'user@dakhli.app'
+
+  const handleSignOut = () => {
+    setIsMenuOpen(false)
+    setIsLoggingOut(true)
+    setTimeout(() => {
+      clearSession()
+      navigate('/login', { replace: true })
+    }, 600)
+  }
+
+  if (isLoggingOut) {
+    return <SplashScreen message="Signing out..." />
+  }
 
   return (
     <aside className="hidden lg:flex w-[13.5rem] xl:w-[14.5rem] h-full flex-shrink-0 flex-col justify-between select-none pl-[1.1rem] pr-[1.25rem] pt-[1.5rem] pb-[1.25rem]">
@@ -129,10 +145,7 @@ export const Sidebar: React.FC = () => {
             <div className="h-[1px] bg-white/[0.06] my-1" />
             <button
               type="button"
-              onClick={() => {
-                clearSession()
-                setIsMenuOpen(false)
-              }}
+              onClick={handleSignOut}
               className="flex items-center gap-2 w-full px-2.5 py-2 text-xs text-red-400 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />

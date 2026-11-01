@@ -1,8 +1,17 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
 export type SavePlanCategory = 'emergency' | 'general' | 'item_funding';
-export type SavePlanStatus = 'active' | 'completed' | 'canceled' | 'cancelled' | 'deactivated';
-export type SavePlanType = 'targeted' | 'general_life';
+export type SavePlanStatus =
+  | 'active'
+  | 'completed'
+  | 'canceled'
+  | 'cancelled'
+  | 'deactivated'
+  | 'paused'
+  | 'ACTIVE'
+  | 'PAUSED';
+export type SavePlanType = 'targeted' | 'general_life' | 'system_baseline';
+export type ReserveSourceBalance = 'BASELINE_INCOME' | 'LIQUID_BALANCE';
 
 export interface ISavePlan extends Document {
   userId: Types.ObjectId;
@@ -19,6 +28,13 @@ export interface ISavePlan extends Document {
   linkedItemName?: string;
   status: SavePlanStatus;
   completedAt?: Date | null;
+  // Cumulative Baseline Reserve specific fields:
+  isSystemDefault?: boolean;
+  isRemovable?: boolean;
+  monthlyDeduction?: number;
+  targetCycleWindow?: string | number | null;
+  sourceBalance?: ReserveSourceBalance;
+  cumulativeTotal?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -48,7 +64,7 @@ const savePlanSchema = new Schema<ISavePlan>(
     type: {
       type: String,
       default: 'targeted',
-      enum: ['targeted', 'general_life'],
+      enum: ['targeted', 'general_life', 'system_baseline'],
     },
     targetAmount: {
       type: Number,
@@ -90,13 +106,48 @@ const savePlanSchema = new Schema<ISavePlan>(
       required: true,
       default: 'active',
       enum: {
-        values: ['active', 'completed', 'canceled', 'cancelled', 'deactivated'],
+        values: [
+          'active',
+          'completed',
+          'canceled',
+          'cancelled',
+          'deactivated',
+          'paused',
+          'ACTIVE',
+          'PAUSED',
+        ],
         message: '{VALUE} is not a valid save plan status',
       },
     },
     completedAt: {
       type: Date,
       default: null,
+    },
+    isSystemDefault: {
+      type: Boolean,
+      default: false,
+    },
+    isRemovable: {
+      type: Boolean,
+      default: true,
+    },
+    monthlyDeduction: {
+      type: Number,
+      default: 0,
+    },
+    targetCycleWindow: {
+      type: Schema.Types.Mixed,
+      default: 'PERPETUAL',
+    },
+    sourceBalance: {
+      type: String,
+      enum: ['BASELINE_INCOME', 'LIQUID_BALANCE'],
+      default: 'BASELINE_INCOME',
+    },
+    cumulativeTotal: {
+      type: Number,
+      default: 0,
+      min: [0, 'Cumulative total cannot be negative'],
     },
   },
   {

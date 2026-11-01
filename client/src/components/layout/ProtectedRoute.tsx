@@ -1,15 +1,11 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/stores/authStore";
 import { SplashScreen } from "@/components/shared/SplashScreen";
 
 export const ProtectedRoute: React.FC = () => {
   const location = useLocation();
-  const { isAuthenticated, isLoading, initialize } = useAuthStore();
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
+  const { isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
     return <SplashScreen message="Loading..." />;
@@ -24,11 +20,7 @@ export const ProtectedRoute: React.FC = () => {
 
 export const PublicRoute: React.FC = () => {
   const location = useLocation();
-  const { isAuthenticated, isLoading, initialize } = useAuthStore();
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
+  const { isAuthenticated, isLoading } = useAuthStore();
 
   if (isLoading) {
     return <SplashScreen message="Loading..." />;

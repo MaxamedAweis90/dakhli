@@ -1,8 +1,7 @@
 import React, { useState } from 'react'
-import { X, Target, PiggyBank, Link2 } from 'lucide-react'
+import { X, Target, Link2, Calendar } from 'lucide-react'
 import {
   type SavePlanCategory,
-  type SavePlanType,
   useSavingsStore,
 } from '@/stores/savingsStore'
 import type { CreateSavePlanPayload } from '../types/savePlan.types'
@@ -27,12 +26,11 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
   const { addPlan } = useSavingsStore()
   const { items } = useItemsStore()
 
-  const [planType, setPlanType] = useState<SavePlanType>('targeted')
   const [name, setName] = useState('')
   const [category, setCategory] = useState<SavePlanCategory>('emergency')
   const [targetAmount, setTargetAmount] = useState('')
   const [initialSaved, setInitialSaved] = useState('')
-  const [monthlyContribution, setMonthlyContribution] = useState('200')
+  const [targetDate, setTargetDate] = useState('')
   const [selectedItemId, setSelectedItemId] = useState('')
 
   if (!isOpen) return null
@@ -54,11 +52,7 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
     if (!name.trim()) return
 
     const saved = parseFloat(initialSaved) || 0
-    const target =
-      planType === 'general_life'
-        ? parseFloat(targetAmount) || 25000
-        : parseFloat(targetAmount) || 1000
-    const monthly = parseFloat(monthlyContribution) || 200
+    const target = parseFloat(targetAmount) || 1000
 
     const linkedItem = selectedItemId
       ? items.find((i) => i.id === selectedItemId)
@@ -68,12 +62,12 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
       await onAdd({
         title: name.trim(),
         name: name.trim(),
-        type: planType,
-        category: planType === 'general_life' ? 'general' : category,
+        type: 'targeted',
+        category,
         targetAmount: target,
         initialDeposit: saved,
         currentAmount: saved,
-        monthlyContribution: planType === 'general_life' ? monthly : undefined,
+        targetDate: targetDate || undefined,
         linkedItemId: selectedItemId || undefined,
         linkedItemName: linkedItem?.name,
         isPinned: true,
@@ -81,12 +75,12 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
     } else {
       addPlan({
         name: name.trim(),
-        type: planType,
+        type: 'targeted',
         category,
         status: 'active',
         currentSaved: saved,
         targetAmount: target,
-        monthlyContribution: planType === 'general_life' ? monthly : undefined,
+        targetDate: targetDate || undefined,
         linkedItemId: selectedItemId || undefined,
         linkedItemName: linkedItem?.name,
         isPinned: true,
@@ -97,6 +91,7 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
     setName('')
     setTargetAmount('')
     setInitialSaved('')
+    setTargetDate('')
     setSelectedItemId('')
     onClose()
   }
@@ -110,19 +105,19 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg rounded-[1.25rem] bg-[#17181D] border border-white/10 p-6 sm:p-7 shadow-2xl z-10 my-8">
+      <div className="relative w-full max-w-lg rounded-[1.25rem] bg-[#13151B] border border-white/[0.08] p-6 sm:p-7 shadow-2xl z-10 my-8">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <PiggyBank className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-[#1A1D26] border border-white/[0.06] flex items-center justify-center text-[#F7B668]">
+              <Target className="w-5 h-5 stroke-[2]" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">
-                Add Save Plan
+              <h2 className="text-[1.1rem] font-semibold text-white tracking-tight">
+                New Targeted Goal
               </h2>
               <p className="text-xs text-[#8E92A0]">
-                Create a targeted goal or core reserve
+                Configure a concrete target-based savings bucket
               </p>
             </div>
           </div>
@@ -135,85 +130,55 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
           </button>
         </div>
 
-        {/* Tab Selection: Targeted vs Save for Life */}
-        <div className="grid grid-cols-2 gap-2 mt-5 p-1 rounded-2xl bg-[#121316] border border-white/[0.05]">
-          <button
-            type="button"
-            onClick={() => setPlanType('targeted')}
-            className={cn(
-              'flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
-              planType === 'targeted'
-                ? 'bg-[#22242C] text-white shadow-sm border border-white/10'
-                : 'text-slate-400 hover:text-white'
-            )}
-          >
-            <Target className="w-3.5 h-3.5" />
-            <span>Targeted Goal</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setPlanType('general_life')}
-            className={cn(
-              'flex items-center justify-center space-x-2 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer',
-              planType === 'general_life'
-                ? 'bg-[#22242C] text-white shadow-sm border border-white/10'
-                : 'text-slate-400 hover:text-white'
-            )}
-          >
-            <PiggyBank className="w-3.5 h-3.5" />
-            <span>Save for Life (Core Reserve)</span>
-          </button>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-4 mt-5">
           {/* Plan Title */}
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1.5">
-              Plan Title
+              Goal Title
             </label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={
-                planType === 'targeted'
-                  ? 'e.g., 6-Month Rent Runway, New Laptop'
-                  : 'e.g., General Emergency Cushion'
-              }
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D24] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400/50"
+              placeholder="e.g. 6-Month Rent Runway, New Laptop, Car Downpayment"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D26] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#F7B668]/50"
             />
           </div>
 
           {/* Category */}
-          <div className="grid grid-cols-3 gap-2">
-            {(['emergency', 'general', 'item_funding'] as SavePlanCategory[]).map(
-              (cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategory(cat)}
-                  className={cn(
-                    'py-2 px-2.5 rounded-xl text-xs font-medium capitalize border transition-all cursor-pointer text-center',
-                    category === cat
-                      ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
-                      : 'bg-[#1A1D24] border-white/[0.05] text-slate-400 hover:text-white hover:border-white/10'
-                  )}
-                >
-                  {cat === 'item_funding'
-                    ? 'Item Funding'
-                    : cat === 'emergency'
-                      ? 'Emergency'
-                      : 'General'}
-                </button>
-              )
-            )}
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              Goal Category
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(['emergency', 'general', 'item_funding'] as SavePlanCategory[]).map(
+                (cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCategory(cat)}
+                    className={cn(
+                      'py-2 px-2.5 rounded-xl text-xs font-medium capitalize border transition-all cursor-pointer text-center',
+                      category === cat
+                        ? 'bg-[#F7B668]/15 border-[#F7B668]/40 text-[#F7B668]'
+                        : 'bg-[#1A1D26] border-white/[0.05] text-slate-400 hover:text-white hover:border-white/10'
+                    )}
+                  >
+                    {cat === 'item_funding'
+                      ? 'Item Funding'
+                      : cat === 'emergency'
+                        ? 'Emergency'
+                        : 'Target Reserve'}
+                  </button>
+                )
+              )}
+            </div>
           </div>
 
           {/* If Item Funding: Link to Registry Item */}
           {category === 'item_funding' && (
-            <div className="p-3 rounded-xl bg-[#121316] border border-white/[0.06]">
+            <div className="p-3.5 rounded-xl bg-[#1A1D26] border border-white/[0.06]">
               <label className="block text-xs font-medium text-indigo-300 mb-1.5 flex items-center space-x-1.5">
                 <Link2 className="w-3.5 h-3.5" />
                 <span>Link from Registry Items</span>
@@ -221,7 +186,7 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
               <select
                 value={selectedItemId}
                 onChange={(e) => handleItemSelect(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg bg-[#1A1D24] border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-400"
+                className="w-full px-3 py-2 rounded-lg bg-[#13151B] border border-white/10 text-white text-xs focus:outline-none focus:border-indigo-400 cursor-pointer"
               >
                 <option value="">-- Choose an item to fund --</option>
                 {unboughtItems.map((item) => (
@@ -233,69 +198,53 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
             </div>
           )}
 
-          {/* Dynamic Inputs Based on Type */}
-          {planType === 'targeted' ? (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Target Goal ($)
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={targetAmount}
-                  onChange={(e) => setTargetAmount(e.target.value)}
-                  placeholder="e.g. 6000"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D24] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400/50"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Initial Saved ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={initialSaved}
-                  onChange={(e) => setInitialSaved(e.target.value)}
-                  placeholder="e.g. 2400"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D24] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400/50"
-                />
-              </div>
+          {/* Target Amount and Initial Saved */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                Target Goal ($)
+              </label>
+              <input
+                type="number"
+                required
+                min="1"
+                step="any"
+                value={targetAmount}
+                onChange={(e) => setTargetAmount(e.target.value)}
+                placeholder="e.g. 6000"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D26] border border-white/[0.08] text-white font-mono text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#F7B668]/50"
+              />
             </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Initial Reserve ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={initialSaved}
-                  onChange={(e) => setInitialSaved(e.target.value)}
-                  placeholder="e.g. 3200"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D24] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400/50"
-                />
-              </div>
 
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Monthly Inflow ($/mo)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={monthlyContribution}
-                  onChange={(e) => setMonthlyContribution(e.target.value)}
-                  placeholder="e.g. 200"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D24] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400/50"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                Initial Saved ($)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={initialSaved}
+                onChange={(e) => setInitialSaved(e.target.value)}
+                placeholder="e.g. 1000"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D26] border border-white/[0.08] text-white font-mono text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#F7B668]/50"
+              />
             </div>
-          )}
+          </div>
+
+          {/* Target Deadline (Optional) */}
+          <div>
+            <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
+              <span>Target Completion Date (Optional)</span>
+            </label>
+            <input
+              type="date"
+              value={targetDate}
+              onChange={(e) => setTargetDate(e.target.value)}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D26] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#F7B668]/50 [color-scheme:dark]"
+            />
+          </div>
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-white/[0.06]">
@@ -311,7 +260,7 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
               disabled={isSubmitting}
               className="px-5 py-2 rounded-xl bg-[#F7B668] hover:bg-[#ffc47d] text-[#111215] font-semibold text-xs tracking-tight shadow-md transition-all cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? 'Creating...' : 'Create Save Plan'}
+              {isSubmitting ? 'Creating...' : 'Create Goal'}
             </button>
           </div>
         </form>

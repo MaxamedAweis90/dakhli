@@ -1,6 +1,15 @@
-export type SavePlanStatus = 'active' | 'completed' | 'cancelled' | 'canceled' | 'deactivated';
+export type SavePlanStatus =
+  | 'active'
+  | 'completed'
+  | 'cancelled'
+  | 'canceled'
+  | 'deactivated'
+  | 'paused'
+  | 'ACTIVE'
+  | 'PAUSED';
 export type SavePlanCategory = 'emergency' | 'general' | 'item_funding';
-export type SavePlanType = 'targeted' | 'general_life';
+export type SavePlanType = 'targeted' | 'general_life' | 'system_baseline';
+export type ReserveSourceBalance = 'BASELINE_INCOME' | 'LIQUID_BALANCE';
 
 export interface SavePlan {
   id: string;
@@ -20,6 +29,12 @@ export interface SavePlan {
   iconKey?: string;       // e.g., 'dumbbell', 'graduation-cap', 'shield', 'car'
   status: SavePlanStatus;
   targetDate?: string;
+  isSystemDefault?: boolean;
+  isRemovable?: boolean;
+  monthlyDeduction?: number;
+  targetCycleWindow?: string | number | null;
+  sourceBalance?: ReserveSourceBalance;
+  cumulativeTotal?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,6 +49,12 @@ export interface CreateSavePlanPayload {
   currentAmount?: number;
   currentSaved?: number;
   monthlyContribution?: number;
+  monthlyDeduction?: number;
+  isSystemDefault?: boolean;
+  isRemovable?: boolean;
+  targetCycleWindow?: string | number | null;
+  sourceBalance?: ReserveSourceBalance;
+  cumulativeTotal?: number;
   linkedItemId?: string;
   linkedItemName?: string;
   linkedItemIds?: string[];
@@ -44,5 +65,12 @@ export interface CreateSavePlanPayload {
 
 export interface DepositSavePlanPayload {
   amount: number;         // Amount to allocate from Gross Balance into this plan
+}
+
+export interface ReserveConfigPayload {
+  monthlyDeduction?: number;
+  status?: 'ACTIVE' | 'PAUSED';
+  sourceBalance?: ReserveSourceBalance;
+  targetCycleWindow?: string | number | null;
 }
 

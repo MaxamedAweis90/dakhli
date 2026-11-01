@@ -11,6 +11,7 @@ export interface AuthState {
   isAuthenticated: boolean
   user: AuthUser | null
   isLoading: boolean
+  isInitialized: boolean
   setSession: (token: string, user: AuthUser) => void
   clearSession: () => void
   initialize: () => Promise<void> | void

@@ -18,7 +18,10 @@ export const normalizeSavePlan = (raw: any): SavePlan => {
   const userId = raw.userId?.toString?.() || raw.userId || ''
   const title = raw.title || raw.name || 'Untitled Plan'
   const targetAmount = Number(raw.targetAmount ?? 1000)
-  const currentAmount = Number(raw.currentAmount ?? raw.currentSaved ?? 0)
+  const isSystemDefault = Boolean(raw.isSystemDefault)
+  const isRemovable = raw.isRemovable !== undefined ? Boolean(raw.isRemovable) : !isSystemDefault
+  const cumulativeTotal = Number(raw.cumulativeTotal ?? raw.currentAmount ?? raw.currentSaved ?? 0)
+  const currentAmount = isSystemDefault ? cumulativeTotal : Number(raw.currentAmount ?? raw.currentSaved ?? 0)
   const percentage =
     targetAmount > 0
       ? Math.min(100, Math.round((currentAmount / targetAmount) * 100))
@@ -31,7 +34,9 @@ export const normalizeSavePlan = (raw: any): SavePlan => {
     : 'general'
 
   const type: SavePlanType =
-    raw.type === 'general_life' ? 'general_life' : 'targeted'
+    raw.type === 'system_baseline' || raw.type === 'general_life'
+      ? raw.type
+      : 'targeted'
 
   const status: SavePlanStatus = [
     'active',
@@ -39,9 +44,14 @@ export const normalizeSavePlan = (raw: any): SavePlan => {
     'cancelled',
     'canceled',
     'deactivated',
+    'paused',
+    'ACTIVE',
+    'PAUSED',
   ].includes(raw.status)
     ? raw.status
     : 'active'
+
+  const monthlyDeduction = Number(raw.monthlyDeduction ?? raw.monthlyContribution ?? 0)
 
   return {
     id,
@@ -57,6 +67,8 @@ export const normalizeSavePlan = (raw: any): SavePlan => {
     monthlyContribution:
       raw.monthlyContribution !== undefined
         ? Number(raw.monthlyContribution)
+        : monthlyDeduction > 0
+        ? monthlyDeduction
         : undefined,
     linkedItemId: raw.linkedItemId,
     linkedItemName: raw.linkedItemName,
@@ -64,6 +76,12 @@ export const normalizeSavePlan = (raw: any): SavePlan => {
     iconKey: raw.iconKey,
     status,
     targetDate: raw.targetDate,
+    isSystemDefault,
+    isRemovable,
+    monthlyDeduction,
+    targetCycleWindow: raw.targetCycleWindow ?? 'PERPETUAL',
+    sourceBalance: raw.sourceBalance || 'BASELINE_INCOME',
+    cumulativeTotal,
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || new Date().toISOString(),
   }

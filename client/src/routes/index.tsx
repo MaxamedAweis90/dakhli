@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect } from 'react'
+import React, { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute, PublicRoute } from './ProtectedRoute'
 import { AppShell } from '@/components/layout/AppShell'
@@ -18,18 +18,15 @@ const LandingPage = lazy(() => import('@/features/landing/LandingPage'))
 
 /**
  * RootEntry smart dispatcher:
- * - If user is unauthenticated -> renders high-converting, privacy-first LandingPage
- * - If user is authenticated -> renders AppShell with DashboardPage
+ * - When loading initial auth state (on refresh/boot) -> show full SplashScreen
+ * - If user is authenticated -> render DashboardPage inside AppShell
+ * - If user is unauthenticated -> render LandingPage
  */
 const RootEntry: React.FC = () => {
-  const { isAuthenticated, isLoading, initialize } = useAuthStore()
-
-  useEffect(() => {
-    initialize()
-  }, [initialize])
+  const { isAuthenticated, isLoading } = useAuthStore()
 
   if (isLoading) {
-    return <SplashScreen message="Loading..." />
+    return <SplashScreen message="Loading Dakhli..." />
   }
 
   if (isAuthenticated) {
@@ -46,7 +43,7 @@ const RootEntry: React.FC = () => {
 export const router = createBrowserRouter([
   {
     element: (
-      <Suspense fallback={<SplashScreen message="Loading..." />}>
+      <Suspense fallback={null}>
         <Outlet />
       </Suspense>
     ),

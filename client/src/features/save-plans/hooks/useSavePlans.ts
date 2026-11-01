@@ -19,10 +19,22 @@ export const toStorePlanItem = (plan: SavePlan): SavePlanItem => ({
   type: plan.type || 'targeted',
   category: plan.category || 'general',
   status: (plan.status === 'cancelled' ? 'canceled' : plan.status) as SavePlanItem['status'],
-  currentSaved: plan.currentAmount,
-  currentAmount: plan.currentAmount,
+  currentSaved:
+    plan.isSystemDefault && plan.cumulativeTotal !== undefined
+      ? plan.cumulativeTotal
+      : plan.currentAmount,
+  currentAmount:
+    plan.isSystemDefault && plan.cumulativeTotal !== undefined
+      ? plan.cumulativeTotal
+      : plan.currentAmount,
   targetAmount: plan.targetAmount,
   monthlyContribution: plan.monthlyContribution,
+  monthlyDeduction: plan.monthlyDeduction,
+  isSystemDefault: plan.isSystemDefault,
+  isRemovable: plan.isRemovable,
+  targetCycleWindow: plan.targetCycleWindow,
+  sourceBalance: plan.sourceBalance,
+  cumulativeTotal: plan.cumulativeTotal,
   percentage: plan.percentage,
   linkedItemId: plan.linkedItemId,
   linkedItemName: plan.linkedItemName,
@@ -49,8 +61,14 @@ export const useSavePlans = () => {
       setPlans(storeItems)
 
       const activeSaved = query.data
-        .filter((p) => p.status === 'active')
-        .reduce((sum, p) => sum + (p.currentAmount || 0), 0)
+        .filter((p) => p.status === 'active' || p.status === 'ACTIVE')
+        .reduce((sum, p) => {
+          const val =
+            p.isSystemDefault && p.cumulativeTotal !== undefined
+              ? p.cumulativeTotal
+              : p.currentAmount || 0
+          return sum + val
+        }, 0)
 
       updateTotalSaved(activeSaved)
     }
@@ -99,11 +117,32 @@ export const useSavePlans = () => {
 
   const plans = query.data ?? []
 
+  const systemReservePlan = plans.find(
+    (p) => p.isSystemDefault || p.type === 'general_life'
+  )
+  const targetedPlans = plans.filter(
+    (p) => !p.isSystemDefault && p.type !== 'general_life'
+  )
+
   const toggleActive = async (id: string) => {
     const target = plans.find((p) => p.id === id)
-    if (!target || target.type === 'general_life') return
+    if (!target || target.isSystemDefault || target.type === 'general_life') return
     const nextStatus: SavePlanStatus =
-      target.status === 'active' ? 'deactivated' : 'active'
+      target.status === 'active' || target.status === 'ACTIVE'
+        ? 'deactivated'
+        : 'active'
+    return updateMutation.mutateAsync({
+      id,
+      updates: { status: nextStatus },
+    })
+  }
+
+  const toggleReserveStatus = async (id: string) => {
+    const target = plans.find((p) => p.id === id)
+    if (!target) return
+    const isCurrentlyActive =
+      target.status === 'active' || target.status === 'ACTIVE'
+    const nextStatus = isCurrentlyActive ? 'PAUSED' : 'ACTIVE'
     return updateMutation.mutateAsync({
       id,
       updates: { status: nextStatus },
@@ -123,6 +162,14 @@ export const useSavePlans = () => {
     return depositMutation.mutateAsync({ id, amount })
   }
 
+  const deletePlanSafely = async (id: string) => {
+    const target = plans.find((p) => p.id === id)
+    if (target?.isSystemDefault || target?.isRemovable === false) {
+      throw new Error('403 Forbidden: System baseline reserve cannot be removed')
+    }
+    return deleteMutation.mutateAsync(id)
+  }
+
   const activePlans = plans.filter(
     (p) => p.status !== 'canceled' && p.status !== 'cancelled'
   )
@@ -130,16 +177,24 @@ export const useSavePlans = () => {
   const unpinned = activePlans.filter((p) => !p.isPinned)
   const pinnedPlans = [...pinned, ...unpinned].slice(0, 3)
 
-  const activeCount = plans.filter(
-    (p) => p.status === 'active'
+  const activeCount = targetedPlans.filter(
+    (p) => p.status === 'active' || p.status === 'ACTIVE'
   ).length
 
   const totalSaved = plans
-    .filter((p) => p.status === 'active')
-    .reduce((sum, p) => sum + (p.currentAmount || 0), 0)
+    .filter((p) => p.status === 'active' || p.status === 'ACTIVE')
+    .reduce((sum, p) => {
+      const val =
+        p.isSystemDefault && p.cumulativeTotal !== undefined
+          ? p.cumulativeTotal
+          : p.currentAmount || 0
+      return sum + val
+    }, 0)
 
   return {
     plans,
+    systemReservePlan,
+    targetedPlans,
     pinnedPlans,
     activeCount,
     totalSaved,
@@ -155,9 +210,12 @@ export const useSavePlans = () => {
     isCompleting: completeMutation.isPending,
     cancelPlan: cancelMutation.mutateAsync,
     isCanceling: cancelMutation.isPending,
+    updatePlan: updateMutation.mutateAsync,
+    isUpdating: updateMutation.isPending,
     toggleActive,
+    toggleReserveStatus,
     togglePin,
-    deletePlan: deleteMutation.mutateAsync,
+    deletePlan: deletePlanSafely,
     isMutationPending:
       createMutation.isPending ||
       depositMutation.isPending ||

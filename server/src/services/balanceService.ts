@@ -25,12 +25,21 @@ export const getFinancialOverview = async (
 
   // Calculate total saved across all active save plans
   const activePlans = await SavePlan.find(
-    { userId, status: 'active' },
-    'currentSaved',
+    {
+      userId,
+      status: { $in: ['active', 'ACTIVE'] },
+    },
+    'currentSaved cumulativeTotal isSystemDefault monthlyDeduction status',
     { session }
   );
 
-  const totalSaved = activePlans.reduce((sum, plan) => sum + plan.currentSaved, 0);
+  const totalSaved = activePlans.reduce((sum, plan) => {
+    const saved =
+      plan.isSystemDefault && plan.cumulativeTotal !== undefined
+        ? plan.cumulativeTotal
+        : plan.currentSaved || 0;
+    return sum + saved;
+  }, 0);
   const netSpendableBalance = balance.grossBalance - totalSaved;
 
   return {

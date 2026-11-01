@@ -2,6 +2,7 @@ import { ClientSession, Types } from 'mongoose';
 import {
   ISavePlan,
   Item,
+  ReserveSourceBalance,
   SavePlan,
   SavePlanCategory,
   SavePlanStatus,
@@ -23,6 +24,12 @@ export interface CreateSavePlanDTO {
   linkedItemId?: string;
   linkedItemName?: string;
   linkedItemIds?: string[];
+  isSystemDefault?: boolean;
+  isRemovable?: boolean;
+  monthlyDeduction?: number;
+  targetCycleWindow?: string | number | null;
+  sourceBalance?: ReserveSourceBalance;
+  cumulativeTotal?: number;
 }
 
 /**
@@ -54,7 +61,7 @@ export const createSavePlan = async (
           type: data.type || 'targeted',
           targetAmount,
           currentSaved: initialDeposit,
-          monthlyContribution: data.monthlyContribution,
+          monthlyContribution: data.monthlyContribution ?? data.monthlyDeduction,
           iconKey: data.iconKey,
           targetDate: data.targetDate,
           isPinned: data.isPinned !== undefined ? data.isPinned : true,
@@ -62,6 +69,12 @@ export const createSavePlan = async (
           linkedItemName: data.linkedItemName,
           status: 'active',
           completedAt: null,
+          isSystemDefault: Boolean(data.isSystemDefault),
+          isRemovable: data.isRemovable !== undefined ? data.isRemovable : !data.isSystemDefault,
+          monthlyDeduction: data.monthlyDeduction ?? data.monthlyContribution ?? 0,
+          targetCycleWindow: data.targetCycleWindow ?? 'PERPETUAL',
+          sourceBalance: data.sourceBalance ?? 'BASELINE_INCOME',
+          cumulativeTotal: data.cumulativeTotal ?? initialDeposit,
         },
       ],
       { session: activeSession }
@@ -220,6 +233,12 @@ export const updateSavePlan = async (
     category: SavePlanCategory;
     type: SavePlanType;
     monthlyContribution: number;
+    isSystemDefault: boolean;
+    isRemovable: boolean;
+    monthlyDeduction: number;
+    targetCycleWindow: string | number | null;
+    sourceBalance: ReserveSourceBalance;
+    cumulativeTotal: number;
   }>
 ): Promise<ISavePlan> => {
   const plan = await SavePlan.findOneAndUpdate(

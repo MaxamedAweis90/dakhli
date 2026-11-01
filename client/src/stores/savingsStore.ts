@@ -1,8 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type SavePlanType = 'targeted' | 'general_life'
-export type SavePlanStatus = 'active' | 'deactivated' | 'completed' | 'canceled'
+export type SavePlanType = 'targeted' | 'general_life' | 'system_baseline'
+export type SavePlanStatus =
+  | 'active'
+  | 'deactivated'
+  | 'completed'
+  | 'canceled'
+  | 'paused'
+  | 'ACTIVE'
+  | 'PAUSED'
 export type SavePlanCategory = 'emergency' | 'general' | 'item_funding'
 
 export interface SavePlanItem {
@@ -22,6 +29,12 @@ export interface SavePlanItem {
   isPinned: boolean
   iconKey?: string
   targetDate?: string
+  isSystemDefault?: boolean
+  isRemovable?: boolean
+  monthlyDeduction?: number
+  targetCycleWindow?: string | number | null
+  sourceBalance?: 'BASELINE_INCOME' | 'LIQUID_BALANCE'
+  cumulativeTotal?: number
 }
 
 interface SavingsState {
@@ -43,11 +56,18 @@ interface SavingsState {
 
 const DEFAULT_PLANS: SavePlanItem[] = [
   {
-    id: 'plan-general-life',
-    name: 'General Savings',
+    id: 'plan-system-reserve',
+    name: 'Cumulative Baseline Reserve',
+    title: 'Cumulative Baseline Reserve',
     type: 'general_life',
     category: 'general',
-    status: 'active',
+    status: 'ACTIVE',
+    isSystemDefault: true,
+    isRemovable: false,
+    monthlyDeduction: 300,
+    sourceBalance: 'BASELINE_INCOME',
+    targetCycleWindow: 'PERPETUAL',
+    cumulativeTotal: 14500,
     currentSaved: 14500,
     targetAmount: 25000,
     monthlyContribution: 300,
@@ -184,7 +204,12 @@ export const useSavingsStore = create<SavingsState>()(
 
       deletePlan: (id: string) => {
         set((state) => ({
-          plans: state.plans.filter((p) => p.id !== id),
+          plans: state.plans.filter((p) => {
+            if (p.id === id && (p.isSystemDefault || p.isRemovable === false)) {
+              return true // Cannot delete system baseline reserve
+            }
+            return p.id !== id
+          }),
         }))
       },
 
@@ -204,14 +229,24 @@ export const useSavingsStore = create<SavingsState>()(
 
       getActiveCount: () => {
         return get().plans.filter(
-          (p) => p.type === 'targeted' && p.status === 'active' && p.percentage < 100
+          (p) =>
+            p.type === 'targeted' &&
+            (p.status === 'active' || p.status === 'ACTIVE') &&
+            p.percentage < 100
         ).length
       },
 
       getTotalSaved: () => {
         return get().plans
-          .filter((p) => p.status === 'active')
-          .reduce((acc, p) => acc + p.currentSaved, 0)
+          .filter((p) => p.status === 'active' || p.status === 'ACTIVE')
+          .reduce(
+            (acc, p) =>
+              acc +
+              (p.isSystemDefault && p.cumulativeTotal !== undefined
+                ? p.cumulativeTotal
+                : p.currentSaved || 0),
+            0
+          )
       },
     }),
     {

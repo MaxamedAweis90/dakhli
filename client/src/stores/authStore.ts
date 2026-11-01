@@ -5,11 +5,12 @@ import { authApi } from '@/features/auth/api/authApi'
 
 const USER_STORAGE_KEY = 'dakhli_user'
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   isAuthenticated: false,
   user: null,
   isLoading: true,
+  isInitialized: false,
 
   setSession: (token: string, user: AuthUser) => {
     try {
@@ -23,6 +24,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       user,
       isAuthenticated: true,
       isLoading: false,
+      isInitialized: true,
     })
   },
 
@@ -38,10 +40,16 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       isAuthenticated: false,
       isLoading: false,
+      isInitialized: true,
     })
   },
 
   initialize: async () => {
+    // If already initialized once during this app lifecycle, don't run again or toggle isLoading
+    if (get().isInitialized) {
+      return
+    }
+
     set({ isLoading: true })
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem(TOKEN_STORAGE_KEY) : null
@@ -51,6 +59,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           user: null,
           isAuthenticated: false,
           isLoading: false,
+          isInitialized: true,
         })
         return
       }
@@ -61,19 +70,20 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       // Support 1-click dev demo session
       if (token === 'demo-jwt-token') {
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        await new Promise((resolve) => setTimeout(resolve, 350))
         set({
           token,
           user: cachedUser || { id: 'demo-user-id', email: 'demo@dakhli.app', name: 'Demo User' },
           isAuthenticated: true,
           isLoading: false,
+          isInitialized: true,
         })
         return
       }
 
       // Rehydrate user session via backend /auth/me
       try {
-        const minDelay = new Promise((resolve) => setTimeout(resolve, 500))
+        const minDelay = new Promise((resolve) => setTimeout(resolve, 350))
         const [user] = await Promise.all([authApi.getMe(), minDelay])
         try {
           localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
@@ -85,6 +95,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           user,
           isAuthenticated: true,
           isLoading: false,
+          isInitialized: true,
         })
       } catch {
         // If rehydration fails or token invalid, purge storage
@@ -99,6 +110,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           user: null,
           isAuthenticated: false,
           isLoading: false,
+          isInitialized: true,
         })
       }
     } catch {
@@ -107,6 +119,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        isInitialized: true,
       })
     }
   },
