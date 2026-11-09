@@ -15,6 +15,7 @@ const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'))
+const MobileUploadPage = lazy(() => import('@/features/items/pages/MobileUploadPage'))
 
 /**
  * RootEntry smart dispatcher:
@@ -59,6 +60,10 @@ export const router = createBrowserRouter([
       {
         path: '/welcome',
         element: <LandingPage />,
+      },
+      {
+        path: '/mobile-upload',
+        element: <MobileUploadPage />,
       },
       {
         path: '/dashboard',
