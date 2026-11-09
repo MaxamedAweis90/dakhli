@@ -1,14 +1,16 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { ItemTabsBar } from './components/ItemTabsBar'
 import { RegisteredItemCard } from './components/RegisteredItemCard'
 import { BoughtItemsList } from './components/BoughtItemsList'
 import { AddItemModal } from './components/AddItemModal'
+import { EditItemModal } from './components/EditItemModal'
 import { useItemsStore } from '@/stores/itemsStore'
 import { useItems } from './hooks/useItems'
 import { useBaseline } from '@/features/settings/hooks/useBaseline'
 import { useSavePlans } from '@/features/save-plans/hooks/useSavePlans'
 import { useLiquidityStore } from '@/stores/liquidityStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
+import type { CreateItemPayload, RegistryItem, UpdateItemPayload } from './types/item.types'
 
 const fmt = (n: number): string =>
   new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(n)
@@ -30,11 +32,71 @@ export const ItemsPage: React.FC = () => {
     boughtItems,
     unboughtTotal,
     createItem,
+    updateItem,
     toggleBought,
     removeItem,
     isCreating,
     isMutating,
   } = useItems(activeTier)
+
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null)
+  const [editingItem, setEditingItem] = useState<RegistryItem | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const scrolledItemRef = useRef<string | null>(null)
+
+  const handleCreateItem = async (payload: CreateItemPayload) => {
+    const newItem = await createItem(payload)
+    if (newItem?.id) {
+      // If the current filter tier hides this item, switch to its tier so it's visible
+      if (activeTier !== 'All' && newItem.displayTier && activeTier !== newItem.displayTier) {
+        setActiveTier(newItem.displayTier)
+      }
+
+      scrolledItemRef.current = null
+      setHighlightedItemId(newItem.id)
+    }
+    return newItem
+  }
+
+  const handleUpdateItem = async (id: string, payload: UpdateItemPayload) => {
+    setIsUpdating(true)
+    try {
+      await updateItem({ id, payload })
+      setEditingItem(null)
+    } catch (err) {
+      console.error('[ItemsPage] Failed to update item:', err)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // Smooth scroll to the newly created item and fade the highlight after a duration
+  useEffect(() => {
+    if (!highlightedItemId) return
+
+    const attemptScroll = () => {
+      const el = document.getElementById(`item-card-${highlightedItemId}`)
+      if (el && scrolledItemRef.current !== highlightedItemId) {
+        scrolledItemRef.current = highlightedItemId
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+    }
+
+    // Scroll attempts to ensure the DOM has painted the new card
+    const timer1 = setTimeout(attemptScroll, 60)
+    const timer2 = setTimeout(attemptScroll, 200)
+
+    // Fade out highlight after showcase duration (3.2 seconds)
+    const clearTimer = setTimeout(() => {
+      setHighlightedItemId((prev) => (prev === highlightedItemId ? null : prev))
+    }, 3200)
+
+    return () => {
+      clearTimeout(timer1)
+      clearTimeout(timer2)
+      clearTimeout(clearTimer)
+    }
+  }, [highlightedItemId, unboughtItems])
 
   const liquidityStore = useLiquidityStore()
   const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS
@@ -60,8 +122,10 @@ export const ItemsPage: React.FC = () => {
             <RegisteredItemCard
               key={item.id}
               item={item}
+              isHighlighted={highlightedItemId === item.id}
               onToggleBought={toggleBought}
               onRemove={removeItem}
+              onEdit={(it) => setEditingItem(it as RegistryItem)}
               isMutating={isMutating}
             />
           ))}
@@ -103,8 +167,17 @@ export const ItemsPage: React.FC = () => {
       <AddItemModal
         isOpen={isAddModalOpen}
         onClose={closeAddModal}
-        onAdd={createItem}
+        onAdd={handleCreateItem}
         isSubmitting={isCreating}
+      />
+
+      {/* Edit Item Modal */}
+      <EditItemModal
+        isOpen={Boolean(editingItem)}
+        item={editingItem}
+        onClose={() => setEditingItem(null)}
+        onUpdate={handleUpdateItem}
+        isSubmitting={isUpdating}
       />
     </div>
   )

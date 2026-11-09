@@ -82,13 +82,30 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateItemPayload) => itemsApi.createItem(payload),
-    onSuccess: invalidateAll,
+    onSuccess: (newItem) => {
+      if (newItem?.id) {
+        queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, (old = []) => {
+          if (!old.some((i) => i.id === newItem.id)) {
+            return [newItem, ...old]
+          }
+          return old
+        })
+      }
+      invalidateAll()
+    },
   })
 
   const updateMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: UpdateItemPayload }) =>
       itemsApi.updateItem(id, payload),
-    onSuccess: invalidateAll,
+    onSuccess: (updatedItem) => {
+      if (updatedItem?.id) {
+        queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, (old = []) =>
+          old.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+        )
+      }
+      invalidateAll()
+    },
   })
 
   const buyMutation = useMutation({
@@ -103,7 +120,12 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => itemsApi.deleteItem(id),
-    onSuccess: invalidateAll,
+    onSuccess: (_, deletedId) => {
+      queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, (old = []) =>
+        old.filter((item) => item.id !== deletedId)
+      )
+      invalidateAll()
+    },
   })
 
   const toggleBought = async (id: string) => {

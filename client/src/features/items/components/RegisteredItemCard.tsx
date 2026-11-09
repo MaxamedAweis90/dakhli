@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import { Pencil } from 'lucide-react'
 import type { RegisteredItem } from '@/stores/itemsStore'
 import type { RegistryItem } from '../types/item.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
@@ -9,7 +10,9 @@ export interface RegisteredItemCardProps {
   item: RegistryItem | RegisteredItem
   onToggleBought: (id: string) => void
   onRemove: (id: string) => void
+  onEdit?: (item: RegistryItem | RegisteredItem) => void
   isMutating?: boolean
+  isHighlighted?: boolean
   className?: string
 }
 
@@ -20,9 +23,22 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
   item,
   onToggleBought,
   onRemove,
+  onEdit,
   isMutating = false,
+  isHighlighted = false,
   className,
 }) => {
+  const [isExiting, setIsExiting] = useState(false)
+
+  const handleRemove = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (isExiting || isMutating) return
+    setIsExiting(true)
+    setTimeout(() => {
+      onRemove(item.id)
+    }, 320)
+  }
+
   const liquidityStore = useLiquidityStore()
   const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS
     ? liquidityStore.currency
@@ -51,16 +67,44 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
 
   return (
     <div
+      id={`item-card-${item.id}`}
       className={cn(
-        'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-3.5 sm:p-4 select-none flex flex-col justify-between border border-white/[0.03] hover:border-white/[0.08] transition-all',
+        'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-3.5 sm:p-4 select-none flex flex-col justify-between border transition-all duration-700 ease-out',
+        isHighlighted
+          ? 'border-[#D4A359] ring-2 ring-[#D4A359]/70 shadow-[0_0_36px_rgba(212,163,89,0.32)] bg-[#1B1B22] scale-[1.01]'
+          : 'border-white/[0.03] hover:border-white/[0.08]',
+        isExiting &&
+          'translate-y-12 opacity-0 scale-[0.96] pointer-events-none blur-[0.5px] transition-all duration-300 ease-in',
         className
       )}
     >
+      {/* Creation showcase badge */}
+      {isHighlighted && (
+        <div className="absolute -top-2.5 right-4 z-30 px-2.5 py-0.5 rounded-full bg-[#D4A359] text-[#121316] font-semibold text-[0.68rem] tracking-tight shadow-[0_2px_12px_rgba(212,163,89,0.5)] animate-in fade-in zoom-in-95 duration-200">
+          Just Added
+        </div>
+      )}
+
       {/* Top Section: Photo Image Container with Title Overlay */}
       <div>
         <div className="w-full aspect-[16/10] rounded-[1rem] overflow-hidden relative bg-[#22242D] border border-white/[0.04]">
           {/* Subtle top scrim to guarantee title contrast */}
           <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none z-10" />
+
+          {/* Quick Edit shortcut on top-right of image - visible only on hover */}
+          {onEdit && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(item)
+              }}
+              title="Edit Item"
+              className="absolute top-3 right-3 z-20 w-7 h-7 rounded-lg bg-black/70 hover:bg-black/95 backdrop-blur-md text-[#C5C8D4] hover:text-white flex items-center justify-center border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer shadow-md active:scale-95"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
 
           {/* Title Overlay on top-left of image */}
           <h3 className="absolute top-3 left-3 text-[1.02rem] sm:text-[1.05rem] font-medium text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] z-20">
@@ -134,8 +178,8 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
       <div className="grid grid-cols-2 gap-2.5 mt-4 pt-1">
         <button
           type="button"
-          disabled={isMutating}
-          onClick={() => onRemove(item.id)}
+          disabled={isMutating || isExiting}
+          onClick={handleRemove}
           className="h-[2.25rem] rounded-xl bg-[#22242D] hover:bg-[#2C2F3C] active:scale-95 text-[#C5C8D4] hover:text-white text-[0.82rem] font-medium flex items-center justify-center transition-all cursor-pointer border border-white/[0.04] disabled:opacity-50"
         >
           Remove
@@ -143,7 +187,7 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
 
         <button
           type="button"
-          disabled={isMutating}
+          disabled={isMutating || isExiting}
           onClick={() => onToggleBought(item.id)}
           className={cn(
             'h-[2.25rem] rounded-xl font-semibold text-[0.82rem] flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50',
@@ -152,7 +196,7 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
               : 'bg-[#D4A359] hover:bg-[#DEB066] text-[#18191E]'
           )}
         >
-          Bought
+          {isBought ? 'Bought' : 'Buy'}
         </button>
       </div>
     </div>

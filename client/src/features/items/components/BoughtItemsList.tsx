@@ -24,6 +24,16 @@ export const BoughtItemsList: React.FC<BoughtItemsListProps> = ({
   isMutating = false,
   className,
 }) => {
+  const [exitingIds, setExitingIds] = React.useState<Set<string>>(new Set())
+
+  const handleRemoveClick = (id: string) => {
+    if (exitingIds.has(id) || isMutating) return
+    setExitingIds((prev) => new Set(prev).add(id))
+    setTimeout(() => {
+      onRemove(id)
+    }, 300)
+  }
+
   const liquidityStore = useLiquidityStore()
   const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS
     ? liquidityStore.currency
@@ -95,10 +105,15 @@ export const BoughtItemsList: React.FC<BoughtItemsListProps> = ({
                 const tierLabel = getItemTierLabel(item)
                 const price = getItemPrice(item) * rate
 
+                const isExiting = exitingIds.has(item.id)
+
                 return (
                   <tr
                     key={item.id}
-                    className="group hover:bg-white/[0.015] transition-colors"
+                    className={cn(
+                      'group hover:bg-white/[0.015] transition-all duration-300',
+                      isExiting && 'translate-y-6 opacity-0 pointer-events-none'
+                    )}
                   >
                     {/* Item: Thumbnail + Title */}
                     <td className="py-3.5 pl-1">
@@ -164,8 +179,8 @@ export const BoughtItemsList: React.FC<BoughtItemsListProps> = ({
 
                         <button
                           type="button"
-                          disabled={isMutating}
-                          onClick={() => onRemove(item.id)}
+                          disabled={isMutating || isExiting}
+                          onClick={() => handleRemoveClick(item.id)}
                           aria-label={`Delete ${name}`}
                           className="p-1.5 rounded-lg text-[#8E92A0] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer disabled:opacity-50"
                         >
