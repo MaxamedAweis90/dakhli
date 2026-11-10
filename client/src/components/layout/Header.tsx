@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Calendar, Plus } from '@/components/shared/icons'
+import { Calculator } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import {
   useOverheadsStore,
@@ -8,6 +9,7 @@ import {
   getMaxFutureMonth,
 } from '@/stores/overheadsStore'
 import { MonthNavigator } from '@/components/shared/ui/MonthNavigator'
+import { CalculatorModal } from '@/components/calculator/CalculatorModal'
 import { cn } from '@/lib/utils'
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -21,6 +23,7 @@ const ROUTE_TITLES: Record<string, string> = {
 export const Header: React.FC = () => {
   const location = useLocation()
   const { user } = useAuthStore()
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
   const {
     currentMonth,
     prevMonth,
@@ -54,6 +57,17 @@ export const Header: React.FC = () => {
       {/* Floating Action Controls: Ask AI + Date (+ Save Baseline on settings), sticky at top-0 */}
       <div className="sticky top-0 z-30 pointer-events-none flex items-center justify-end h-14 lg:h-[4.75rem] px-4 lg:px-0 bg-transparent -mb-14 lg:-mb-[4.75rem]">
         <div className="pointer-events-auto flex items-center gap-[0.75rem]">
+          {/* Top-Right Calculator Icon Button (to left of calendar) */}
+          <button
+            type="button"
+            onClick={() => setIsCalculatorOpen(true)}
+            title="Open Calculator"
+            aria-label="Open Calculator"
+            className="flex items-center justify-center w-[2.2rem] h-[2.2rem] rounded-full bg-[#212121] hover:bg-[#2c2f38] text-[#cfcfcf] hover:text-white transition-all shadow-[0_2px_12px_rgba(0,0,0,0.5)] cursor-pointer active:scale-95 border border-white/[0.04]"
+          >
+            <Calculator className="w-[0.95rem] h-[0.95rem]" />
+          </button>
+
           {/* Top-Right Fast-Switch Date pill button */}
           <button
             type="button"
@@ -100,6 +114,12 @@ export const Header: React.FC = () => {
           </h1>
         )}
       </div>
+
+      {/* Floating Mobile/Desktop Calculator Modal */}
+      <CalculatorModal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
+      />
     </>
   )
 }
