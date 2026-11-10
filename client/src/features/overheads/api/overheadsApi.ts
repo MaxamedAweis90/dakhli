@@ -2,6 +2,7 @@ import { api } from '@/lib/api'
 import type {
   OverheadBill,
   CreateOverheadPayload,
+  UpdateOverheadPayload,
   OverheadSummary,
   OverheadStatus,
 } from '../types/overhead.types'
@@ -36,6 +37,8 @@ export const normalizeBill = (raw: any): OverheadBill => {
   const status: OverheadStatus = isPaid ? 'paid' : 'unpaid'
   const iconKey = inferIconKey(title, raw.iconKey || item.iconKey)
   const isRecurring = raw.isRecurring !== undefined ? raw.isRecurring : !item.isArchived
+  const isActive = raw.isActive !== undefined ? Boolean(raw.isActive) : (item.isActive !== undefined ? Boolean(item.isActive) : true)
+  const archivedAtMonthKey = raw.archivedAtMonthKey || item.archivedAtMonthKey || null
   const paidAt = raw.paidAt || record.paidAt || (isPaid ? new Date().toISOString() : null)
   const createdAt = raw.createdAt || item.createdAt || new Date().toISOString()
   const updatedAt = raw.updatedAt || item.updatedAt || new Date().toISOString()
@@ -49,6 +52,8 @@ export const normalizeBill = (raw: any): OverheadBill => {
     status,
     iconKey,
     isRecurring,
+    isActive,
+    archivedAtMonthKey,
     notes: raw.notes || item.notes,
     paidAt,
     createdAt,
@@ -56,18 +61,33 @@ export const normalizeBill = (raw: any): OverheadBill => {
   }
 }
 
-export const computeSummary = (bills: OverheadBill[]): OverheadSummary => {
-  const totalPaid = bills
+export const computeSummary = (bills: OverheadBill[], isFuture = false): OverheadSummary => {
+  // Deactivated bills are excluded from Total Overhead and Unpaid calculations for active/future cycles
+  const activeBills = bills.filter((b) => b.isActive !== false)
+
+  if (isFuture) {
+    const totalMonthly = activeBills.reduce((sum, b) => sum + b.amount, 0)
+    return {
+      totalUnpaid: totalMonthly,
+      totalPaid: 0,
+      totalMonthly,
+      billsCount: bills.length,
+      unpaidCount: activeBills.length,
+      percentagePaid: 0,
+    }
+  }
+
+  const totalPaid = activeBills
     .filter((b) => b.status === 'paid')
     .reduce((sum, b) => sum + b.amount, 0)
 
-  const totalUnpaid = bills
+  const totalUnpaid = activeBills
     .filter((b) => b.status === 'unpaid')
     .reduce((sum, b) => sum + b.amount, 0)
 
   const totalMonthly = totalPaid + totalUnpaid
   const billsCount = bills.length
-  const unpaidCount = bills.filter((b) => b.status === 'unpaid').length
+  const unpaidCount = activeBills.filter((b) => b.status === 'unpaid').length
   const percentagePaid = totalMonthly > 0 ? Math.min(100, Math.round((totalPaid / totalMonthly) * 100)) : 0
 
   return {
@@ -83,12 +103,15 @@ export const computeSummary = (bills: OverheadBill[]): OverheadSummary => {
 export const overheadsApi = {
   getOverheads: async (monthKey?: string): Promise<{ bills: OverheadBill[]; summary: OverheadSummary }> => {
     const res = (await api.get('/overheads', {
-      params: monthKey ? { monthKey } : undefined,
+      params: monthKey ? { monthKey, cycle: monthKey } : undefined,
     })) as OverheadsApiResponse
 
     const rawList = Array.isArray(res?.data) ? res.data : []
     const bills = rawList.map(normalizeBill)
-    const summary = computeSummary(bills)
+    
+    const nowKey = new Date().toISOString().slice(0, 7)
+    const isFuture = Boolean(monthKey && monthKey > nowKey)
+    const summary = computeSummary(bills, isFuture)
 
     return { bills, summary }
   },
@@ -108,6 +131,11 @@ export const overheadsApi = {
     return normalizeBill(res?.data || {})
   },
 
+  updateOverhead: async (id: string, payload: UpdateOverheadPayload): Promise<OverheadBill> => {
+    const res = (await api.patch(`/overheads/${id}`, payload)) as { success: boolean; data: any }
+    return normalizeBill(res?.data || {})
+  },
+
   updateOverheadStatus: async (
     id: string,
     status: OverheadStatus,
@@ -119,7 +147,10 @@ export const overheadsApi = {
     })
   },
 
-  deleteOverhead: async (id: string): Promise<void> => {
-    await api.delete(`/overheads/${id}`)
+  deleteOverhead: async (id: string, monthKey?: string): Promise<void> => {
+    await api.delete(`/overheads/${id}`, {
+      data: monthKey ? { monthKey } : undefined,
+      params: monthKey ? { monthKey } : undefined,
+    })
   },
 }

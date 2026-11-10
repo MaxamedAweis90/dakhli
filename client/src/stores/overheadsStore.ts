@@ -13,13 +13,27 @@ export interface OverheadBill {
   paidDate?: string // e.g. "Paid on Oct 1st"
 }
 
+export const getRealCurrentMonth = (): string => new Date().toISOString().slice(0, 7)
+
+export const getMaxFutureMonth = (baseMonth?: string, offset = 3): string => {
+  const base = baseMonth || getRealCurrentMonth()
+  const [y, m] = base.split('-').map(Number)
+  const date = new Date(y, m - 1 + offset, 1)
+  const newY = date.getFullYear()
+  const newM = String(date.getMonth() + 1).padStart(2, '0')
+  return `${newY}-${newM}`
+}
+
 interface OverheadsState {
-  currentMonth: string // Format: "YYYY-MM", e.g. "2026-10"
+  currentMonth: string // Format: "YYYY-MM", e.g. "2026-11"
   bills: OverheadBill[]
   baseTotal: number
-  setMonth: (monthStr: string) => void
-  prevMonth: () => void
-  nextMonth: () => void
+  setMonth: (monthStr: string, minMonth?: string, maxMonth?: string) => void
+  prevMonth: (minMonth?: string) => void
+  nextMonth: (maxMonth?: string) => void
+  jumpToCurrentMonth: () => void
+  isAtCreationMonth: (minMonth?: string) => boolean
+  isAtFutureLimit: (maxMonth?: string) => boolean
   toggleBillPaid: (id: string) => void
   addBill: (bill: Omit<OverheadBill, 'id'>) => void
   deleteBill: (id: string) => void
@@ -63,26 +77,76 @@ const DEFAULT_BILLS: OverheadBill[] = [
 export const useOverheadsStore = create<OverheadsState>()(
   persist(
     (set, get) => ({
-      currentMonth: '2026-10',
+      // Always initialize dynamically to real current month (e.g. 2026-11)
+      currentMonth: getRealCurrentMonth(),
       bills: DEFAULT_BILLS,
       baseTotal: 1200,
 
-      setMonth: (currentMonth: string) => set({ currentMonth }),
+      setMonth: (monthStr: string, minMonth?: string, maxMonth?: string) => {
+        let finalMonth = monthStr.slice(0, 7)
+        if (minMonth) {
+          const cleanMin = minMonth.slice(0, 7)
+          if (finalMonth < cleanMin) {
+            finalMonth = cleanMin
+          }
+        }
+        const limit = maxMonth ? maxMonth.slice(0, 7) : getMaxFutureMonth()
+        if (finalMonth > limit) {
+          finalMonth = limit
+        }
+        set({ currentMonth: finalMonth })
+      },
 
-      prevMonth: () => {
-        const [y, m] = get().currentMonth.split('-').map(Number)
+      prevMonth: (minMonth?: string) => {
+        const current = get().currentMonth
+        if (minMonth) {
+          const cleanMin = minMonth.slice(0, 7)
+          if (current <= cleanMin) {
+            return
+          }
+        }
+        const [y, m] = current.split('-').map(Number)
         const date = new Date(y, m - 1 - 1, 1)
         const newY = date.getFullYear()
         const newM = String(date.getMonth() + 1).padStart(2, '0')
-        set({ currentMonth: `${newY}-${newM}` })
+        const target = `${newY}-${newM}`
+        if (minMonth && target < minMonth.slice(0, 7)) {
+          set({ currentMonth: minMonth.slice(0, 7) })
+        } else {
+          set({ currentMonth: target })
+        }
       },
 
-      nextMonth: () => {
-        const [y, m] = get().currentMonth.split('-').map(Number)
+      nextMonth: (maxMonth?: string) => {
+        const current = get().currentMonth
+        const limit = maxMonth ? maxMonth.slice(0, 7) : getMaxFutureMonth()
+        if (current >= limit) {
+          return
+        }
+        const [y, m] = current.split('-').map(Number)
         const date = new Date(y, m - 1 + 1, 1)
         const newY = date.getFullYear()
         const newM = String(date.getMonth() + 1).padStart(2, '0')
-        set({ currentMonth: `${newY}-${newM}` })
+        const target = `${newY}-${newM}`
+        if (target > limit) {
+          set({ currentMonth: limit })
+        } else {
+          set({ currentMonth: target })
+        }
+      },
+
+      jumpToCurrentMonth: () => {
+        set({ currentMonth: getRealCurrentMonth() })
+      },
+
+      isAtCreationMonth: (minMonth?: string) => {
+        if (!minMonth) return false
+        return get().currentMonth <= minMonth.slice(0, 7)
+      },
+
+      isAtFutureLimit: (maxMonth?: string) => {
+        const limit = maxMonth ? maxMonth.slice(0, 7) : getMaxFutureMonth()
+        return get().currentMonth >= limit
       },
 
       toggleBillPaid: (id: string) => {
@@ -114,13 +178,11 @@ export const useOverheadsStore = create<OverheadsState>()(
       },
 
       getTotalOverhead: () => {
-        // Base total is $1,200 as seen in reference UI, adjusted by dynamically added bills
         const addedAmount = get().bills.slice(DEFAULT_BILLS.length).reduce((s, b) => s + b.amount, 0)
         return 1200 + addedAmount
       },
 
       getTotalPaid: () => {
-        // Starts at reference $400, dynamically adjusted by bill toggle state
         const internetPaid = get().bills.find((b) => b.id === 'bill-internet')?.status === 'paid'
         const rentUnpaid = get().bills.find((b) => b.id === 'bill-rent')?.status === 'unpaid'
         const gymUnpaid = get().bills.find((b) => b.id === 'bill-gym')?.status === 'unpaid'
@@ -130,7 +192,6 @@ export const useOverheadsStore = create<OverheadsState>()(
         if (rentUnpaid) paid = Math.max(0, paid - 800)
         if (gymUnpaid) paid = Math.max(0, paid - 20)
 
-        // Add any newly added bills marked paid
         const customPaid = get().bills.slice(DEFAULT_BILLS.length)
           .filter((b) => b.status === 'paid')
           .reduce((s, b) => s + b.amount, 0)
@@ -153,6 +214,11 @@ export const useOverheadsStore = create<OverheadsState>()(
     }),
     {
       name: 'dakhli_overheads_store',
+      // Strictly exclude currentMonth from persistent storage so login always starts on live current month
+      partialize: (state) => ({
+        bills: state.bills,
+        baseTotal: state.baseTotal,
+      }),
     }
   )
 )

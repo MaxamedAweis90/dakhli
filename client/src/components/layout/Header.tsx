@@ -2,8 +2,13 @@ import React from 'react'
 import { useLocation } from 'react-router-dom'
 import { Calendar, Plus } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
-import { useOverheadsStore } from '@/stores/overheadsStore'
+import {
+  useOverheadsStore,
+  getRealCurrentMonth,
+  getMaxFutureMonth,
+} from '@/stores/overheadsStore'
 import { MonthNavigator } from '@/components/shared/ui/MonthNavigator'
+import { cn } from '@/lib/utils'
 
 const ROUTE_TITLES: Record<string, string> = {
   '/overheads': 'Overhead Bills',
@@ -16,7 +21,26 @@ const ROUTE_TITLES: Record<string, string> = {
 export const Header: React.FC = () => {
   const location = useLocation()
   const { user } = useAuthStore()
-  const { currentMonth, prevMonth, nextMonth } = useOverheadsStore()
+  const {
+    currentMonth,
+    prevMonth,
+    nextMonth,
+    jumpToCurrentMonth,
+    isAtCreationMonth,
+    isAtFutureLimit,
+  } = useOverheadsStore()
+
+  const realCurrentMonth = getRealCurrentMonth()
+  const userCreatedAtMonth = user?.createdAt ? user.createdAt.slice(0, 7) : realCurrentMonth
+  const maxFutureMonth = getMaxFutureMonth(realCurrentMonth, 3)
+
+  const isPrevDisabled = isAtCreationMonth(userCreatedAtMonth)
+  const isNextDisabled = isAtFutureLimit(maxFutureMonth)
+
+  const [yStr, mStr] = currentMonth.split('-')
+  const dateObj = new Date(Number(yStr), Number(mStr) - 1, 1)
+  const cycleLabel = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const isDifferentFromNow = currentMonth !== realCurrentMonth
 
   const rawName = user?.name || (user?.email ? user.email.split('@')[0] : 'Anna')
   const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1)
@@ -30,11 +54,21 @@ export const Header: React.FC = () => {
       {/* Floating Action Controls: Ask AI + Date (+ Save Baseline on settings), sticky at top-0 */}
       <div className="sticky top-0 z-30 pointer-events-none flex items-center justify-end h-14 lg:h-[4.75rem] px-4 lg:px-0 bg-transparent -mb-14 lg:-mb-[4.75rem]">
         <div className="pointer-events-auto flex items-center gap-[0.75rem]">
-          {/* Date pill */}
-          <div className="flex items-center gap-[0.5rem] h-[2.2rem] px-[1rem] rounded-full bg-[#212121] text-[0.78rem] font-medium text-white shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
+          {/* Top-Right Fast-Switch Date pill button */}
+          <button
+            type="button"
+            onClick={jumpToCurrentMonth}
+            title={isDifferentFromNow ? 'Click to jump to current month' : 'Active Cycle'}
+            className={cn(
+              'flex items-center gap-[0.5rem] h-[2.2rem] px-[1rem] rounded-full text-[0.78rem] font-medium shadow-[0_2px_12px_rgba(0,0,0,0.5)] transition-all',
+              isDifferentFromNow
+                ? 'bg-[#252833] hover:bg-[#2e3240] text-amber-300 border border-amber-500/30 cursor-pointer active:scale-95'
+                : 'bg-[#212121] text-white cursor-default'
+            )}
+          >
             <Calendar className="w-[0.9rem] h-[0.9rem] text-[#cfcfcf]" />
-            <span>October 2026</span>
-          </div>
+            <span>{cycleLabel}</span>
+          </button>
 
           {/* + Save Baseline Button on Settings route */}
           {isSettings && (
@@ -55,8 +89,10 @@ export const Header: React.FC = () => {
         {isOverheads ? (
           <MonthNavigator
             currentMonth={currentMonth}
-            onPrev={prevMonth}
-            onNext={nextMonth}
+            onPrev={() => prevMonth(userCreatedAtMonth)}
+            onNext={() => nextMonth(maxFutureMonth)}
+            isPrevDisabled={isPrevDisabled}
+            isNextDisabled={isNextDisabled}
           />
         ) : (
           <h1 className="text-[1.35rem] lg:text-[1.5rem] font-semibold leading-none tracking-[-0.015em] text-white">
@@ -67,6 +103,5 @@ export const Header: React.FC = () => {
     </>
   )
 }
-
 
 export default Header

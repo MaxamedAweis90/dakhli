@@ -18,6 +18,7 @@ export interface AuthResponseData {
     _id?: string
     email: string
     name?: string
+    createdAt?: string
   }
 }
 
@@ -27,6 +28,7 @@ export interface MeResponseData {
     _id?: string
     email: string
     name?: string
+    createdAt?: string
   }
   balance?: unknown
 }
@@ -52,6 +54,7 @@ export const authApi = {
         id: (rawUser.id || rawUser._id) as string,
         email: rawUser.email,
         name: rawUser.name,
+        createdAt: rawUser.createdAt,
       },
     }
   },
@@ -80,6 +83,7 @@ export const authApi = {
         id: (rawUser.id || rawUser._id) as string,
         email: rawUser.email,
         name: rawUser.name,
+        createdAt: rawUser.createdAt,
       },
     }
   },
@@ -98,6 +102,7 @@ export const authApi = {
       id: (rawUser.id || rawUser._id) as string,
       email: rawUser.email,
       name: rawUser.name,
+      createdAt: rawUser.createdAt,
     }
   },
 }

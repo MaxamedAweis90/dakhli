@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { TOKEN_STORAGE_KEY, AUTH_UNAUTHORIZED_EVENT } from '@/lib/api'
 import type { AuthState, AuthUser } from '@/types/store'
 import { authApi } from '@/features/auth/api/authApi'
+import { useOverheadsStore } from '@/stores/overheadsStore'
 
 const USER_STORAGE_KEY = 'dakhli_user'
 
@@ -19,6 +20,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Ignore storage write errors in restricted sandbox environments
     }
+    // Always reset overhead cycle to real current month upon session start
+    useOverheadsStore.getState().jumpToCurrentMonth()
     set({
       token,
       user,
@@ -35,6 +38,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Ignore storage remove errors
     }
+    useOverheadsStore.getState().jumpToCurrentMonth()
     set({
       token: null,
       user: null,

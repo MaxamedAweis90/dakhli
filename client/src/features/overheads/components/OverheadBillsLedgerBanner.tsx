@@ -9,6 +9,8 @@ export interface OverheadBillsLedgerBannerProps {
   totalOverhead: number
   totalPaid: number
   totalUnpaid: number
+  isFutureCycle?: boolean
+  isPastCycle?: boolean
   className?: string
 }
 
@@ -21,6 +23,7 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
   totalOverhead,
   totalPaid,
   totalUnpaid,
+  isFutureCycle = false,
   className,
 }) => {
   const store = useLiquidityStore()
@@ -31,7 +34,7 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
 
   const rate = config.rate ?? 1
   const convertedTotal = totalOverhead * rate
-  const convertedPaid = totalPaid * rate
+  const convertedPaid = isFutureCycle ? 0 : totalPaid * rate
   const convertedUnpaid = totalUnpaid * rate
 
   return (
@@ -78,17 +81,27 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
           <span className="block text-[0.84rem] font-normal text-[#8E92A0] mb-2 tracking-normal">
             Paid
           </span>
-          <div className="text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold text-[#4ADE80] tracking-tight leading-none">
+          <div
+            className={cn(
+              'text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold tracking-tight leading-none',
+              isFutureCycle ? 'text-[#8E92A0]' : 'text-[#4ADE80]'
+            )}
+          >
             <AnimatedNumber value={convertedPaid} prefix={config.symbol} />
           </div>
         </div>
 
-        {/* Unpaid */}
+        {/* Unpaid / Projected */}
         <div className="pr-1 sm:pr-3">
           <span className="block text-[0.84rem] font-normal text-[#8E92A0] mb-2 tracking-normal">
-            Unpaid
+            {isFutureCycle ? 'Projected' : 'Unpaid'}
           </span>
-          <div className="text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold text-[#FA8C68] tracking-tight leading-none">
+          <div
+            className={cn(
+              'text-[2.75rem] sm:text-[3.15rem] lg:text-[3.45rem] font-semibold tracking-tight leading-none',
+              isFutureCycle ? 'text-[#8E92A0]' : 'text-[#FA8C68]'
+            )}
+          >
             <AnimatedNumber value={convertedUnpaid} prefix={config.symbol} />
           </div>
         </div>

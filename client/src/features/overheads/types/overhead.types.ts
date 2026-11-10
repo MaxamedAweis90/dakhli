@@ -9,6 +9,8 @@ export interface OverheadBill {
   status: OverheadStatus; // 'paid' | 'unpaid'
   iconKey?: string;       // e.g., 'home', 'dumbbell', 'wifi', 'music', 'key', 'flash', 'shield'
   isRecurring: boolean;
+  isActive?: boolean;
+  archivedAtMonthKey?: string | null;
   notes?: string;
   paidAt?: string | null;
   createdAt: string;
@@ -22,6 +24,17 @@ export interface CreateOverheadPayload {
   isRecurring?: boolean;
   notes?: string;
   iconKey?: string;
+}
+
+export interface UpdateOverheadPayload {
+  title?: string;
+  amount?: number;
+  dueDay?: number;
+  isRecurring?: boolean;
+  isActive?: boolean;
+  notes?: string;
+  iconKey?: string;
+  monthKey?: string;
 }
 
 export interface OverheadSummary {

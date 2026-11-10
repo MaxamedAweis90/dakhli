@@ -83,6 +83,7 @@ export const router = createBrowserRouter([
             element: <AppShell />,
             children: [
               { path: '/overheads', element: <OverheadsPage /> },
+              { path: '/overhead', element: <Navigate to="/overheads" replace /> },
               { path: '/daily', element: <DailyPage /> },
               { path: '/save-plans', element: <SavePlansPage /> },
               { path: '/items', element: <ItemsPage /> },
