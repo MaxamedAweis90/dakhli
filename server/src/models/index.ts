@@ -6,3 +6,4 @@ export * from './IncomeAdjustment';
 export * from './DailyLog';
 export * from './SavePlan';
 export * from './Item';
+export * from './UploadSession';

@@ -15,7 +15,10 @@ export const listOverheads = async (
 ): Promise<void> => {
   try {
     const userId = req.userId!;
-    const monthKey = (req.query.monthKey as string) || new Date().toISOString().slice(0, 7);
+    const monthKey =
+      (req.query.cycle as string) ||
+      (req.query.monthKey as string) ||
+      new Date().toISOString().slice(0, 7);
 
     const entries = await getMonthOverheads(userId, monthKey);
 
@@ -26,8 +29,10 @@ export const listOverheads = async (
       amount: record.billedAmount ?? item.defaultAmount,
       dueDay: item.dueDate,
       status: (record.isPaid ? 'paid' : 'unpaid') as 'paid' | 'unpaid',
-      iconKey: undefined,
+      iconKey: item.iconKey || 'home',
       isRecurring: !item.isArchived,
+      isActive: item.isActive !== false,
+      notes: item.notes || '',
       paidAt: record.paidAt,
       createdAt: item.createdAt ? item.createdAt.toISOString() : new Date().toISOString(),
       updatedAt: item.updatedAt ? item.updatedAt.toISOString() : new Date().toISOString(),
@@ -70,6 +75,9 @@ export const createOverhead = async (
       title: title.trim(),
       defaultAmount: Number(finalAmount),
       dueDate: Number(finalDueDay),
+      iconKey: iconKey || 'home',
+      notes: notes ? notes.trim() : '',
+      isActive: true,
       isArchived: false,
     });
 
@@ -92,9 +100,10 @@ export const createOverhead = async (
       amount: record.billedAmount,
       dueDay: item.dueDate,
       status: 'unpaid' as const,
-      iconKey,
+      iconKey: item.iconKey || 'home',
       isRecurring: isRecurring !== undefined ? isRecurring : true,
-      notes,
+      isActive: true,
+      notes: item.notes || '',
       createdAt: item.createdAt.toISOString(),
       updatedAt: item.updatedAt.toISOString(),
       item,
@@ -102,6 +111,107 @@ export const createOverhead = async (
     };
 
     res.status(201).json({
+      success: true,
+      data: formattedBill,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateOverhead = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const id = req.params.id as string;
+    const {
+      title,
+      amount,
+      defaultAmount,
+      dueDay,
+      dueDate,
+      iconKey,
+      notes,
+      isActive,
+      monthKey,
+    } = req.body;
+
+    const currentRealMonthKey = new Date().toISOString().slice(0, 7);
+    const targetMonth = monthKey || currentRealMonthKey;
+
+    if (targetMonth < currentRealMonthKey) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Archived cycle: Past months are read-only.' },
+      });
+      return;
+    }
+
+    const item = await OverheadItem.findOne({
+      _id: new Types.ObjectId(id),
+      userId: new Types.ObjectId(userId),
+    });
+
+    if (!item) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'Overhead item not found.' },
+      });
+      return;
+    }
+
+    if (title !== undefined) item.title = title.trim();
+    const finalAmount = amount !== undefined ? amount : defaultAmount;
+    if (finalAmount !== undefined) item.defaultAmount = Number(finalAmount);
+    const finalDueDay = dueDay !== undefined ? dueDay : dueDate;
+    if (finalDueDay !== undefined) item.dueDate = Number(finalDueDay);
+    if (iconKey !== undefined) item.iconKey = iconKey;
+    if (notes !== undefined) item.notes = notes.trim();
+    if (isActive !== undefined) item.isActive = Boolean(isActive);
+
+    await item.save();
+
+    // If amount changed, update active month's monthly record if unpaid
+    if (finalAmount !== undefined) {
+      await OverheadMonthlyRecord.findOneAndUpdate(
+        {
+          overheadItemId: item._id,
+          userId: item.userId,
+          monthKey: targetMonth,
+          isPaid: false,
+        },
+        { $set: { billedAmount: Number(finalAmount) } }
+      );
+    }
+
+    const record = await OverheadMonthlyRecord.findOne({
+      overheadItemId: item._id,
+      userId: item.userId,
+      monthKey: targetMonth,
+    });
+
+    const formattedBill = {
+      id: item._id.toString(),
+      userId: item.userId.toString(),
+      title: item.title,
+      amount: record ? record.billedAmount : item.defaultAmount,
+      dueDay: item.dueDate,
+      status: (record?.isPaid ? 'paid' : 'unpaid') as 'paid' | 'unpaid',
+      iconKey: item.iconKey || 'home',
+      isRecurring: !item.isArchived,
+      isActive: item.isActive !== false,
+      notes: item.notes || '',
+      paidAt: record?.paidAt || null,
+      createdAt: item.createdAt.toISOString(),
+      updatedAt: item.updatedAt.toISOString(),
+      item,
+      record,
+    };
+
+    res.status(200).json({
       success: true,
       data: formattedBill,
     });
@@ -124,6 +234,15 @@ export const updateMonthlyBilled = async (
       res.status(400).json({
         success: false,
         error: { message: 'billedAmount and monthKey are required.' },
+      });
+      return;
+    }
+
+    const currentRealMonthKey = new Date().toISOString().slice(0, 7);
+    if (monthKey < currentRealMonthKey) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Archived cycle: Past months are read-only.' },
       });
       return;
     }
@@ -157,7 +276,17 @@ export const payOverhead = async (
     const id = req.params.id as string;
     const { monthKey } = req.body;
 
-    const targetMonth = monthKey || new Date().toISOString().slice(0, 7);
+    const currentRealMonthKey = new Date().toISOString().slice(0, 7);
+    const targetMonth = monthKey || currentRealMonthKey;
+
+    if (targetMonth < currentRealMonthKey) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Archived cycle: Past months are read-only.' },
+      });
+      return;
+    }
+
     const updatedRecord = await markOverheadPaid(userId, id, targetMonth);
 
     res.status(200).json({
@@ -179,7 +308,16 @@ export const updateOverheadStatus = async (
     const id = req.params.id as string;
     const { status, monthKey } = req.body;
 
-    const targetMonth = monthKey || new Date().toISOString().slice(0, 7);
+    const currentRealMonthKey = new Date().toISOString().slice(0, 7);
+    const targetMonth = monthKey || currentRealMonthKey;
+
+    if (targetMonth < currentRealMonthKey) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Archived cycle: Past months are read-only.' },
+      });
+      return;
+    }
 
     let updatedRecord;
     if (status === 'paid') {
@@ -211,10 +349,24 @@ export const deleteOverhead = async (
   try {
     const userId = req.userId!;
     const id = req.params.id as string;
+    const targetMonth =
+      req.body?.monthKey ||
+      (req.query.monthKey as string) ||
+      (req.query.cycle as string) ||
+      new Date().toISOString().slice(0, 7);
+
+    const currentRealMonthKey = new Date().toISOString().slice(0, 7);
+    if (targetMonth < currentRealMonthKey) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Cannot delete bills from archived past months.' },
+      });
+      return;
+    }
 
     const item = await OverheadItem.findOneAndUpdate(
       { _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) },
-      { $set: { isArchived: true } },
+      { $set: { isArchived: true, archivedAtMonthKey: targetMonth } },
       { new: true }
     );
 
@@ -225,6 +377,14 @@ export const deleteOverhead = async (
       });
       return;
     }
+
+    // Delete future monthly records for this item (months >= targetMonth)
+    // Historical records in past months (< targetMonth) are strictly preserved!
+    await OverheadMonthlyRecord.deleteMany({
+      overheadItemId: item._id,
+      userId: new Types.ObjectId(userId),
+      monthKey: { $gte: targetMonth },
+    });
 
     res.status(200).json({
       success: true,

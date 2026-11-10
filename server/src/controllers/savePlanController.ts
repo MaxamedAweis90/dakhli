@@ -7,6 +7,7 @@ import {
   completeSavePlan,
   createSavePlan,
   fundSavePlan,
+  processSystemReserveMonthlyCut,
   updateSavePlan,
 } from '../services/savePlanService';
 
@@ -41,6 +42,12 @@ const formatSavePlan = (plan: ISavePlan) => {
     targetCycleWindow: plan.targetCycleWindow ?? 'PERPETUAL',
     sourceBalance: plan.sourceBalance || 'BASELINE_INCOME',
     cumulativeTotal: Number(plan.cumulativeTotal ?? plan.currentSaved ?? 0),
+    cutDay: plan.cutDay,
+    lastCutMonth: plan.lastCutMonth,
+    lastCutDate: plan.lastCutDate ? plan.lastCutDate.toISOString() : null,
+    pausedMonth: plan.pausedMonth,
+    pausedAt: plan.pausedAt ? plan.pausedAt.toISOString() : null,
+    cutsCompleted: plan.cutsCompleted ?? 0,
     createdAt: plan.createdAt ? plan.createdAt.toISOString() : new Date().toISOString(),
     updatedAt: plan.updatedAt ? plan.updatedAt.toISOString() : new Date().toISOString(),
   };
@@ -102,6 +109,9 @@ export const listSavePlans = async (
       }
     }
 
+    // Process automated monthly cut & check auto-unpause for Save for Life
+    await processSystemReserveMonthlyCut(userId);
+
     const query: Record<string, unknown> = {
       userId: new Types.ObjectId(userId),
     };
@@ -138,6 +148,8 @@ export const createPlan = async (
       currentAmount,
       currentSaved,
       monthlyContribution,
+      monthlyDeduction,
+      cutDay,
       iconKey,
       targetDate,
       isPinned,
@@ -157,6 +169,13 @@ export const createPlan = async (
         ? Number(currentSaved)
         : 0;
 
+    const finalMonthlyCut =
+      monthlyContribution !== undefined
+        ? Number(monthlyContribution)
+        : monthlyDeduction !== undefined
+        ? Number(monthlyDeduction)
+        : undefined;
+
     if (!finalTitle) {
       res.status(400).json({
         success: false,
@@ -171,7 +190,9 @@ export const createPlan = async (
       type: type || 'targeted',
       targetAmount: finalTarget,
       initialDeposit: finalInitialDeposit,
-      monthlyContribution: monthlyContribution !== undefined ? Number(monthlyContribution) : undefined,
+      monthlyContribution: finalMonthlyCut,
+      monthlyDeduction: finalMonthlyCut,
+      cutDay: cutDay !== undefined ? Number(cutDay) : undefined,
       iconKey,
       targetDate,
       isPinned,
@@ -283,6 +304,9 @@ export const patchPlan = async (
       targetCycleWindow,
       sourceBalance,
       cumulativeTotal,
+      cutDay,
+      pausedMonth,
+      pausedAt,
     } = req.body;
 
     const updates: Record<string, any> = {};
@@ -297,7 +321,36 @@ export const patchPlan = async (
         updates.currentSaved = Number(cumulativeTotal);
       }
     }
-    if (status !== undefined) updates.status = status;
+    if (status !== undefined) {
+      updates.status = status;
+      const now = new Date();
+      const currentMonthKey = now.toISOString().slice(0, 7);
+      const todayDay = now.getDate();
+      const isPaused = status === 'PAUSED' || status === 'paused';
+      if (isPaused) {
+        updates.pausedMonth = pausedMonth || currentMonthKey;
+        updates.pausedAt = pausedAt ? new Date(pausedAt) : now;
+      } else if (status === 'ACTIVE' || status === 'active') {
+        updates.pausedMonth = null;
+        updates.pausedAt = null;
+
+        // If activating a targeted plan after its cutDay has already passed this month while deactivated,
+        // consider this month skipped so no charge happens retroactively for this month.
+        const existingPlan = await SavePlan.findOne({
+          _id: new Types.ObjectId(id),
+          userId: new Types.ObjectId(userId),
+        });
+        if (existingPlan && !existingPlan.isSystemDefault && existingPlan.type !== 'general_life') {
+          const planCutDay = existingPlan.cutDay || 25;
+          if (todayDay >= planCutDay && existingPlan.status === 'deactivated') {
+            updates.lastCutMonth = currentMonthKey;
+          }
+        }
+      }
+    }
+    if (cutDay !== undefined) {
+      updates.cutDay = Math.min(31, Math.max(1, Number(cutDay)));
+    }
     if (isPinned !== undefined) updates.isPinned = Boolean(isPinned);
     if (iconKey !== undefined) updates.iconKey = iconKey;
     if (targetDate !== undefined) updates.targetDate = targetDate;
@@ -318,7 +371,15 @@ export const patchPlan = async (
     if (targetCycleWindow !== undefined) updates.targetCycleWindow = targetCycleWindow;
     if (sourceBalance !== undefined) updates.sourceBalance = sourceBalance;
 
-    const plan = await updateSavePlan(userId, id, updates);
+    let plan = await updateSavePlan(userId, id, updates);
+
+    // If active and due, trigger monthly cut
+    if (plan.isSystemDefault && (plan.status === 'ACTIVE' || plan.status === 'active')) {
+      const refreshed = await processSystemReserveMonthlyCut(userId);
+      if (refreshed) {
+        plan = refreshed;
+      }
+    }
 
     res.status(200).json({
       success: true,

@@ -35,6 +35,12 @@ export interface ISavePlan extends Document {
   targetCycleWindow?: string | number | null;
   sourceBalance?: ReserveSourceBalance;
   cumulativeTotal?: number;
+  cutDay?: number;
+  lastCutMonth?: string;
+  lastCutDate?: Date | null;
+  pausedMonth?: string | null;
+  pausedAt?: Date | null;
+  cutsCompleted?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -148,6 +154,32 @@ const savePlanSchema = new Schema<ISavePlan>(
       type: Number,
       default: 0,
       min: [0, 'Cumulative total cannot be negative'],
+    },
+    cutDay: {
+      type: Number,
+      min: [1, 'Cut day must be between 1 and 31'],
+      max: [31, 'Cut day must be between 1 and 31'],
+      default: undefined,
+    },
+    lastCutMonth: {
+      type: String,
+      default: undefined,
+    },
+    lastCutDate: {
+      type: Date,
+      default: null,
+    },
+    pausedMonth: {
+      type: String,
+      default: undefined,
+    },
+    pausedAt: {
+      type: Date,
+      default: null,
+    },
+    cutsCompleted: {
+      type: Number,
+      default: 0,
     },
   },
   {

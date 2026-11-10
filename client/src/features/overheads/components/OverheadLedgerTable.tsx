@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import {
   KeyRound,
   Home,
@@ -30,6 +30,15 @@ export interface OverheadLedgerTableProps {
   isUpdating?: boolean
   className?: string
 }
+
+type StatusFilter = 'all' | 'paid' | 'unpaid' | 'overdue'
+
+const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
+  { key: 'all', label: 'ALL' },
+  { key: 'paid', label: 'PAID' },
+  { key: 'unpaid', label: 'UNPAID' },
+  { key: 'overdue', label: 'OVERDUE' },
+]
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   key: KeyRound,
@@ -68,15 +77,23 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
   onEditBill,
   onToggleActive,
   onDeleteBill,
-  isCurrentCycle: _isCurrentCycle = true,
+  isCurrentCycle = true,
   isFutureCycle = false,
   isPastCycle = false,
   isUpdating = false,
   className,
 }) => {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const menuContainerRef = useRef<HTMLDivElement>(null)
+  const [menuCoords, setMenuCoords] = useState<{
+    top: number
+    left: number
+    openUpward: boolean
+  } | null>(null)
+
+  const menuRef = useRef<HTMLDivElement>(null)
+  const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   const store = useLiquidityStore()
   const currentCode = (store.currency in CURRENCY_CONFIGS
@@ -84,32 +101,71 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
     : 'USD') as CurrencyCode
   const config = CURRENCY_CONFIGS[currentCode]
 
-  // Close dropdown on click outside or Escape
+  // Close dropdown on click outside, Escape, or scroll
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        menuContainerRef.current &&
-        !menuContainerRef.current.contains(event.target as Node)
-      ) {
-        setOpenMenuId(null)
-        setConfirmDeleteId(null)
+      const target = event.target as Node
+      if (menuRef.current && menuRef.current.contains(target)) {
+        return
       }
+      if (openMenuId && triggerRefs.current[openMenuId]?.contains(target)) {
+        return
+      }
+      setOpenMenuId(null)
+      setConfirmDeleteId(null)
+      setMenuCoords(null)
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setOpenMenuId(null)
         setConfirmDeleteId(null)
+        setMenuCoords(null)
+      }
+    }
+
+    const handleScroll = () => {
+      if (openMenuId) {
+        setOpenMenuId(null)
+        setConfirmDeleteId(null)
+        setMenuCoords(null)
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('scroll', handleScroll, true)
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('scroll', handleScroll, true)
     }
-  }, [])
+  }, [openMenuId])
+
+  // Filter bills by status
+  const filteredBills = useMemo(() => {
+    if (statusFilter === 'all') return bills
+
+    const currentDay = new Date().getDate()
+
+    if (statusFilter === 'paid') {
+      return bills.filter((b) => b.status === 'paid')
+    }
+
+    if (statusFilter === 'unpaid') {
+      return bills.filter((b) => b.status === 'unpaid')
+    }
+
+    if (statusFilter === 'overdue') {
+      if (isFutureCycle) return []
+      if (isPastCycle) {
+        return bills.filter((b) => b.status === 'unpaid')
+      }
+      return bills.filter((b) => b.status === 'unpaid' && currentDay > b.dueDay)
+    }
+
+    return bills
+  }, [bills, statusFilter, isPastCycle, isFutureCycle])
 
   const formatAmount = (val: number): string =>
     new Intl.NumberFormat('en-US', {
@@ -117,14 +173,110 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
       maximumFractionDigits: 2,
     }).format(val * (config.rate ?? 1))
 
+  // Temporal Status Rendering without button badges or borders
+  const renderStatus = (bill: OverheadBill) => {
+    if (bill.isActive === false) {
+      return <span className="text-[#8E92A0]">Inactive</span>
+    }
+
+    // B. Past Closed Months (selectedCycle < currentCycle)
+    if (isPastCycle) {
+      if (bill.status === 'paid') {
+        return <span className="text-amber-300">Paid</span>
+      }
+      return <span className="text-[#FA8C68]">Unpaid</span>
+    }
+
+    // C. Future Months (selectedCycle > currentCycle)
+    if (isFutureCycle) {
+      return <span className="text-[#8E92A0]">Scheduled</span>
+    }
+
+    // A. Live Active Month (selectedCycle === currentCycle)
+    if (bill.status === 'paid') {
+      return <span className="text-[#4ADE80]">Paid</span>
+    }
+
+    // Live active month - Unpaid urgency classification
+    const currentDay = new Date().getDate()
+    const dueDay = bill.dueDay
+
+    // Due Today
+    if (dueDay === currentDay) {
+      return <span className="text-amber-400 font-medium">Payday</span>
+    }
+
+    // Past Due
+    if (currentDay > dueDay) {
+      const daysOverdue = currentDay - dueDay
+      return <span className="text-[#FA8C68]">Overdue {daysOverdue}d</span>
+    }
+
+    // Upcoming (<= 3 Days)
+    const daysUntilDue = dueDay - currentDay
+    if (daysUntilDue <= 3) {
+      return <span className="text-slate-300">Due in {daysUntilDue}d</span>
+    }
+
+    // Distant (> 3 Days)
+    return <span className="text-[#8E92A0]">Due day {dueDay}</span>
+  }
+
+  const handleToggleMenu = (e: React.MouseEvent<HTMLButtonElement>, billId: string) => {
+    e.stopPropagation()
+    if (openMenuId === billId) {
+      setOpenMenuId(null)
+      setConfirmDeleteId(null)
+      setMenuCoords(null)
+      return
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const menuEstimatedHeight = 155
+    const spaceBelow = window.innerHeight - rect.bottom
+    const openUpward = spaceBelow < menuEstimatedHeight && rect.top > menuEstimatedHeight
+
+    setMenuCoords({
+      top: openUpward ? rect.top - 6 : rect.bottom + 6,
+      left: Math.max(12, rect.right - 192), // 192px = w-48
+      openUpward,
+    })
+    setConfirmDeleteId(null)
+    setOpenMenuId(billId)
+  }
+
+  const activeBill = bills.find((b) => b.id === openMenuId)
+
   return (
     <div
-      ref={menuContainerRef}
       className={cn(
         'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-6 lg:p-7 select-none',
         className
       )}
     >
+      {/* 1. Status Filter Strip (ALL, PAID, UNPAID, OVERDUE) */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-4 mb-4 border-b border-white/[0.04]">
+        {STATUS_FILTERS.map((tab) => {
+          const isActive = statusFilter === tab.key
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setStatusFilter(tab.key)}
+              className={cn(
+                'px-2.5 py-1 text-xs font-mono rounded transition-colors cursor-pointer shrink-0',
+                isActive
+                  ? 'text-white bg-[#1A1D26] border border-white/10'
+                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+              )}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* 2. Bills Table */}
       <div className="w-full overflow-x-auto no-scrollbar">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -138,29 +290,47 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
           </thead>
 
           <tbody className="divide-y divide-white/[0.04]">
-            {bills.length === 0 ? (
+            {filteredBills.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-12 text-center text-[0.88rem] text-[#8E92A0]">
-                  No overhead bills recorded for this cycle.{' '}
-                  {!isPastCycle && (
-                    <span>Click <span className="text-[#F7B668] font-medium">"Add Bill"</span> to create your first obligation.</span>
+                  {bills.length === 0 ? (
+                    <>
+                      No overhead bills recorded for this cycle.{' '}
+                      {!isPastCycle && (
+                        <span>
+                          Click <span className="text-[#F7B668] font-medium">"Add Bill"</span> to create your first obligation.
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      No {statusFilter !== 'all' ? statusFilter : ''} bills recorded for this cycle.{' '}
+                      <button
+                        type="button"
+                        onClick={() => setStatusFilter('all')}
+                        className="text-[#F7B668] hover:underline cursor-pointer ml-1"
+                      >
+                        Show all
+                      </button>
+                    </>
                   )}
                 </td>
               </tr>
             ) : (
-              bills.map((bill) => {
+              filteredBills.map((bill) => {
                 const Icon = getCategoryIcon(bill)
                 const isPaid = bill.status === 'paid'
                 const isInactive = bill.isActive === false
+                const isPaidActive = isCurrentCycle && isPaid
                 const isMenuOpen = openMenuId === bill.id
-                const isConfirmingDelete = confirmDeleteId === bill.id
 
                 return (
                   <tr
                     key={bill.id}
                     className={cn(
                       'group hover:bg-white/[0.015] transition-colors',
-                      isInactive && 'opacity-50'
+                      isInactive && 'opacity-50',
+                      isPaidActive && 'opacity-45'
                     )}
                   >
                     {/* Bill Name + Icon Tile */}
@@ -178,7 +348,7 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                           <span
                             className={cn(
                               'text-[0.92rem] font-medium tracking-tight block',
-                              isInactive
+                              isInactive || isPaidActive
                                 ? 'text-slate-400 line-through'
                                 : 'text-white'
                             )}
@@ -216,21 +386,9 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                       {formatAmount(bill.amount)}
                     </td>
 
-                    {/* Status */}
-                    <td className="py-4 text-[0.88rem] font-medium">
-                      {isInactive ? (
-                        <span className="px-2 py-0.5 rounded text-[0.7rem] font-mono tracking-wider bg-white/5 text-[#8E92A0] border border-white/[0.06]">
-                          INACTIVE
-                        </span>
-                      ) : isFutureCycle ? (
-                        <span className="text-[#8E92A0] font-mono text-[0.85rem]">
-                          Scheduled
-                        </span>
-                      ) : isPaid ? (
-                        <span className="text-[#4ADE80]">Paid</span>
-                      ) : (
-                        <span className="text-[#FA8C68]">Unpaid</span>
-                      )}
+                    {/* Status (Clean Text, No Button Borders or Backgrounds) */}
+                    <td className="py-4 text-[0.88rem] font-medium font-mono">
+                      {renderStatus(bill)}
                     </td>
 
                     {/* Actions */}
@@ -293,111 +451,21 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
 
                         {/* 3-Dot Vertical Context Menu Trigger */}
                         {!isPastCycle && (
-                          <div className="relative">
-                            <button
-                              type="button"
-                              aria-label="Bill actions"
-                              disabled={isUpdating}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setConfirmDeleteId(null)
-                                setOpenMenuId(isMenuOpen ? null : bill.id)
-                              }}
-                              className={cn(
-                                'p-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded transition-colors cursor-pointer',
-                                isMenuOpen && 'bg-white/10 text-white'
-                              )}
-                            >
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
-
-                            {/* Dropdown Menu Container */}
-                            {isMenuOpen && (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                className="absolute right-0 top-full mt-1.5 w-48 rounded-xl bg-[#1A1D26] border border-white/[0.08] shadow-[0_12px_32px_rgba(0,0,0,0.65)] py-1.5 z-50 text-left animate-fade-in"
-                              >
-                                {isConfirmingDelete ? (
-                                  // Inline Delete Confirmation
-                                  <div className="p-2.5 space-y-2">
-                                    <p className="text-[0.76rem] text-slate-300 font-medium leading-tight">
-                                      Delete this bill from current and future cycles?
-                                    </p>
-                                    <div className="flex items-center gap-1.5 pt-1">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (onDeleteBill) onDeleteBill(bill.id)
-                                          setOpenMenuId(null)
-                                          setConfirmDeleteId(null)
-                                        }}
-                                        className="flex-1 py-1 px-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-[0.74rem] font-semibold transition-colors cursor-pointer text-center"
-                                      >
-                                        Confirm
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => setConfirmDeleteId(null)}
-                                        className="py-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-[0.74rem] transition-colors cursor-pointer"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  // Standard Context Options
-                                  <>
-                                    {/* 1. Edit Bill */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenMenuId(null)
-                                        if (onEditBill) onEditBill(bill)
-                                      }}
-                                      className="w-full px-3.5 py-2 flex items-center gap-2.5 text-[0.8rem] text-slate-200 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                                    >
-                                      <Pencil className="w-3.5 h-3.5 text-slate-400" />
-                                      <span>Edit Bill</span>
-                                    </button>
-
-                                    {/* 2. Deactivate / Activate */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setOpenMenuId(null)
-                                        if (onToggleActive) {
-                                          onToggleActive(bill.id, bill.isActive !== false)
-                                        }
-                                      }}
-                                      className="w-full px-3.5 py-2 flex items-center gap-2.5 text-[0.8rem] text-slate-200 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
-                                    >
-                                      <Power
-                                        className={cn(
-                                          'w-3.5 h-3.5',
-                                          isInactive ? 'text-emerald-400' : 'text-amber-400'
-                                        )}
-                                      />
-                                      <span>
-                                        {isInactive ? 'Activate' : 'Deactivate'}
-                                      </span>
-                                    </button>
-
-                                    <div className="my-1 border-t border-white/[0.06]" />
-
-                                    {/* 3. Delete */}
-                                    <button
-                                      type="button"
-                                      onClick={() => setConfirmDeleteId(bill.id)}
-                                      className="w-full px-3.5 py-2 flex items-center gap-2.5 text-[0.8rem] text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                      <span>Delete</span>
-                                    </button>
-                                  </>
-                                )}
-                              </div>
+                          <button
+                            ref={(el) => {
+                              triggerRefs.current[bill.id] = el
+                            }}
+                            type="button"
+                            aria-label="Bill actions"
+                            disabled={isUpdating}
+                            onClick={(e) => handleToggleMenu(e, bill.id)}
+                            className={cn(
+                              'p-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded transition-colors cursor-pointer',
+                              isMenuOpen && 'bg-white/10 text-white'
                             )}
-                          </div>
+                          >
+                            <MoreVertical className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -408,6 +476,108 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* 3. Floating Dropdown Menu (Fixed Positioning, Highest Z-Index, Never Clipped by Table Overflow) */}
+      {openMenuId && activeBill && menuCoords && (
+        <div
+          ref={menuRef}
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'fixed',
+            top: menuCoords.openUpward ? undefined : `${menuCoords.top}px`,
+            bottom: menuCoords.openUpward
+              ? `${window.innerHeight - menuCoords.top}px`
+              : undefined,
+            left: `${menuCoords.left}px`,
+            zIndex: 9999,
+          }}
+          className="w-48 rounded-xl bg-[#1A1D26] border border-white/[0.08] shadow-[0_12px_36px_rgba(0,0,0,0.85)] py-1.5 text-left animate-fade-in pointer-events-auto"
+        >
+          {confirmDeleteId === activeBill.id ? (
+            // Inline Delete Confirmation
+            <div className="p-2.5 space-y-2">
+              <p className="text-[0.76rem] text-slate-300 font-medium leading-tight">
+                Delete this bill from current and future cycles?
+              </p>
+              <div className="flex items-center gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onDeleteBill) onDeleteBill(activeBill.id)
+                    setOpenMenuId(null)
+                    setConfirmDeleteId(null)
+                    setMenuCoords(null)
+                  }}
+                  className="flex-1 py-1 px-2 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-[0.74rem] font-semibold transition-colors cursor-pointer text-center"
+                >
+                  Confirm
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="py-1 px-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-[0.74rem] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            // Standard Context Options
+            <>
+              {/* 1. Edit Bill */}
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenMenuId(null)
+                  setMenuCoords(null)
+                  if (onEditBill) onEditBill(activeBill)
+                }}
+                className="w-full px-3.5 py-2 flex items-center gap-2.5 text-[0.8rem] text-slate-200 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <Pencil className="w-3.5 h-3.5 text-slate-400" />
+                <span>Edit Bill</span>
+              </button>
+
+              {/* 2. Deactivate / Activate */}
+              <button
+                type="button"
+                onClick={() => {
+                  setOpenMenuId(null)
+                  setMenuCoords(null)
+                  if (onToggleActive) {
+                    onToggleActive(activeBill.id, activeBill.isActive !== false)
+                  }
+                }}
+                className="w-full px-3.5 py-2 flex items-center gap-2.5 text-[0.8rem] text-slate-200 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+              >
+                <Power
+                  className={cn(
+                    'w-3.5 h-3.5',
+                    activeBill.isActive === false
+                      ? 'text-emerald-400'
+                      : 'text-amber-400'
+                  )}
+                />
+                <span>
+                  {activeBill.isActive === false ? 'Activate' : 'Deactivate'}
+                </span>
+              </button>
+
+              <div className="my-1 border-t border-white/[0.06]" />
+
+              {/* 3. Delete */}
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteId(activeBill.id)}
+                className="w-full px-3.5 py-2 flex items-center gap-2.5 text-[0.8rem] text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -5,7 +5,11 @@ export interface IOverheadItem extends Document {
   title: string;
   defaultAmount: number;
   dueDate: number;
+  iconKey?: string;
+  notes?: string;
+  isActive: boolean;
   isArchived: boolean;
+  archivedAtMonthKey?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -34,9 +38,25 @@ const overheadItemSchema = new Schema<IOverheadItem>(
       min: [1, 'Due date must be between 1 and 31'],
       max: [31, 'Due date must be between 1 and 31'],
     },
+    iconKey: {
+      type: String,
+      default: 'home',
+    },
+    notes: {
+      type: String,
+      default: '',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
     isArchived: {
       type: Boolean,
       default: false,
+    },
+    archivedAtMonthKey: {
+      type: String,
+      default: null,
     },
   },
   {
@@ -45,6 +65,7 @@ const overheadItemSchema = new Schema<IOverheadItem>(
   }
 );
 
-overheadItemSchema.index({ userId: 1, isArchived: 1 });
+overheadItemSchema.index({ userId: 1, isArchived: 1, createdAt: -1 });
+overheadItemSchema.index({ userId: 1, monthKey: 1 });
 
 export const OverheadItem = model<IOverheadItem>('OverheadItem', overheadItemSchema);

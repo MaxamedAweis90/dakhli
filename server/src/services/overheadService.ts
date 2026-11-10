@@ -1,12 +1,12 @@
-import { ClientSession, Types } from 'mongoose';
+import { ClientSession, Types } from "mongoose";
 import {
   IOverheadItem,
   IOverheadMonthlyRecord,
   OverheadItem,
   OverheadMonthlyRecord,
-} from '../models';
-import { adjustGrossBalance } from './balanceService';
-import { withTransaction } from './transactionHelper';
+} from "../models";
+import { adjustGrossBalance } from "./balanceService";
+import { withTransaction } from "./transactionHelper";
 
 export interface MonthOverheadEntry {
   item: IOverheadItem;
@@ -16,20 +16,16 @@ export interface MonthOverheadEntry {
 /**
  * Retrieves all active overhead items for the user and ensures a monthly record exists
  * for the specified monthKey. If a record does not exist yet, it is initialized.
+ * - Future months carry over active recurring bills.
+ * - Newly added bills only apply to current & future months (not retroactively to past months before creation).
+ * - Deleting in current month removes from current & future, preserving historical past records.
+ * - Sorted newest first (createdAt: -1), segregating active before inactive.
  */
 export const getMonthOverheads = async (
   userId: string,
-  monthKey: string
+  monthKey: string,
 ): Promise<MonthOverheadEntry[]> => {
-  const activeItems = await OverheadItem.find({
-    userId: new Types.ObjectId(userId),
-    isArchived: false,
-  });
-
-  if (activeItems.length === 0) {
-    return [];
-  }
-
+  // 1. Fetch user's existing monthly records for this monthKey
   const existingRecords = await OverheadMonthlyRecord.find({
     userId: new Types.ObjectId(userId),
     monthKey,
@@ -40,9 +36,43 @@ export const getMonthOverheads = async (
     recordMap.set(record.overheadItemId.toString(), record);
   });
 
-  // Identify items that need an initial monthly snapshot
-  const missingItems = activeItems.filter(
-    (item) => !recordMap.has(item._id.toString())
+  // 2. Fetch all overhead items for this user
+  const allUserItems = await OverheadItem.find({
+    userId: new Types.ObjectId(userId),
+  });
+
+  // 3. Filter items that belong in this monthKey:
+  // - A bill NEVER exists prior to its creation month
+  // - If archived/deleted, it only exists in months strictly BEFORE the deletion month
+  // - Historical past records (< deletion month) are strictly preserved
+  const validItems = allUserItems.filter((item) => {
+    const itemCreationMonth = item.createdAt
+      ? item.createdAt.toISOString().slice(0, 7)
+      : monthKey;
+
+    // Rule 1: Bill never exists prior to its creation month
+    if (itemCreationMonth > monthKey) {
+      return false;
+    }
+
+    // Rule 2: If archived/deleted, exclude from deletion month and all future months
+    if (item.isArchived) {
+      const archivedMonth = item.archivedAtMonthKey || itemCreationMonth;
+      if (monthKey >= archivedMonth) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  if (validItems.length === 0) {
+    return [];
+  }
+
+  // 4. Identify items that need an initial monthly snapshot
+  const missingItems = validItems.filter(
+    (item) => !recordMap.has(item._id.toString()),
   );
 
   if (missingItems.length > 0) {
@@ -61,10 +91,24 @@ export const getMonthOverheads = async (
     });
   }
 
-  return activeItems.map((item) => ({
+  // 5. Combine and sort: Active items first, then newest created bills first (createdAt: -1)
+  const entries: MonthOverheadEntry[] = validItems.map((item) => ({
     item,
     record: recordMap.get(item._id.toString())!,
   }));
+
+  entries.sort((a, b) => {
+    const aActive = a.item.isActive !== false;
+    const bActive = b.item.isActive !== false;
+    if (aActive !== bActive) {
+      return aActive ? -1 : 1;
+    }
+    const aTime = a.item.createdAt ? new Date(a.item.createdAt).getTime() : 0;
+    const bTime = b.item.createdAt ? new Date(b.item.createdAt).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  return entries;
 };
 
 /**
@@ -75,7 +119,7 @@ export const markOverheadPaid = async (
   userId: string,
   overheadItemId: string,
   monthKey: string,
-  session?: ClientSession
+  session?: ClientSession,
 ): Promise<IOverheadMonthlyRecord> => {
   return withTransaction(async (activeSession) => {
     let record = await OverheadMonthlyRecord.findOne({
@@ -92,7 +136,9 @@ export const markOverheadPaid = async (
       }).session(activeSession);
 
       if (!parentItem) {
-        throw new Error(`[OverheadService] Overhead item not found: ${overheadItemId}`);
+        throw new Error(
+          `[OverheadService] Overhead item not found: ${overheadItemId}`,
+        );
       }
 
       const created = await OverheadMonthlyRecord.create(
@@ -106,7 +152,7 @@ export const markOverheadPaid = async (
             paidAt: null,
           },
         ],
-        { session: activeSession }
+        { session: activeSession },
       );
       record = created[0];
     }
@@ -114,7 +160,7 @@ export const markOverheadPaid = async (
     // Guardrail: Prevent double-deductions
     if (record.isPaid) {
       throw new Error(
-        `[OverheadService] Overhead item "${overheadItemId}" is already marked as paid for month ${monthKey}.`
+        `[OverheadService] Overhead item "${overheadItemId}" is already marked as paid for month ${monthKey}.`,
       );
     }
 
@@ -137,7 +183,7 @@ export const markOverheadUnpaid = async (
   userId: string,
   overheadItemId: string,
   monthKey: string,
-  session?: ClientSession
+  session?: ClientSession,
 ): Promise<IOverheadMonthlyRecord> => {
   return withTransaction(async (activeSession) => {
     const record = await OverheadMonthlyRecord.findOne({
@@ -147,7 +193,9 @@ export const markOverheadUnpaid = async (
     }).session(activeSession);
 
     if (!record) {
-      throw new Error(`[OverheadService] Overhead record not found: ${overheadItemId}`);
+      throw new Error(
+        `[OverheadService] Overhead record not found: ${overheadItemId}`,
+      );
     }
 
     if (!record.isPaid) {

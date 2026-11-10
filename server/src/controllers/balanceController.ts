@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { Balance } from '../models';
 import { getFinancialOverview } from '../services/balanceService';
+import { processSystemReserveMonthlyCut } from '../services/savePlanService';
 
 export const getOverview = async (
   req: AuthRequest,
@@ -10,6 +11,7 @@ export const getOverview = async (
 ): Promise<void> => {
   try {
     const userId = req.userId!;
+    await processSystemReserveMonthlyCut(userId);
     const overview = await getFinancialOverview(userId);
 
     res.status(200).json({

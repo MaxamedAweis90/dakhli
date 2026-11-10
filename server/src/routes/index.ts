@@ -5,6 +5,7 @@ import overheadRoutes from './overheadRoutes';
 import dailyRoutes from './dailyRoutes';
 import savePlanRoutes from './savePlanRoutes';
 import itemRoutes from './itemRoutes';
+import uploadRoutes from './uploadRoutes';
 
 const apiRouter = Router();
 
@@ -16,5 +17,6 @@ apiRouter.use('/overheads', overheadRoutes);
 apiRouter.use('/daily', dailyRoutes);
 apiRouter.use('/save-plans', savePlanRoutes);
 apiRouter.use('/items', itemRoutes);
+apiRouter.use('/upload', uploadRoutes);
 
 export default apiRouter;
