@@ -143,9 +143,15 @@ export const useSavePlans = () => {
     const isCurrentlyActive =
       target.status === 'active' || target.status === 'ACTIVE'
     const nextStatus = isCurrentlyActive ? 'PAUSED' : 'ACTIVE'
+    const now = new Date()
+    const currentMonthKey = now.toISOString().slice(0, 7)
     return updateMutation.mutateAsync({
       id,
-      updates: { status: nextStatus },
+      updates: {
+        status: nextStatus,
+        pausedMonth: nextStatus === 'PAUSED' ? currentMonthKey : null,
+        pausedAt: nextStatus === 'PAUSED' ? now.toISOString() : null,
+      },
     })
   }
 

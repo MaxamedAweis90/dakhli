@@ -38,7 +38,9 @@ export const normalizeSavePlan = (raw: any): SavePlan => {
       ? raw.type
       : 'targeted'
 
-  const status: SavePlanStatus = [
+  const now = new Date()
+  const currentMonthKey = now.toISOString().slice(0, 7)
+  let status: SavePlanStatus = [
     'active',
     'completed',
     'cancelled',
@@ -50,6 +52,14 @@ export const normalizeSavePlan = (raw: any): SavePlan => {
   ].includes(raw.status)
     ? raw.status
     : 'active'
+
+  const pausedMonth = raw.pausedMonth || undefined
+  const pausedAt = raw.pausedAt || null
+
+  // Auto-unpause if paused in an earlier month
+  if ((status === 'PAUSED' || status === 'paused') && pausedMonth && currentMonthKey > pausedMonth) {
+    status = 'ACTIVE'
+  }
 
   const monthlyDeduction = Number(raw.monthlyDeduction ?? raw.monthlyContribution ?? 0)
 
@@ -82,6 +92,12 @@ export const normalizeSavePlan = (raw: any): SavePlan => {
     targetCycleWindow: raw.targetCycleWindow ?? 'PERPETUAL',
     sourceBalance: raw.sourceBalance || 'BASELINE_INCOME',
     cumulativeTotal,
+    cutDay: raw.cutDay !== undefined ? Number(raw.cutDay) : undefined,
+    lastCutMonth: raw.lastCutMonth,
+    lastCutDate: raw.lastCutDate,
+    pausedMonth,
+    pausedAt,
+    cutsCompleted: raw.cutsCompleted !== undefined ? Number(raw.cutsCompleted) : 0,
     createdAt: raw.createdAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || new Date().toISOString(),
   }

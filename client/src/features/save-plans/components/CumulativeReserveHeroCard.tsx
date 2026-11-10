@@ -1,12 +1,27 @@
 import React, { useState, useId } from 'react'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { useBaseline } from '@/features/settings/hooks/useBaseline'
 import {
   CURRENCY_CONFIGS,
   type CurrencyCode,
 } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 import type { SavePlan } from '../types/savePlan.types'
+
+const getDayWithSuffix = (day: number): string => {
+  if (day >= 11 && day <= 13) return `${day}th`
+  switch (day % 10) {
+    case 1:
+      return `${day}st`
+    case 2:
+      return `${day}nd`
+    case 3:
+      return `${day}rd`
+    default:
+      return `${day}th`
+  }
+}
 
 interface CumulativeReserveHeroCardProps {
   plan: SavePlan
@@ -47,6 +62,10 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
 }) => {
   const filterId = useId().replace(/:/g, '')
   const liquidityStore = useLiquidityStore()
+  const { baseline } = useBaseline()
+  const salaryDay = baseline?.paydayAnchorDay ?? 25
+  const effectiveCutDay = plan.cutDay ?? salaryDay
+
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
 
   const currentCode = (
@@ -59,7 +78,7 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
 
   const isPaused = plan.status === 'PAUSED' || plan.status === 'paused'
   const monthlyDeduction = Number(
-    plan.monthlyDeduction ?? plan.monthlyContribution ?? 300
+    plan.monthlyDeduction ?? plan.monthlyContribution ?? 50
   )
   const cumulativeTotal = Number(
     plan.cumulativeTotal ?? plan.currentAmount ?? plan.currentSaved ?? 0
@@ -72,6 +91,11 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
     plan.sourceBalance === 'LIQUID_BALANCE'
       ? 'Liquid Surplus'
       : 'Monthly Baseline Income'
+
+  const pauseDate = plan.pausedAt ? new Date(plan.pausedAt) : new Date()
+  const pauseMonthName = pauseDate.toLocaleDateString('en-US', { month: 'long' })
+  const pauseDayAndYear = pauseDate.toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' })
+  const pauseDateFormatted = `${pauseMonthName} ${pauseDayAndYear}`
 
   // Generate 7 rolling monthly trajectory points (3 past months, current, 3 projected)
   const monthNames = [
@@ -164,7 +188,7 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
               <p className="text-[0.8rem] text-[#8E92A0] mt-0.5">
                 {isPaused ? (
                   <span className="text-[#FBBF24]">
-                    Accumulation paused • Reserve preserved
+                    Paused for this {pauseDateFormatted} • Auto-resumes next month • Reserve preserved
                   </span>
                 ) : (
                   <span>
@@ -175,7 +199,7 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
                         maximumFractionDigits: 0,
                       }).format(convertedCut)}
                     </strong>
-                    /mo from {sourceLabel}
+                    /mo from {sourceLabel} on the {getDayWithSuffix(effectiveCutDay)}
                   </span>
                 )}
               </p>
@@ -200,7 +224,7 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
                     isPaused ? 'bg-[#FBBF24]' : 'bg-[#4ADE80]'
                   )}
                 />
-                <span>{isPaused ? 'Paused • Resume' : 'Active'}</span>
+                <span>{isPaused ? 'Paused • Click to Unpause' : 'Active'}</span>
               </button>
 
               <button

@@ -4,6 +4,8 @@ import { useBaseline } from "@/features/settings/hooks/useBaseline";
 import { useOverheads } from "@/features/overheads/hooks/useOverheads";
 import { useDaily } from "@/features/daily/hooks/useDaily";
 import { CURRENCY_CONFIGS, type CurrencyCode } from "@/features/settings/types/settings.types";
+import { AnimatedNumber } from "@/components/shared/AnimatedNumber";
+import { calculateCycleBurnRate } from "@/features/daily/hooks/useCycleBurnRate";
 import { cn } from "@/lib/utils";
 
 export interface CashFlowCardProps {
@@ -14,9 +16,6 @@ export interface CashFlowCardProps {
   usedPercent?: number;
   className?: string;
 }
-
-const fmt = (n: number): string =>
-  new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(n);
 
 interface SparklineProps {
   path: string;
@@ -103,7 +102,10 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
 
   // Base raw amounts
   const rawIncome =
-    propIncome ?? (baseline?.monthlyIncome !== undefined && baseline.monthlyIncome > 0 ? baseline.monthlyIncome : 8385);
+    propIncome ??
+    (baseline?.monthlyIncome !== undefined && baseline.monthlyIncome > 0
+      ? baseline.monthlyIncome
+      : 8385);
 
   const liveSpent = dailyLogs.reduce((sum, l) => sum + (l.spent || 0), 0);
   const liveOverheadObligations =
@@ -140,6 +142,35 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
   const isNetPositive = net >= 0;
   const netSign = isNetPositive ? "+" : "-";
 
+  // Cycle burn-rate calculation
+  const totalCycleDays = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() + 1,
+    0
+  ).getDate();
+
+  const discretionaryBaseline =
+    baseline?.defaultDailyCap && baseline.defaultDailyCap > 0
+      ? baseline.defaultDailyCap * totalCycleDays
+      : rawLimit > 0
+      ? rawLimit
+      : 1000;
+
+  const cumulativeSpend =
+    propExpenses !== undefined
+      ? propExpenses
+      : liveSpent > 0
+      ? liveSpent
+      : rawExpenses;
+
+  const baselineForBurn =
+    propLimit !== undefined ? propLimit : discretionaryBaseline;
+
+  const burnRate = calculateCycleBurnRate({
+    cumulativeSpend,
+    discretionaryBaseline: baselineForBurn,
+  });
+
   return (
     <div
       className={cn(
@@ -169,9 +200,15 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
             <p className="text-[0.75rem] leading-none text-[#8E92A0] font-normal">
               Income
             </p>
-            <p className="mt-[0.45rem] text-[1.35rem] leading-none font-semibold tracking-tight text-white">
-              {config.symbol}{fmt(income)}
-            </p>
+            <div className="mt-[0.45rem] text-[1.35rem] leading-none font-semibold tracking-tight text-white font-mono tabular-nums">
+              <AnimatedNumber
+                value={income}
+                prefix={config.symbol}
+                currency={currentCode}
+                decimals={0}
+                className="font-mono tabular-nums"
+              />
+            </div>
           </div>
           <Sparkline
             viewBox="0 0 100 50"
@@ -188,9 +225,15 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
             <p className="text-[0.75rem] leading-none text-[#8E92A0] font-normal">
               Expenses
             </p>
-            <p className="mt-[0.45rem] text-[1.35rem] leading-none font-semibold tracking-tight text-white">
-              {config.symbol}{fmt(expenses)}
-            </p>
+            <div className="mt-[0.45rem] text-[1.35rem] leading-none font-semibold tracking-tight text-white font-mono tabular-nums">
+              <AnimatedNumber
+                value={expenses}
+                prefix={config.symbol}
+                currency={currentCode}
+                decimals={0}
+                className="font-mono tabular-nums"
+              />
+            </div>
           </div>
           <Sparkline
             viewBox="0 0 100 50"
@@ -202,8 +245,14 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
         </div>
 
         {/* Floating net pill centered over the seam */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 h-[1.75rem] min-w-[3.8rem] px-[0.85rem] rounded-full bg-white text-[#15161A] text-[0.78rem] font-semibold flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.5)]">
-          {netSign}{config.symbol}{fmt(Math.abs(net))}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 h-[1.75rem] min-w-[3.8rem] px-[0.85rem] rounded-full bg-white text-[#15161A] text-[0.78rem] font-semibold flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.5)] font-mono tabular-nums">
+          <AnimatedNumber
+            value={Math.abs(net)}
+            prefix={`${netSign}${config.symbol}`}
+            currency={currentCode}
+            decimals={0}
+            className="font-mono tabular-nums font-semibold"
+          />
         </div>
       </div>
 
@@ -213,18 +262,38 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
           <span className="text-[0.85rem] leading-none text-[#8E92A0] font-normal">
             Expenses limit
           </span>
-          <span className="text-[1.45rem] leading-none font-semibold tracking-tight text-white">
-            {config.symbol}{fmt(limit)}
-          </span>
+          <div className="flex items-baseline gap-2.5">
+            <span className={burnRate.pacingClassName}>
+              {burnRate.pacingLabel}
+            </span>
+            <span className="text-[1.45rem] leading-none font-semibold tracking-tight text-white font-mono tabular-nums">
+              <AnimatedNumber
+                value={limit}
+                prefix={config.symbol}
+                currency={currentCode}
+                decimals={0}
+                className="font-mono tabular-nums"
+              />
+            </span>
+          </div>
         </div>
-        <div className="relative mt-[0.7rem] w-full h-[3.4rem]">
+        <div className="relative mt-[0.7rem] w-full h-[3.4rem] rounded-2xl overflow-hidden">
           {/* Hatched track spanning full width, cleanly rounded at edges */}
-          <div className="absolute inset-0 rounded-2xl overflow-hidden bg-limit-hatch" />
+          <div className="absolute inset-0 bg-limit-hatch" />
 
           {/* Neon pill with full rounded corners and radiant ambient glow */}
           <div
-            className="relative h-full rounded-2xl bg-expenses-neon transition-all"
+            className="relative h-full rounded-2xl bg-expenses-neon transition-all duration-500 ease-out"
             style={{ width: `${usedPercent}%` }}
+          />
+
+          {/* Hairline Timeline Marker */}
+          <div
+            className="w-[1.5px] h-full bg-white/40 absolute top-0 pointer-events-none z-10"
+            style={{
+              left: `${Math.min(100, Math.max(0, burnRate.timeProgressRatio * 100))}%`,
+            }}
+            title={`Expected cycle consumption pace: ${(burnRate.timeProgressRatio * 100).toFixed(1)}%`}
           />
         </div>
       </div>

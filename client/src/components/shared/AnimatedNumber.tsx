@@ -1,75 +1,66 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React from 'react'
+import {
+  useAnimatedNumber,
+  formatLocalizedNumber,
+  type UseAnimatedNumberOptions,
+} from '@/hooks/useAnimatedNumber'
+import { cn } from '@/lib/utils'
 
 export interface AnimatedNumberProps {
   value: number
+  currency?: 'USD' | 'SOS' | 'EUR' | string
+  decimals?: number
   duration?: number
+  stiffness?: number
+  damping?: number
+  mass?: number
   prefix?: string
   suffix?: string
   className?: string
+  includeSymbol?: boolean
   formatOptions?: Intl.NumberFormatOptions
 }
 
 export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   value,
-  duration = 650,
+  currency,
+  decimals,
+  duration,
+  stiffness = 200,
+  damping = 25,
+  mass = 1,
   prefix = '',
   suffix = '',
   className,
-  formatOptions = {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  },
+  includeSymbol,
+  formatOptions,
 }) => {
-  const [displayValue, setDisplayValue] = useState(value)
-  const prevValueRef = useRef(value)
-  const isFirstRender = useRef(true)
+  const derivedDecimals =
+    decimals !== undefined
+      ? decimals
+      : formatOptions?.maximumFractionDigits !== undefined
+      ? formatOptions.maximumFractionDigits
+      : undefined
 
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false
-      prevValueRef.current = value
-      setDisplayValue(value)
-      return
-    }
-
-    const startValue = prevValueRef.current
-    const endValue = value
-    prevValueRef.current = value
-
-    if (startValue === endValue) return
-
-    const startTime = performance.now()
-    let animationFrameId: number
-
-    const tick = (now: number) => {
-      const elapsed = now - startTime
-      const progress = Math.min(elapsed / duration, 1)
-      // Ease-out cubic curve for natural deceleration
-      const ease = 1 - Math.pow(1 - progress, 3)
-      const current = startValue + (endValue - startValue) * ease
-
-      setDisplayValue(current)
-
-      if (progress < 1) {
-        animationFrameId = requestAnimationFrame(tick)
-      } else {
-        setDisplayValue(endValue)
-      }
-    }
-
-    animationFrameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(animationFrameId)
-  }, [value, duration])
-
-  const formatted = new Intl.NumberFormat('en-US', formatOptions).format(displayValue)
+  const formatted = useAnimatedNumber(value, {
+    currency,
+    decimals: derivedDecimals,
+    duration,
+    stiffness,
+    damping,
+    mass,
+    includeSymbol,
+    prefix,
+    suffix,
+  })
 
   return (
-    <span className={className}>
-      {prefix}
+    <span className={cn('font-mono tabular-nums inline-block', className)}>
       {formatted}
-      {suffix}
     </span>
   )
 }
 
+export { useAnimatedNumber, formatLocalizedNumber }
+export type { UseAnimatedNumberOptions }
 export default AnimatedNumber

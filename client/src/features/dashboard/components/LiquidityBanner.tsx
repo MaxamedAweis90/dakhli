@@ -6,7 +6,7 @@ import { saveStoredPreferences } from '@/features/settings/api/settingsApi'
 import { useSavePlans } from '@/features/save-plans/hooks/useSavePlans'
 import { useDaily } from '@/features/daily/hooks/useDaily'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn } from '@/lib/utils'
 
 export interface LiquidityBannerProps {
   grossBalance?: number
@@ -66,18 +66,15 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
   const primaryActivePlan = pinnedPlans.find((p) => p.status === 'active')
   const todayRecord = dailySummary.todayRecord
   const defaultCap = baseline?.defaultDailyCap ?? 30
+  const activeCap = todayRecord ? todayRecord.cap : defaultCap
+  const activeSpent = todayRecord ? todayRecord.spent : 0
+  const remainingDailySpendCap = Math.max(0, activeCap - activeSpent) * currentConfig.rate
 
   const activeHighlightTitle = todayRecord
     ? todayRecord.status === 'over_budget'
       ? 'Over Cap Today'
       : 'Active • On Track'
     : 'Active'
-
-  const activeHighlightSubtitle = primaryActivePlan
-    ? `${primaryActivePlan.title} • ${primaryActivePlan.percentage}% funded`
-    : todayRecord
-      ? `Today: ${formatCurrency(todayRecord.spent, currentCode)} / ${formatCurrency(todayRecord.cap, currentCode)} cap`
-      : `Daily Cap: ${formatCurrency(defaultCap, currentCode)}/day`
 
   return (
     <div
@@ -105,11 +102,16 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
 
         {/* Gross balance with smooth animated counting */}
         <div className="mt-[0.7rem] flex items-start gap-[0.3rem]">
-          <span className="mt-[0.4rem] text-[0.875rem] leading-none text-[#8d8d8d] select-none">
+          <span className="mt-[0.4rem] text-[0.875rem] leading-none text-[#8d8d8d] select-none font-mono">
             {currentConfig.symbol}
           </span>
-          <span className="text-[2rem] leading-none font-medium tracking-[-0.035em] text-white">
-            <AnimatedNumber value={convertedGross} />
+          <span className="text-[2rem] leading-none font-medium tracking-[-0.035em] text-white font-mono tabular-nums">
+            <AnimatedNumber
+              value={convertedGross}
+              currency={currentCode}
+              includeSymbol={false}
+              className="font-mono tabular-nums"
+            />
           </span>
         </div>
         <p className="mt-[0.5rem] text-[0.72rem] leading-4 text-[#979797]">Gross Balance</p>
@@ -118,16 +120,26 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
       {/* Saved / spendable with smooth animated counting */}
       <div className="flex items-start gap-[1.6rem]">
         <div>
-          <div className="text-[0.97rem] leading-5 font-medium tracking-[-0.02em] text-white flex items-center gap-1">
-            <span>{currentConfig.symbol}</span>
-            <AnimatedNumber value={convertedSaved} />
+          <div className="text-[0.97rem] leading-5 font-medium tracking-[-0.02em] text-white flex items-center gap-1 font-mono tabular-nums">
+            <span className="text-[#8d8d8d]">{currentConfig.symbol}</span>
+            <AnimatedNumber
+              value={convertedSaved}
+              currency={currentCode}
+              includeSymbol={false}
+              className="font-mono tabular-nums"
+            />
           </div>
           <p className="mt-[0.1rem] text-[0.72rem] leading-4 text-[#979797]">Total Saved</p>
         </div>
         <div>
-          <div className="text-[0.97rem] leading-5 font-medium tracking-[-0.02em] text-white flex items-center gap-1">
-            <span>{currentConfig.symbol}</span>
-            <AnimatedNumber value={convertedNet} />
+          <div className="text-[0.97rem] leading-5 font-medium tracking-[-0.02em] text-white flex items-center gap-1 font-mono tabular-nums">
+            <span className="text-[#8d8d8d]">{currentConfig.symbol}</span>
+            <AnimatedNumber
+              value={convertedNet}
+              currency={currentCode}
+              includeSymbol={false}
+              className="font-mono tabular-nums"
+            />
           </div>
           <p className="mt-[0.1rem] text-[0.72rem] leading-4 text-[#979797]">Net Spendable</p>
         </div>
@@ -139,9 +151,48 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
           <span className="block text-[0.78rem] leading-4 font-normal text-[#aee69a]">
             {activeHighlightTitle}
           </span>
-          <p className="mt-[0.15rem] text-[0.66rem] leading-4 text-[#9a9a9a] truncate">
-            {activeHighlightSubtitle}
-          </p>
+          <div className="mt-[0.15rem] text-[0.66rem] leading-4 text-[#9a9a9a] truncate font-mono tabular-nums">
+            {primaryActivePlan ? (
+              <span>
+                {primaryActivePlan.title} • {primaryActivePlan.percentage}% funded
+              </span>
+            ) : todayRecord ? (
+              <span className="flex items-center gap-1">
+                <span>Today:</span>
+                <AnimatedNumber
+                  value={todayRecord.spent * currentConfig.rate}
+                  prefix={currentConfig.symbol}
+                  currency={currentCode}
+                />
+                <span>/</span>
+                <AnimatedNumber
+                  value={todayRecord.cap * currentConfig.rate}
+                  prefix={currentConfig.symbol}
+                  currency={currentCode}
+                />
+                <span>cap</span>
+                <span className="text-[#aee69a]">
+                  (rem:{' '}
+                  <AnimatedNumber
+                    value={remainingDailySpendCap}
+                    prefix={currentConfig.symbol}
+                    currency={currentCode}
+                  />
+                  )
+                </span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <span>Daily Cap:</span>
+                <AnimatedNumber
+                  value={defaultCap * currentConfig.rate}
+                  prefix={currentConfig.symbol}
+                  currency={currentCode}
+                />
+                <span>/day</span>
+              </span>
+            )}
+          </div>
         </div>
         <button
           type="button"

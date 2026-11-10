@@ -3,6 +3,9 @@ import { Link } from "react-router-dom";
 import { ChevronRight } from "@/components/shared/icons";
 import { useSavingsStore, type SavePlanItem } from "@/stores/savingsStore";
 import { useSavePlans } from "@/features/save-plans/hooks/useSavePlans";
+import { useLiquidityStore } from "@/stores/liquidityStore";
+import { CURRENCY_CONFIGS, type CurrencyCode } from "@/features/settings/types/settings.types";
+import { AnimatedNumber } from "@/components/shared/AnimatedNumber";
 import { cn } from "@/lib/utils";
 
 export interface SavingPlanCardProps {
@@ -90,8 +93,17 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
   plans: propPlans,
   className,
 }) => {
-  const { pinnedPlans } = useSavePlans();
+  const { pinnedPlans, totalSaved: liveTotalSaved } = useSavePlans();
   const store = useSavingsStore();
+  const liquidityStore = useLiquidityStore();
+
+  const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS
+    ? liquidityStore.currency
+    : "USD") as CurrencyCode;
+  const config = CURRENCY_CONFIGS[currentCode];
+  const rate = config.rate ?? 1;
+
+  const totalAccumulatedSavings = (liveTotalSaved > 0 ? liveTotalSaved : store.getTotalSaved()) * rate;
 
   const livePlans =
     propPlans ??
@@ -124,6 +136,18 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
           <span>Saving plan</span>
           <ChevronRight className="w-3 h-3 text-white/50 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
         </Link>
+        <div
+          className="text-[0.75rem] font-mono tabular-nums text-white/90 bg-emerald-950/30 px-2 py-0.5 rounded-md border border-emerald-500/20 flex items-center gap-1.5"
+          title="Active Savings Accumulation"
+        >
+          <span className="text-emerald-400/70 text-[0.68rem] tracking-wide uppercase">Active</span>
+          <AnimatedNumber
+            value={totalAccumulatedSavings}
+            prefix={config.symbol}
+            currency={currentCode}
+            className="font-mono tabular-nums font-medium text-emerald-400"
+          />
+        </div>
       </div>
 
       {/* Rows are spread evenly; hairline dividers sit between them */}
@@ -136,8 +160,13 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
                 <span className="text-[0.9rem] leading-5 font-medium tracking-[-0.01em] text-white">
                   {plan.name}
                 </span>
-                <span className="text-[0.69rem] leading-4 text-[#8d8d8d]">
-                  {plan.percentage}%
+                <span className="text-[0.69rem] leading-4 text-[#8d8d8d] font-mono tabular-nums">
+                  <AnimatedNumber
+                    value={plan.percentage}
+                    suffix="%"
+                    decimals={0}
+                    className="font-mono tabular-nums"
+                  />
                 </span>
               </div>
               <div className="mt-[0.55rem]">

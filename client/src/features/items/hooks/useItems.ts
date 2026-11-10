@@ -43,13 +43,14 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
   const enrichedItems = useMemo(() => {
     const raw = query.data ?? []
     return raw.map((item) => {
+      const itemTitleLower = (item.title || item.name || '').toLowerCase().trim()
       const linkedPlan = savePlans.find(
         (p) =>
           p.status !== 'canceled' &&
           ((item.savePlanId && p.id === item.savePlanId) ||
             (p.linkedItemId && p.linkedItemId === item.id) ||
             (p.category === 'item_funding' &&
-              p.name.toLowerCase() === item.title.toLowerCase()))
+              ((p as any).name || (p as any).title || '').toLowerCase().trim() === itemTitleLower))
       )
 
       if (linkedPlan) {
@@ -110,12 +111,108 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
 
   const buyMutation = useMutation({
     mutationFn: (id: string) => itemsApi.buyItem(id),
-    onSuccess: invalidateAll,
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ITEMS_QUERY_KEY })
+      const previousItems = queryClient.getQueryData<RegistryItem[]>(ITEMS_QUERY_KEY)
+      const nowFormatted = new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: 'numeric',
+      }).format(new Date())
+
+      queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, (old = []) =>
+        old.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                status: 'bought',
+                boughtDate: nowFormatted,
+                boughtAt: new Date().toISOString(),
+              }
+            : item
+        )
+      )
+      return { previousItems }
+    },
+    onSuccess: (updatedItem) => {
+      if (updatedItem?.id) {
+        queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, (old = []) =>
+          old.map((item) =>
+            item.id === updatedItem.id
+              ? {
+                  ...item,
+                  ...updatedItem,
+                  status: 'bought',
+                  boughtDate:
+                    updatedItem.boughtDate ||
+                    item.boughtDate ||
+                    new Intl.DateTimeFormat('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                    }).format(new Date()),
+                }
+              : item
+          )
+        )
+      }
+      // Invalidate balance and dashboard, avoiding ITEMS_QUERY_KEY cache resets/flickers
+      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: SAVE_PLANS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['balance'] })
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(ITEMS_QUERY_KEY, context.previousItems)
+      }
+    },
   })
 
   const unbuyMutation = useMutation({
     mutationFn: (id: string) => itemsApi.unbuyItem(id),
-    onSuccess: invalidateAll,
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ITEMS_QUERY_KEY })
+      const previousItems = queryClient.getQueryData<RegistryItem[]>(ITEMS_QUERY_KEY)
+
+      queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, (old = []) =>
+        old.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                status: 'planned',
+                boughtDate: undefined,
+                boughtAt: null,
+              }
+            : item
+        )
+      )
+      return { previousItems }
+    },
+    onSuccess: (updatedItem) => {
+      if (updatedItem?.id) {
+        queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, (old = []) =>
+          old.map((item) =>
+            item.id === updatedItem.id
+              ? {
+                  ...item,
+                  ...updatedItem,
+                  status: 'planned',
+                  boughtDate: undefined,
+                  boughtAt: null,
+                }
+              : item
+          )
+        )
+      }
+      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: SAVE_PLANS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['balance'] })
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(ITEMS_QUERY_KEY, context.previousItems)
+      }
+    },
   })
 
   const deleteMutation = useMutation({
@@ -124,7 +221,10 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
       queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, (old = []) =>
         old.filter((item) => item.id !== deletedId)
       )
-      invalidateAll()
+      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: SAVE_PLANS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['balance'] })
     },
   })
 

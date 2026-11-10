@@ -58,6 +58,8 @@ export const OverheadBillsCard: React.FC<OverheadBillsCardProps> = ({
 
   const convertedUnpaid = liveUnpaid * rate
   const convertedPaid = livePaid * rate
+  const liveTotalCommitted = summary.totalMonthly || (liveUnpaid + livePaid)
+  const convertedTotalCommitted = liveTotalCommitted * rate
 
   const recurringBills = bills.filter((b) => b.isRecurring !== false)
   const sourceBills = recurringBills.length > 0 ? recurringBills : bills
@@ -95,19 +97,41 @@ export const OverheadBillsCard: React.FC<OverheadBillsCardProps> = ({
             <span>Overhead Bills</span>
             <ChevronRight className="w-3 h-3 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
           </Link>
+          <div
+            className="text-[0.75rem] font-mono tabular-nums text-white/90 bg-black/20 px-2 py-0.5 rounded-md border border-white/10 flex items-center gap-1.5"
+            title="Total Monthly Committed Overhead"
+          >
+            <span className="text-white/60 text-[0.68rem] tracking-wide uppercase">Total</span>
+            <AnimatedNumber
+              value={convertedTotalCommitted}
+              prefix={activeCurrencySymbol}
+              currency={currentCode}
+              className="font-mono tabular-nums font-medium"
+            />
+          </div>
         </div>
         <p className="mt-[0.9rem] text-[0.8125rem] leading-4 text-white/90">This Month</p>
 
         <div className="mt-[0.5rem] flex items-start gap-[1.5rem]">
           <div>
-            <div className="text-[1.25rem] leading-6 font-medium tracking-[-0.025em] text-white">
-              <AnimatedNumber value={convertedUnpaid} prefix={activeCurrencySymbol} />
+            <div className="text-[1.25rem] leading-6 font-medium tracking-[-0.025em] text-white font-mono tabular-nums">
+              <AnimatedNumber
+                value={convertedUnpaid}
+                prefix={activeCurrencySymbol}
+                currency={currentCode}
+                className="font-mono tabular-nums"
+              />
             </div>
             <p className="text-[0.69rem] leading-4 text-white/60">Unpaid</p>
           </div>
           <div>
-            <div className="text-[1.25rem] leading-6 font-medium tracking-[-0.025em] text-white">
-              <AnimatedNumber value={convertedPaid} prefix={activeCurrencySymbol} />
+            <div className="text-[1.25rem] leading-6 font-medium tracking-[-0.025em] text-white font-mono tabular-nums">
+              <AnimatedNumber
+                value={convertedPaid}
+                prefix={activeCurrencySymbol}
+                currency={currentCode}
+                className="font-mono tabular-nums"
+              />
             </div>
             <p className="text-[0.69rem] leading-4 text-white/60">Paid</p>
           </div>

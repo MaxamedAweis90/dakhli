@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { X, Check } from 'lucide-react'
 import type { ReserveSourceBalance, SavePlan } from '../types/savePlan.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { useBaseline } from '@/features/settings/hooks/useBaseline'
 import {
   CURRENCY_CONFIGS,
   type CurrencyCode,
@@ -16,6 +18,20 @@ interface SystemReserveDrawerProps {
   isMutating?: boolean
 }
 
+const getDayWithSuffix = (day: number): string => {
+  if (day >= 11 && day <= 13) return `${day}th`
+  switch (day % 10) {
+    case 1:
+      return `${day}st`
+    case 2:
+      return `${day}nd`
+    case 3:
+      return `${day}rd`
+    default:
+      return `${day}th`
+  }
+}
+
 export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
   isOpen,
   onClose,
@@ -23,7 +39,10 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
   onSave,
   isMutating = false,
 }) => {
+  const navigate = useNavigate()
   const liquidityStore = useLiquidityStore()
+  const { baseline } = useBaseline()
+  const salaryDay = baseline?.paydayAnchorDay ?? 25
 
   const currentCode = (
     liquidityStore.currency in CURRENCY_CONFIGS
@@ -33,7 +52,7 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
   const config = CURRENCY_CONFIGS[currentCode]
 
   const initialDeduction = Number(
-    plan.monthlyDeduction ?? plan.monthlyContribution ?? 300
+    plan.monthlyDeduction ?? plan.monthlyContribution ?? 50
   )
   const [deductionAmount, setDeductionAmount] = useState<string>(
     initialDeduction.toString()
@@ -59,7 +78,7 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
 
   useEffect(() => {
     if (isOpen) {
-      const amt = Number(plan.monthlyDeduction ?? plan.monthlyContribution ?? 300)
+      const amt = Number(plan.monthlyDeduction ?? plan.monthlyContribution ?? 50)
       setDeductionAmount(amt.toString())
       setSourceBalance(plan.sourceBalance || 'BASELINE_INCOME')
       const isFixed =
@@ -83,17 +102,30 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
     const cycleWindow =
       scheduleType === 'PERPETUAL' ? 'PERPETUAL' : fixedMonths
 
+    const now = new Date()
+    const currentMonthKey = now.toISOString().slice(0, 7)
+
     await onSave({
       monthlyDeduction: numericCut,
       monthlyContribution: numericCut,
       sourceBalance,
       targetCycleWindow: cycleWindow,
       status,
+      cutDay: salaryDay,
+      pausedMonth: status === 'PAUSED' ? currentMonthKey : null,
+      pausedAt: status === 'PAUSED' ? now.toISOString() : null,
     })
     onClose()
   }
 
-  const presets = [100, 200, 300, 500, 1000]
+  // Monthly cut options requested by user: $5, 10, 30, 50, 100, 200
+  const presets = [5, 10, 30, 50, 100, 200]
+
+  // Date info for the pause message
+  const today = new Date()
+  const currentMonthName = today.toLocaleDateString('en-US', { month: 'long' })
+  const currentDayAndYear = today.toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' })
+  const fullMonthAndDate = `${currentMonthName} ${currentDayAndYear}`
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden select-none">
@@ -144,7 +176,7 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
                   required
                   value={deductionAmount}
                   onChange={(e) => setDeductionAmount(e.target.value)}
-                  placeholder="300"
+                  placeholder="50"
                   className="w-full pl-8 pr-16 py-2.5 rounded-xl bg-[#121316] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-amber-400/50"
                 />
                 <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] text-[#8E92A0]">
@@ -152,8 +184,8 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
                 </span>
               </div>
 
-              {/* Quick Presets */}
-              <div className="grid grid-cols-5 gap-1.5 mt-2.5">
+              {/* Quick Presets: $5, 10, 30, 50, 100, 200 */}
+              <div className="grid grid-cols-6 gap-1.5 mt-2.5">
                 {presets.map((preset) => (
                   <button
                     key={preset}
@@ -166,13 +198,13 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
                         : 'bg-[#121316] border-white/[0.05] text-[#8E92A0] hover:text-white'
                     )}
                   >
-                    ${preset}
+                    {config.symbol}{preset}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Source Selector */}
+            {/* Source Selector: Baseline vs Balance */}
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1.5">
                 Deduct Funds From
@@ -244,7 +276,7 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
               </div>
             </div>
 
-            {/* Cycle Schedule */}
+            {/* Cycle Schedule Duration */}
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1.5">
                 Schedule Duration
@@ -307,6 +339,33 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
               )}
             </div>
 
+            {/* Cut from Balance Day (from Settings state) */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-medium text-slate-300">
+                  Cut from Balance Day
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose()
+                    navigate('/settings')
+                  }}
+                  className="text-[11px] text-[#F7B668] hover:underline cursor-pointer font-medium"
+                >
+                  Change from settings
+                </button>
+              </div>
+              <div className="py-2.5 px-3.5 rounded-xl bg-[#121316] border border-white/[0.08] text-white text-xs flex items-center justify-between">
+                <span className="font-medium text-white">
+                  {getDayWithSuffix(salaryDay)} of each month
+                </span>
+                <span className="text-[11px] text-[#8E92A0]">
+                  Payday / Salary Day
+                </span>
+              </div>
+            </div>
+
             {/* Lifecycle State (Pause / Active) */}
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1.5">
@@ -341,6 +400,13 @@ export const SystemReserveDrawer: React.FC<SystemReserveDrawerProps> = ({
                   <span>Paused</span>
                 </button>
               </div>
+
+              {/* Pause Notification Message: simple, unobtrusive text */}
+              {status === 'PAUSED' && (
+                <p className="text-[11px] text-[#FBBF24] mt-2 leading-relaxed">
+                  Paused for this {fullMonthAndDate}. Can be unpaused anytime; auto-unpauses next month.
+                </p>
+              )}
             </div>
 
             {/* Action Buttons */}

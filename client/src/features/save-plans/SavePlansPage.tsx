@@ -4,6 +4,7 @@ import { CumulativeReserveHeroCard } from './components/CumulativeReserveHeroCar
 import { SystemReserveDrawer } from './components/SystemReserveDrawer'
 import { SavePlanCard } from './components/SavePlanCard'
 import { AddSavePlanModal } from './components/AddSavePlanModal'
+import { EditSavePlanModal } from './components/EditSavePlanModal'
 import { useSavePlans } from './hooks/useSavePlans'
 import { useBaseline } from '@/features/settings/hooks/useBaseline'
 import type { SavePlan } from './types/savePlan.types'
@@ -29,6 +30,7 @@ export const SavePlansPage: React.FC = () => {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [editingPlan, setEditingPlan] = useState<SavePlan | null>(null)
 
   // Fallback initial baseline reserve if query hasn't populated yet
   const defaultSystemReserve: SavePlan = {
@@ -132,6 +134,7 @@ export const SavePlansPage: React.FC = () => {
               onComplete={completePlan}
               onTogglePin={togglePin}
               onDelete={deletePlan}
+              onEdit={(p) => setEditingPlan(p as SavePlan)}
               isMutating={isMutationPending}
             />
           ))}
@@ -153,6 +156,18 @@ export const SavePlansPage: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         onAdd={createPlan}
         isSubmitting={isCreating}
+      />
+
+      {/* 7. Edit Save Plan Modal */}
+      <EditSavePlanModal
+        isOpen={!!editingPlan}
+        onClose={() => setEditingPlan(null)}
+        plan={editingPlan}
+        onSave={async (id, updates) => {
+          await updatePlan({ id, updates })
+          setEditingPlan(null)
+        }}
+        isSubmitting={isMutationPending}
       />
     </div>
   )

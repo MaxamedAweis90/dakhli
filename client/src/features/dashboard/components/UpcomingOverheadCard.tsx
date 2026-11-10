@@ -140,7 +140,12 @@ export const UpcomingOverheadCard: React.FC<UpcomingOverheadCardProps> = ({
                   title={isRealBill ? 'Click to mark paid' : undefined}
                   className="text-[1rem] leading-5 font-medium tracking-[-0.01em] text-white hover:text-[#4ADE80] transition-colors cursor-pointer disabled:cursor-default"
                 >
-                  <AnimatedNumber value={item.amount ?? 0} prefix={config.symbol} />
+                  <AnimatedNumber
+                    value={item.amount ?? 0}
+                    prefix={config.symbol}
+                    currency={currentCode}
+                    className="font-mono tabular-nums"
+                  />
                 </button>
               )}
             </li>

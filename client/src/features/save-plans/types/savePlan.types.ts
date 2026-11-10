@@ -35,6 +35,12 @@ export interface SavePlan {
   targetCycleWindow?: string | number | null;
   sourceBalance?: ReserveSourceBalance;
   cumulativeTotal?: number;
+  cutDay?: number;
+  lastCutMonth?: string;
+  lastCutDate?: string | null;
+  pausedMonth?: string | null;
+  pausedAt?: string | null;
+  cutsCompleted?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -55,6 +61,7 @@ export interface CreateSavePlanPayload {
   targetCycleWindow?: string | number | null;
   sourceBalance?: ReserveSourceBalance;
   cumulativeTotal?: number;
+  cutDay?: number;
   linkedItemId?: string;
   linkedItemName?: string;
   linkedItemIds?: string[];
@@ -72,5 +79,8 @@ export interface ReserveConfigPayload {
   status?: 'ACTIVE' | 'PAUSED';
   sourceBalance?: ReserveSourceBalance;
   targetCycleWindow?: string | number | null;
+  cutDay?: number;
+  pausedMonth?: string | null;
+  pausedAt?: string | null;
 }
 

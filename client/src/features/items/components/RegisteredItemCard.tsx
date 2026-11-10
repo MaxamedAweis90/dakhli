@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Pencil } from 'lucide-react'
+import { Pencil, Check } from 'lucide-react'
 import type { RegisteredItem } from '@/stores/itemsStore'
 import type { RegistryItem } from '../types/item.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
@@ -13,6 +13,7 @@ export interface RegisteredItemCardProps {
   onEdit?: (item: RegistryItem | RegisteredItem) => void
   isMutating?: boolean
   isHighlighted?: boolean
+  badgeLabel?: string
   className?: string
 }
 
@@ -26,17 +27,28 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
   onEdit,
   isMutating = false,
   isHighlighted = false,
+  badgeLabel = 'Just Added',
   className,
 }) => {
   const [isExiting, setIsExiting] = useState(false)
+  const [isDipping, setIsDipping] = useState(false)
 
   const handleRemove = (e?: React.MouseEvent) => {
     e?.stopPropagation()
-    if (isExiting || isMutating) return
+    if (isExiting || isDipping || isMutating) return
     setIsExiting(true)
     setTimeout(() => {
       onRemove(item.id)
-    }, 320)
+    }, 280)
+  }
+
+  const handleBuy = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (isExiting || isDipping || isMutating) return
+    setIsDipping(true)
+    setTimeout(() => {
+      onToggleBought(item.id)
+    }, 260)
   }
 
   const liquidityStore = useLiquidityStore()
@@ -71,17 +83,19 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
       className={cn(
         'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-3.5 sm:p-4 select-none flex flex-col justify-between border transition-all duration-700 ease-out',
         isHighlighted
-          ? 'border-[#D4A359] ring-2 ring-[#D4A359]/70 shadow-[0_0_36px_rgba(212,163,89,0.32)] bg-[#1B1B22] scale-[1.01]'
+          ? 'border-[#D4A359] ring-2 ring-[#D4A359]/70 shadow-[0_4px_24px_rgba(212,163,89,0.22)] bg-[#1B1B22]'
           : 'border-white/[0.03] hover:border-white/[0.08]',
         isExiting &&
-          'translate-y-12 opacity-0 scale-[0.96] pointer-events-none blur-[0.5px] transition-all duration-300 ease-in',
+          'translate-y-10 opacity-0 scale-[0.96] pointer-events-none blur-[0.5px] transition-all duration-280 ease-in',
+        isDipping &&
+          'translate-y-8 scale-[0.86] opacity-0 blur-[0.5px] pointer-events-none transition-all duration-260 ease-[cubic-bezier(0.2,0,0,1)]',
         className
       )}
     >
-      {/* Creation showcase badge */}
+      {/* Creation / Restored showcase badge */}
       {isHighlighted && (
         <div className="absolute -top-2.5 right-4 z-30 px-2.5 py-0.5 rounded-full bg-[#D4A359] text-[#121316] font-semibold text-[0.68rem] tracking-tight shadow-[0_2px_12px_rgba(212,163,89,0.5)] animate-in fade-in zoom-in-95 duration-200">
-          Just Added
+          {badgeLabel}
         </div>
       )}
 
@@ -178,7 +192,7 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
       <div className="grid grid-cols-2 gap-2.5 mt-4 pt-1">
         <button
           type="button"
-          disabled={isMutating || isExiting}
+          disabled={isMutating || isExiting || isDipping}
           onClick={handleRemove}
           className="h-[2.25rem] rounded-xl bg-[#22242D] hover:bg-[#2C2F3C] active:scale-95 text-[#C5C8D4] hover:text-white text-[0.82rem] font-medium flex items-center justify-center transition-all cursor-pointer border border-white/[0.04] disabled:opacity-50"
         >
@@ -187,16 +201,25 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
 
         <button
           type="button"
-          disabled={isMutating || isExiting}
-          onClick={() => onToggleBought(item.id)}
+          disabled={isMutating || isExiting || isDipping}
+          onClick={handleBuy}
           className={cn(
-            'h-[2.25rem] rounded-xl font-semibold text-[0.82rem] flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50',
-            isBought
-              ? 'border border-[#4ADE80]/50 text-[#86EFAC] bg-[#16271E] hover:bg-[#1D3528]'
+            'h-[2.25rem] rounded-xl font-semibold text-[0.82rem] flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95 disabled:opacity-50',
+            isBought || isDipping
+              ? 'border border-[#4ADE80]/50 text-[#86EFAC] bg-[#16271E]'
               : 'bg-[#D4A359] hover:bg-[#DEB066] text-[#18191E]'
           )}
         >
-          {isBought ? 'Bought' : 'Buy'}
+          {isDipping ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-[#4ADE80]" />
+              <span>Bought!</span>
+            </>
+          ) : isBought ? (
+            'Bought'
+          ) : (
+            'Buy'
+          )}
         </button>
       </div>
     </div>

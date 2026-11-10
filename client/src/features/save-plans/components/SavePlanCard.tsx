@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { MoreHorizontal, Plus, Check } from "lucide-react";
+import { MoreHorizontal, Check, Pencil } from "lucide-react";
 import { type SavePlanItem, useSavingsStore } from "@/stores/savingsStore";
 import type { SavePlan } from "../types/savePlan.types";
 import { useLiquidityStore } from "@/stores/liquidityStore";
@@ -17,24 +17,24 @@ interface SavePlanCardProps {
   onComplete?: (id: string) => Promise<any> | void;
   onTogglePin?: (id: string) => Promise<any> | void;
   onDelete?: (id: string) => Promise<any> | void;
+  onEdit?: (plan: SavePlan | SavePlanItem) => void;
   isMutating?: boolean;
 }
 
 export const SavePlanCard: React.FC<SavePlanCardProps> = ({
   plan,
-  onDeposit,
+  onDeposit: _onDeposit,
   onToggleActive,
   onCancel,
   onComplete,
   onTogglePin,
   onDelete,
+  onEdit,
   isMutating = false,
 }) => {
   const store = useSavingsStore();
   const liquidityStore = useLiquidityStore();
   const [showMenu, setShowMenu] = useState(false);
-  const [showDepositInput, setShowDepositInput] = useState(false);
-  const [depositAmount, setDepositAmount] = useState("100");
 
   const currentCode = (
     liquidityStore.currency in CURRENCY_CONFIGS
@@ -63,20 +63,10 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
   const isGoalReached =
     isAlreadyCompleted || (plan.type === "targeted" && plan.percentage >= 100);
   const isCanceled = plan.status === "canceled" || plan.status === "cancelled";
-  const isActive = plan.status === "active";
+  const isActive = plan.status === "active" || plan.status === "ACTIVE";
 
   // Clamp percentage
   const clampedPercentage = Math.min(100, Math.max(0, plan.percentage));
-
-  const handleDeposit = async (amount: number) => {
-    if (amount <= 0 || isNaN(amount)) return;
-    if (onDeposit) {
-      await onDeposit(plan.id, amount);
-    } else {
-      store.depositToPlan(plan.id, amount);
-    }
-    setShowDepositInput(false);
-  };
 
   const handleToggleActive = async () => {
     if (onToggleActive) {
@@ -134,61 +124,9 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
           </div>
 
           <div className="flex items-center space-x-2.5">
-            {showDepositInput ? (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleDeposit(parseFloat(depositAmount));
-                }}
-                className="flex items-center space-x-2"
-              >
-                <input
-                  type="number"
-                  min="1"
-                  step="any"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  placeholder="Amount ($)"
-                  className="w-28 px-3 py-1.5 rounded-xl bg-[#121316] border border-white/10 text-white text-xs focus:outline-none focus:border-amber-400/60"
-                />
-                <button
-                  type="submit"
-                  disabled={isMutating}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#F7B668] text-[#16171B] text-xs font-semibold hover:brightness-105 transition-all cursor-pointer"
-                >
-                  Confirm
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowDepositInput(false)}
-                  className="px-2.5 py-1.5 rounded-xl bg-white/[0.05] text-slate-400 hover:text-white text-xs transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </form>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={isMutating}
-                  onClick={() => handleDeposit(500)}
-                  className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-[#22242D] hover:bg-[#2A2D38] text-white border border-white/[0.06] text-[0.8rem] font-semibold transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Deposit $500</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDepositAmount("500");
-                    setShowDepositInput(true);
-                  }}
-                  className="px-3 py-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-[#8E92A0] hover:text-white text-[0.78rem] font-medium transition-colors cursor-pointer"
-                >
-                  Custom
-                </button>
-              </>
-            )}
+            <span className="text-xs text-[#8E92A0]">
+              Automated Buffer
+            </span>
           </div>
         </div>
 
@@ -239,53 +177,42 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
       )}
     >
       <div>
-        {/* Header Row: Text Title ONLY, Deposit Action & Minimal Menu */}
+        {/* Header Row: Text Title & Minimal Menu */}
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-[1.18rem] font-semibold text-white tracking-tight">
             {displayTitle}
           </h3>
 
-          <div className="flex items-center gap-1.5">
-            {!isAlreadyCompleted && !isCanceled && (
-              <button
-                type="button"
-                onClick={() => setShowDepositInput((prev) => !prev)}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#22242D] hover:bg-[#2A2D38] text-[#F7B668] border border-white/[0.06] text-[0.74rem] font-semibold transition-all cursor-pointer active:scale-95"
-              >
-                <Plus className="w-3 h-3 stroke-[2.5]" />
-                <span>Deposit</span>
-              </button>
-            )}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowMenu((prev) => !prev)}
+              aria-label="More options"
+              className="p-1 rounded-lg text-[#8E92A0] hover:text-white transition-colors cursor-pointer"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
 
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setShowMenu((prev) => !prev)}
-                aria-label="More options"
-                className="p-1 rounded-lg text-[#8E92A0] hover:text-white transition-colors cursor-pointer"
-              >
-                <MoreHorizontal className="w-4 h-4" />
-              </button>
-
-              {showMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setShowMenu(false)}
-                  />
-                  <div className="absolute right-0 top-8 z-20 w-44 rounded-xl bg-[#1C1E24] border border-white/10 shadow-2xl py-1 text-xs">
-                    {!isAlreadyCompleted && !isCanceled && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowDepositInput(true);
-                          setShowMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-[#F7B668] hover:bg-white/[0.06] transition-colors cursor-pointer font-medium"
-                      >
-                        Deposit Funds
-                      </button>
-                    )}
+            {showMenu && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowMenu(false)}
+                />
+                <div className="absolute right-0 top-8 z-20 w-44 rounded-xl bg-[#1C1E24] border border-white/10 shadow-2xl py-1 text-xs">
+                  {!isCanceled && onEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onEdit(plan);
+                        setShowMenu(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer flex items-center gap-2"
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Edit Goal</span>
+                    </button>
+                  )}
 
                     <button
                       type="button"
@@ -326,7 +253,6 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
                   </div>
                 </>
               )}
-            </div>
           </div>
         </div>
 
@@ -339,6 +265,11 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
                 ? "Emergency"
                 : "General Reserve"}
           </span>
+          {(plan.monthlyDeduction || plan.monthlyContribution) ? (
+            <span className="text-[0.8rem] text-[#8E92A0]">
+              • {formatCurrency(plan.monthlyDeduction || plan.monthlyContribution)}/mo cut
+            </span>
+          ) : null}
           {!isActive && !isCanceled && !isAlreadyCompleted && (
             <span className="text-[0.68rem] font-medium px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20">
               Deactivated
@@ -355,42 +286,6 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
             </span>
           )}
         </div>
-
-        {/* Inline Deposit Form when toggled */}
-        {showDepositInput && !isCanceled && !isAlreadyCompleted && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleDeposit(parseFloat(depositAmount));
-            }}
-            className="mb-4 p-2.5 rounded-xl bg-[#121316] border border-white/[0.07] flex items-center gap-2"
-          >
-            <input
-              type="number"
-              min="1"
-              step="any"
-              required
-              value={depositAmount}
-              onChange={(e) => setDepositAmount(e.target.value)}
-              placeholder="Deposit amount ($)"
-              className="flex-1 min-w-0 px-3 py-1.5 rounded-lg bg-[#1A1D24] border border-white/[0.08] text-white text-xs focus:outline-none focus:border-amber-400/50"
-            />
-            <button
-              type="submit"
-              disabled={isMutating}
-              className="px-3.5 py-1.5 rounded-lg bg-[#F7B668] hover:bg-[#ffc47d] text-[#111215] font-semibold text-xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
-            >
-              Allocate
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDepositInput(false)}
-              className="px-2 py-1.5 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer"
-            >
-              ✕
-            </button>
-          </form>
-        )}
 
         {/* Figures Row: Bigger Font */}
         <div className="flex items-baseline justify-between mb-3">
@@ -474,7 +369,6 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
             <span className="text-[0.75rem] text-[#8E92A0]">100% Complete</span>
           </div>
         ) : isGoalReached ? (
-          /* 100% Completed State matching Emergency Fund */
           <div className="flex items-center justify-end">
             <button
               type="button"
@@ -486,7 +380,6 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
             </button>
           </div>
         ) : (
-          /* Targeted Active / Deactivate and Cancel buttons */
           <div className="grid grid-cols-2 gap-3">
             {/* Left Button: Activate / Deactivate Toggle */}
             <button

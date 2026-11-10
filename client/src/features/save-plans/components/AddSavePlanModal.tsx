@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Target, Link2, Calendar } from 'lucide-react'
 import {
   type SavePlanCategory,
@@ -7,6 +7,12 @@ import {
 import type { CreateSavePlanPayload } from '../types/savePlan.types'
 import { useItemsStore } from '@/stores/itemsStore'
 import { useItems } from '@/features/items/hooks/useItems'
+import { useBaseline } from '@/features/settings/hooks/useBaseline'
+import { useLiquidityStore } from '@/stores/liquidityStore'
+import {
+  CURRENCY_CONFIGS,
+  type CurrencyCode,
+} from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
 interface AddSavePlanModalProps {
@@ -25,13 +31,74 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
   useItems()
   const { addPlan } = useSavingsStore()
   const { items } = useItemsStore()
+  const { baseline } = useBaseline()
+  const salaryDay = baseline?.paydayAnchorDay ?? 25
+
+  const liquidityStore = useLiquidityStore()
+  const currentCode = (
+    liquidityStore.currency in CURRENCY_CONFIGS
+      ? liquidityStore.currency
+      : 'USD'
+  ) as CurrencyCode
+  const config = CURRENCY_CONFIGS[currentCode]
 
   const [name, setName] = useState('')
   const [category, setCategory] = useState<SavePlanCategory>('emergency')
   const [targetAmount, setTargetAmount] = useState('')
   const [initialSaved, setInitialSaved] = useState('')
+  const [monthlyCut, setMonthlyCut] = useState('')
   const [targetDate, setTargetDate] = useState('')
+  const [isManualDate, setIsManualDate] = useState(false)
   const [selectedItemId, setSelectedItemId] = useState('')
+
+  // Auto-calculate completion date when targetAmount, initialSaved, or monthlyCut changes
+  useEffect(() => {
+    if (isManualDate) return
+
+    const target = parseFloat(targetAmount) || 0
+    const saved = parseFloat(initialSaved) || 0
+    const cut = parseFloat(monthlyCut) || 0
+    const remaining = Math.max(0, target - saved)
+
+    if (target > 0 && cut > 0 && remaining > 0) {
+      const fullMonths = Math.floor(remaining / cut)
+      const remainder = Number((remaining - fullMonths * cut).toFixed(2))
+      const totalMonths = remainder > 0.001 ? fullMonths + 1 : fullMonths
+
+      const today = new Date()
+      const todayDay = today.getDate()
+      const startOffset = todayDay > salaryDay ? 1 : 0
+      const finishMonthIdx = today.getMonth() + startOffset + (totalMonths - 1)
+      const finishDate = new Date(today.getFullYear(), finishMonthIdx, salaryDay)
+
+      const yyyy = finishDate.getFullYear()
+      const mm = String(finishDate.getMonth() + 1).padStart(2, '0')
+      const dd = String(finishDate.getDate()).padStart(2, '0')
+      setTargetDate(`${yyyy}-${mm}-${dd}`)
+    } else if (!monthlyCut) {
+      setTargetDate('')
+    }
+  }, [targetAmount, initialSaved, monthlyCut, salaryDay, isManualDate])
+
+  const getCalculationSummary = (): string | null => {
+    const target = parseFloat(targetAmount) || 0
+    const saved = parseFloat(initialSaved) || 0
+    const cut = parseFloat(monthlyCut) || 0
+    const remaining = Math.max(0, target - saved)
+
+    if (target > 0 && cut > 0 && remaining > 0) {
+      const fullMonths = Math.floor(remaining / cut)
+      const remainder = Number((remaining - fullMonths * cut).toFixed(2))
+      const totalMonths = remainder > 0.001 ? fullMonths + 1 : fullMonths
+      const finalCut = remainder > 0.001 ? remainder : cut
+
+      if (remainder > 0.001) {
+        return `Completion in ${totalMonths} months (${fullMonths} × ${config.symbol}${cut} + final month of ${config.symbol}${finalCut})`
+      }
+      return `Completion in ${totalMonths} months (${totalMonths} × ${config.symbol}${cut}/mo)`
+    }
+    return null
+  }
 
   if (!isOpen) return null
 
@@ -53,6 +120,7 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
 
     const saved = parseFloat(initialSaved) || 0
     const target = parseFloat(targetAmount) || 1000
+    const cut = parseFloat(monthlyCut) || 0
 
     const linkedItem = selectedItemId
       ? items.find((i) => i.id === selectedItemId)
@@ -67,7 +135,10 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
         targetAmount: target,
         initialDeposit: saved,
         currentAmount: saved,
+        monthlyContribution: cut > 0 ? cut : undefined,
+        monthlyDeduction: cut > 0 ? cut : undefined,
         targetDate: targetDate || undefined,
+        cutDay: salaryDay,
         linkedItemId: selectedItemId || undefined,
         linkedItemName: linkedItem?.name,
         isPinned: true,
@@ -80,6 +151,8 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
         status: 'active',
         currentSaved: saved,
         targetAmount: target,
+        monthlyContribution: cut > 0 ? cut : undefined,
+        monthlyDeduction: cut > 0 ? cut : undefined,
         targetDate: targetDate || undefined,
         linkedItemId: selectedItemId || undefined,
         linkedItemName: linkedItem?.name,
@@ -91,10 +164,14 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
     setName('')
     setTargetAmount('')
     setInitialSaved('')
+    setMonthlyCut('')
     setTargetDate('')
+    setIsManualDate(false)
     setSelectedItemId('')
     onClose()
   }
+
+  const calculationSummary = getCalculationSummary()
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
@@ -202,7 +279,7 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                Target Goal ($)
+                Target Goal ({config.symbol})
               </label>
               <input
                 type="number"
@@ -218,7 +295,7 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
 
             <div>
               <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                Initial Saved ($)
+                Initial Saved ({config.symbol})
               </label>
               <input
                 type="number"
@@ -232,19 +309,48 @@ export const AddSavePlanModal: React.FC<AddSavePlanModalProps> = ({
             </div>
           </div>
 
-          {/* Target Deadline (Optional) */}
-          <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" />
-              <span>Target Completion Date (Optional)</span>
-            </label>
-            <input
-              type="date"
-              value={targetDate}
-              onChange={(e) => setTargetDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D26] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#F7B668]/50 [color-scheme:dark]"
-            />
+          {/* Monthly Cut and Target Completion Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                Monthly Cut ({config.symbol}/mo)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={monthlyCut}
+                onChange={(e) => {
+                  setMonthlyCut(e.target.value)
+                  setIsManualDate(false)
+                }}
+                placeholder="e.g. 300"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D26] border border-white/[0.08] text-white font-mono text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#F7B668]/50"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <span>Target Completion Date</span>
+              </label>
+              <input
+                type="date"
+                value={targetDate}
+                onChange={(e) => {
+                  setTargetDate(e.target.value)
+                  setIsManualDate(true)
+                }}
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#1A1D26] border border-white/[0.08] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#F7B668]/50 [color-scheme:dark]"
+              />
+            </div>
           </div>
+
+          {calculationSummary && (
+            <p className="text-[11px] text-[#8E92A0]">
+              {calculationSummary}
+            </p>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end space-x-3 pt-4 border-t border-white/[0.06]">

@@ -1,13 +1,16 @@
 import React, { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { motion } from 'motion/react'
 import { Search, LogOut, ChevronDown, User as UserIcon, Settings } from '@/components/shared/icons'
 import { useAuthStore } from '@/stores/authStore'
+import { useSearchStore } from '@/stores/searchStore'
 import { SplashScreen } from '@/components/shared/SplashScreen'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from './navItems'
 
 export const Sidebar: React.FC = () => {
   const { user, clearSession } = useAuthStore()
+  const { isOpen, openSearch } = useSearchStore()
   const navigate = useNavigate()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
@@ -39,16 +42,23 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Search */}
-        <div className="mt-[1.75rem] relative flex items-center h-[2.35rem] rounded-[0.75rem] bg-[#1b1b1b]">
-          <Search className="absolute left-[0.875rem] w-[0.95rem] h-[0.95rem] text-[#6f6f6f]" />
-          <input
-            type="text"
-            readOnly
-            placeholder="Search"
-            aria-label="Search"
-            className="w-full h-full bg-transparent pl-[2.4rem] pr-3 text-[0.825rem] text-white placeholder-[#777] outline-none cursor-pointer"
-          />
-        </div>
+        {!isOpen ? (
+          <motion.div
+            layoutId="sidebar-search-bar"
+            onClick={openSearch}
+            className="mt-[1.75rem] relative flex items-center h-[2.35rem] rounded-[0.75rem] bg-[#1b1b1b] cursor-pointer px-[0.875rem] select-none hover:bg-[#202020] transition-colors"
+            transition={{
+              type: 'spring',
+              stiffness: 350,
+              damping: 32,
+            }}
+          >
+            <Search className="w-[0.95rem] h-[0.95rem] text-[#6f6f6f] flex-shrink-0" />
+            <span className="ml-[0.625rem] text-[0.825rem] text-[#777]">Search</span>
+          </motion.div>
+        ) : (
+          <div className="mt-[1.75rem] h-[2.35rem]" aria-hidden="true" />
+        )}
 
         {/* Navigation */}
         <nav className="mt-[1.75rem] flex flex-col gap-[0.35rem]">
