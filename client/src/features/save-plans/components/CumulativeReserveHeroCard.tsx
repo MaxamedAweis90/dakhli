@@ -1,6 +1,7 @@
 import React, { useState, useId } from 'react'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
 import { useBaseline } from '@/features/settings/hooks/useBaseline'
 import {
   CURRENCY_CONFIGS,
@@ -75,6 +76,7 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
   ) as CurrencyCode
   const config = CURRENCY_CONFIGS[currentCode]
   const rate = config.rate ?? 1
+  const isMasked = usePrivacyStore((state) => state.isMasked)
 
   const isPaused = plan.status === 'PAUSED' || plan.status === 'paused'
   const monthlyDeduction = Number(
@@ -195,9 +197,11 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
                     Auto-saving{' '}
                     <strong className="text-white font-medium">
                       {config.symbol}
-                      {new Intl.NumberFormat('en-US', {
-                        maximumFractionDigits: 0,
-                      }).format(convertedCut)}
+                      {isMasked
+                        ? getDynamicBullets(convertedCut)
+                        : new Intl.NumberFormat('en-US', {
+                            maximumFractionDigits: 0,
+                          }).format(convertedCut)}
                     </strong>
                     /mo from {sourceLabel} on the {getDayWithSuffix(effectiveCutDay)}
                   </span>
@@ -259,9 +263,11 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
                 </span>
                 <span className="text-[0.95rem] font-medium text-[#5EEAD4]">
                   {config.symbol}
-                  {new Intl.NumberFormat('en-US', {
-                    maximumFractionDigits: 0,
-                  }).format(activePoint.value)}
+                  {isMasked
+                    ? getDynamicBullets(activePoint.value)
+                    : new Intl.NumberFormat('en-US', {
+                        maximumFractionDigits: 0,
+                      }).format(activePoint.value)}
                   {activePoint.isFuture && !isPaused && (
                     <span className="text-[#8E92A0] text-[0.72rem] ml-1 font-normal">
                       (projected)

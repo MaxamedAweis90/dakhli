@@ -3,6 +3,7 @@ import { CheckCircle2, RotateCcw, Trash2, Check } from "lucide-react";
 import type { RegisteredItem } from "@/stores/itemsStore";
 import type { RegistryItem } from "../types/item.types";
 import { useLiquidityStore } from "@/stores/liquidityStore";
+import { usePrivacyStore, getDynamicBullets } from "@/stores/privacyStore";
 import {
   CURRENCY_CONFIGS,
   type CurrencyCode,
@@ -56,6 +57,7 @@ export const BoughtItemsList: React.FC<BoughtItemsListProps> = ({
   ) as CurrencyCode;
   const currencyConfig = CURRENCY_CONFIGS[currentCode];
   const rate = currencyConfig.rate ?? 1;
+  const isMasked = usePrivacyStore((state) => state.isMasked);
 
   const getItemPrice = (item: RegistryItem | RegisteredItem): number =>
     Number(
@@ -101,9 +103,9 @@ export const BoughtItemsList: React.FC<BoughtItemsListProps> = ({
 
         <div className="flex items-center space-x-2 text-[0.88rem]">
           <span className="text-[#8E92A0]">Total Completed:</span>
-          <span className="font-semibold text-[#4ADE80] font-mono text-[1.05rem]">
+          <span className="font-semibold text-[#4ADE80] font-mono text-[1.05rem] tabular-nums">
             {currencyConfig.symbol}
-            {fmt(totalBought)}
+            {isMasked ? getDynamicBullets(totalBought) : fmt(totalBought)}
           </span>
         </div>
       </div>
@@ -187,9 +189,9 @@ export const BoughtItemsList: React.FC<BoughtItemsListProps> = ({
                     </td>
 
                     {/* Purchase Price */}
-                    <td className="py-3.5 text-[0.92rem] font-semibold text-white font-mono">
+                    <td className="py-3.5 text-[0.92rem] font-semibold text-white font-mono tabular-nums">
                       {currencyConfig.symbol}
-                      {fmt(price)}
+                      {isMasked ? getDynamicBullets(price) : fmt(price)}
                     </td>
 
                     {/* Status & Bought Date */}

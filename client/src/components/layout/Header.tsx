@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Calendar, Plus } from '@/components/shared/icons'
-import { Calculator } from 'lucide-react'
+import { Calculator, Eye, EyeOff } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { usePrivacyStore } from '@/stores/privacyStore'
 import {
   useOverheadsStore,
   getRealCurrentMonth,
@@ -23,6 +24,7 @@ const ROUTE_TITLES: Record<string, string> = {
 export const Header: React.FC = () => {
   const location = useLocation()
   const { user } = useAuthStore()
+  const { isMasked, togglePrivacy } = usePrivacyStore()
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
   const {
     currentMonth,
@@ -66,6 +68,26 @@ export const Header: React.FC = () => {
             className="flex items-center justify-center w-[2.2rem] h-[2.2rem] rounded-full bg-[#212121] hover:bg-[#2c2f38] text-[#cfcfcf] hover:text-white transition-all shadow-[0_2px_12px_rgba(0,0,0,0.5)] cursor-pointer active:scale-95 border border-white/[0.04]"
           >
             <Calculator className="w-[0.95rem] h-[0.95rem]" />
+          </button>
+
+          {/* Top-Right Privacy Shroud Toggle Button (directly to left of calendar) */}
+          <button
+            type="button"
+            onClick={togglePrivacy}
+            title={isMasked ? 'Show balances (H)' : 'Hide balances (H)'}
+            aria-label={isMasked ? 'Show balances' : 'Hide balances'}
+            className={cn(
+              'flex items-center justify-center w-[2.2rem] h-[2.2rem] rounded-full transition-all shadow-[0_2px_12px_rgba(0,0,0,0.5)] cursor-pointer active:scale-95 border',
+              isMasked
+                ? 'bg-[#252833] hover:bg-[#2c3040] text-amber-400 border-amber-500/30'
+                : 'bg-[#212121] hover:bg-[#2c2f38] text-slate-400 hover:text-white border-white/[0.04]'
+            )}
+          >
+            {isMasked ? (
+              <EyeOff className="w-[0.95rem] h-[0.95rem]" />
+            ) : (
+              <Eye className="w-[0.95rem] h-[0.95rem]" />
+            )}
           </button>
 
           {/* Top-Right Fast-Switch Date pill button */}

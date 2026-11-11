@@ -1,5 +1,6 @@
 import React from 'react'
 import { CheckCircle2 } from 'lucide-react'
+import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
 import { cn } from '@/lib/utils'
 
 export interface ItemsBottomTotalsProps {
@@ -18,6 +19,8 @@ export const ItemsBottomTotals: React.FC<ItemsBottomTotalsProps> = ({
   boughtCount,
   className,
 }) => {
+  const isMasked = usePrivacyStore((state) => state.isMasked)
+
   return (
     <div
       className={cn(
@@ -28,8 +31,8 @@ export const ItemsBottomTotals: React.FC<ItemsBottomTotalsProps> = ({
       {/* Left: Unbought Totals */}
       <div className="flex items-center text-[#8E92A0]">
         <span>Unbought totals:</span>
-        <span className="text-white font-semibold text-[1.05rem] ml-2 tracking-tight">
-          ${fmt(unboughtTotal)}
+        <span className="text-white font-semibold text-[1.05rem] ml-2 tracking-tight font-mono tabular-nums">
+          ${isMasked ? getDynamicBullets(unboughtTotal) : fmt(unboughtTotal)}
         </span>
       </div>
 
@@ -39,8 +42,8 @@ export const ItemsBottomTotals: React.FC<ItemsBottomTotalsProps> = ({
           <CheckCircle2 className="w-4 h-4 text-[#4ADE80]" />
           <span>Bought items:</span>
         </div>
-        <span className="text-[#4ADE80] font-semibold text-[1.05rem] tracking-tight">
-          ${fmt(boughtTotal)}
+        <span className="text-[#4ADE80] font-semibold text-[1.05rem] tracking-tight font-mono tabular-nums">
+          ${isMasked ? getDynamicBullets(boughtTotal) : fmt(boughtTotal)}
         </span>
         {boughtCount > 0 && (
           <span className="text-[0.75rem] font-medium text-[#8E92A0] bg-[#22242D] px-2 py-0.5 rounded-full border border-white/[0.04]">

@@ -609,7 +609,7 @@ export const CalculatorModal: React.FC<CalculatorModalProps> = ({
                     onClick={handleBackspace}
                     title="Click or backspace to delete last digit"
                     className={cn(
-                      "text-right font-light text-white tracking-tight leading-tight select-text whitespace-nowrap overflow-hidden transition-all duration-150 cursor-pointer",
+                      "text-right font-light text-white tracking-tight leading-none select-text whitespace-nowrap overflow-hidden transition-all duration-150 cursor-pointer",
                       getDisplayFontSize(formattedDisplay),
                     )}
                   >
@@ -625,28 +625,28 @@ export const CalculatorModal: React.FC<CalculatorModalProps> = ({
                     onClick={
                       isInputNonZero ? handleClearCurrent : handleAllClear
                     }
-                    className="w-full aspect-square rounded-full bg-[#383D4A] hover:bg-[#434958] active:scale-[0.92] text-white text-[1.65rem] sm:text-[1.6rem] font-normal flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.12)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#383D4A] hover:bg-[#434958] active:scale-[0.92] text-white text-[22px] sm:text-[24px] font-normal leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.12)] cursor-pointer touch-manipulation"
                   >
                     {isInputNonZero ? "C" : "AC"}
                   </button>
                   <button
                     type="button"
                     onClick={handleNegate}
-                    className="w-full aspect-square rounded-full bg-[#383D4A] hover:bg-[#434958] active:scale-[0.92] text-white text-[1.65rem] sm:text-[1.6rem] font-normal flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.12)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#383D4A] hover:bg-[#434958] active:scale-[0.92] text-white text-[22px] sm:text-[24px] font-normal leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.12)] cursor-pointer touch-manipulation"
                   >
                     +/−
                   </button>
                   <button
                     type="button"
                     onClick={handlePercentage}
-                    className="w-full aspect-square rounded-full bg-[#383D4A] hover:bg-[#434958] active:scale-[0.92] text-white text-[1.65rem] sm:text-[1.6rem] font-normal flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.12)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#383D4A] hover:bg-[#434958] active:scale-[0.92] text-white text-[22px] sm:text-[24px] font-normal leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.12)] cursor-pointer touch-manipulation"
                   >
                     %
                   </button>
                   <button
                     type="button"
                     onClick={() => handleOperator("/")}
-                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[2rem] sm:text-[1.95rem] font-medium flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[30px] sm:text-[32px] font-medium leading-none flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
                   >
                     ÷
                   </button>
@@ -655,28 +655,28 @@ export const CalculatorModal: React.FC<CalculatorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDigit("7")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     7
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDigit("8")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     8
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDigit("9")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     9
                   </button>
                   <button
                     type="button"
                     onClick={() => handleOperator("*")}
-                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[2rem] sm:text-[1.95rem] font-medium flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[30px] sm:text-[32px] font-medium leading-none flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
                   >
                     ×
                   </button>
@@ -685,28 +685,28 @@ export const CalculatorModal: React.FC<CalculatorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDigit("4")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     4
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDigit("5")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     5
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDigit("6")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     6
                   </button>
                   <button
                     type="button"
                     onClick={() => handleOperator("-")}
-                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[2rem] sm:text-[1.95rem] font-medium flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[30px] sm:text-[32px] font-medium leading-none flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
                   >
                     −
                   </button>
@@ -715,28 +715,28 @@ export const CalculatorModal: React.FC<CalculatorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDigit("1")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     1
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDigit("2")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     2
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDigit("3")}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     3
                   </button>
                   <button
                     type="button"
                     onClick={() => handleOperator("+")}
-                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[2rem] sm:text-[1.95rem] font-medium flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[30px] sm:text-[32px] font-medium leading-none flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
                   >
                     +
                   </button>
@@ -745,21 +745,21 @@ export const CalculatorModal: React.FC<CalculatorModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleDigit("0")}
-                    className="col-span-2 rounded-full h-full aspect-[2.15/1] bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.95] text-white/95 text-[1.9rem] sm:text-[1.85rem] font-light flex items-center justify-start pl-8 transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="col-span-2 rounded-full h-full aspect-[2.15/1] bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.95] text-white/95 text-[30px] sm:text-[32px] font-light leading-none flex items-center justify-start pl-8 transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     0
                   </button>
                   <button
                     type="button"
                     onClick={handleDecimal}
-                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[2rem] sm:text-[1.95rem] font-normal flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#22252E] hover:bg-[#2B2F3A] active:scale-[0.92] text-white/95 text-[36px] font-normal leading-none pb-2 flex items-center justify-center transition-transform shadow-[0_4px_10px_rgba(0,0,0,0.35),inset_0_1px_1px_rgba(255,255,255,0.06)] cursor-pointer touch-manipulation"
                   >
                     .
                   </button>
                   <button
                     type="button"
                     onClick={handleEquals}
-                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[2rem] sm:text-[1.95rem] font-medium flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
+                    className="w-full aspect-square rounded-full bg-[#FF9500] hover:bg-[#FFA51E] active:scale-[0.92] text-white text-[30px] sm:text-[32px] font-medium leading-none flex items-center justify-center transition-transform shadow-[0_5px_18px_rgba(255,149,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.3)] cursor-pointer touch-manipulation"
                   >
                     =
                   </button>

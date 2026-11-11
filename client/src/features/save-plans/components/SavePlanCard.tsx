@@ -3,6 +3,7 @@ import { MoreHorizontal, Check, Pencil } from "lucide-react";
 import { type SavePlanItem, useSavingsStore } from "@/stores/savingsStore";
 import type { SavePlan } from "../types/savePlan.types";
 import { useLiquidityStore } from "@/stores/liquidityStore";
+import { usePrivacyStore, getDynamicBullets } from "@/stores/privacyStore";
 import {
   CURRENCY_CONFIGS,
   type CurrencyCode,
@@ -43,8 +44,12 @@ export const SavePlanCard: React.FC<SavePlanCardProps> = ({
   ) as CurrencyCode;
   const currencyConfig = CURRENCY_CONFIGS[currentCode];
   const rate = currencyConfig.rate ?? 1;
+  const isMasked = usePrivacyStore((state) => state.isMasked);
 
   const formatCurrency = (val?: number): string => {
+    if (isMasked) {
+      return `${currencyConfig.symbol}${getDynamicBullets(val !== undefined ? val * rate : 0)}`;
+    }
     if (val === undefined || isNaN(val)) return `${currencyConfig.symbol}0`;
     const converted = val * rate;
     return `${currencyConfig.symbol}${new Intl.NumberFormat("en-US", {

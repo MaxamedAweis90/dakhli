@@ -7,10 +7,12 @@ import { SearchPalette } from './SearchPalette'
 import { NAV_ITEMS } from './navItems'
 import { Search } from '@/components/shared/icons'
 import { useSearchStore } from '@/stores/searchStore'
+import { usePrivacyHotkey } from '@/hooks/usePrivacyHotkey'
 import { cn } from '@/lib/utils'
 
 export const AppShell: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { openSearch } = useSearchStore()
+  usePrivacyHotkey()
 
   return (
     <LayoutGroup id="search-flow">

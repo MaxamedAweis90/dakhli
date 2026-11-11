@@ -3,6 +3,7 @@ import { Pencil, Check } from 'lucide-react'
 import type { RegisteredItem } from '@/stores/itemsStore'
 import type { RegistryItem } from '../types/item.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
@@ -57,6 +58,7 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
     : 'USD') as CurrencyCode
   const currencyConfig = CURRENCY_CONFIGS[currentCode]
   const rate = currencyConfig.rate ?? 1
+  const isMasked = usePrivacyStore((state) => state.isMasked)
 
   const displayName = ('title' in item && item.title) ? item.title : item.name
   const rawPrice =
@@ -141,8 +143,8 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
         {/* Price & Tag Row */}
         <div className="mt-3.5">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[1.38rem] sm:text-[1.45rem] font-semibold text-white tracking-tight leading-none">
-              {currencyConfig.symbol}{fmt(convertedPrice)}
+            <span className="text-[1.38rem] sm:text-[1.45rem] font-semibold text-white tracking-tight leading-none font-mono tabular-nums">
+              {currencyConfig.symbol}{isMasked ? getDynamicBullets(convertedPrice) : fmt(convertedPrice)}
             </span>
 
             {/* Tag Pill */}

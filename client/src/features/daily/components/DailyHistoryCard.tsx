@@ -3,6 +3,7 @@ import { Pencil } from 'lucide-react'
 import type { DailyRecord, DailyStatus } from '../types/daily.types'
 import { RecordCheckOffCard } from './RecordCheckOffCard'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
@@ -86,17 +87,24 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
   const convertedSpend = spent * rate
   const convertedDelta = savedDelta * rate
 
-  const formatMoney = (n: number) =>
-    new Intl.NumberFormat('en-US', {
+  const isMasked = usePrivacyStore((state) => state.isMasked)
+
+  const formatMoney = (n: number) => {
+    if (isMasked) {
+      return getDynamicBullets(n)
+    }
+    return new Intl.NumberFormat('en-US', {
       maximumFractionDigits: 0,
     }).format(n)
+  }
 
-  const varianceFormatted =
-    convertedDelta > 0
-      ? `+${config.symbol}${formatMoney(convertedDelta)}`
-      : convertedDelta < 0
-      ? `-${config.symbol}${formatMoney(Math.abs(convertedDelta))}`
-      : `${config.symbol}0`
+  const varianceFormatted = isMasked
+    ? `${config.symbol}${getDynamicBullets(convertedDelta)}`
+    : convertedDelta > 0
+    ? `+${config.symbol}${formatMoney(convertedDelta)}`
+    : convertedDelta < 0
+    ? `-${config.symbol}${formatMoney(Math.abs(convertedDelta))}`
+    : `${config.symbol}0`
 
   const varianceColor =
     convertedDelta > 0

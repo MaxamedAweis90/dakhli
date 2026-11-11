@@ -9,6 +9,7 @@ import { useItems } from "./hooks/useItems";
 import { useBaseline } from "@/features/settings/hooks/useBaseline";
 import { useSavePlans } from "@/features/save-plans/hooks/useSavePlans";
 import { useLiquidityStore } from "@/stores/liquidityStore";
+import { usePrivacyStore, getDynamicBullets } from "@/stores/privacyStore";
 import {
   CURRENCY_CONFIGS,
   type CurrencyCode,
@@ -200,6 +201,7 @@ export const ItemsPage: React.FC = () => {
   const currencyConfig = CURRENCY_CONFIGS[currentCode];
   const rate = currencyConfig.rate ?? 1;
   const convertedUnboughtTotal = unboughtTotal * rate;
+  const isMasked = usePrivacyStore((state) => state.isMasked);
 
   return (
     <div className="flex flex-col gap-6 pb-14 pt-1 px-1.5 select-none">
@@ -247,7 +249,9 @@ export const ItemsPage: React.FC = () => {
           <span>Unbought totals:</span>
           <span className="text-white font-semibold text-[1.05rem] font-mono ml-2 tracking-tight">
             {currencyConfig.symbol}
-            {fmt(convertedUnboughtTotal)}
+            {isMasked
+              ? getDynamicBullets(convertedUnboughtTotal)
+              : fmt(convertedUnboughtTotal)}
           </span>
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import type { OverheadBill, OverheadStatus } from '../types/overhead.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
@@ -167,11 +168,17 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
     return bills
   }, [bills, statusFilter, isPastCycle, isFutureCycle])
 
-  const formatAmount = (val: number): string =>
-    new Intl.NumberFormat('en-US', {
+  const isMasked = usePrivacyStore((state) => state.isMasked)
+
+  const formatAmount = (val: number): string => {
+    if (isMasked) {
+      return getDynamicBullets(val * (config.rate ?? 1))
+    }
+    return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(val * (config.rate ?? 1))
+  }
 
   // Temporal Status Rendering without button badges or borders
   const renderStatus = (bill: OverheadBill) => {
