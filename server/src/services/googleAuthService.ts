@@ -1,7 +1,7 @@
 import { OAuth2Client } from 'google-auth-library';
 import { ENV } from '../config/env';
 
-const client = new OAuth2Client(ENV.GOOGLE_CLIENT_ID);
+const client = new OAuth2Client(ENV.GOOGLE_CLIENT_ID, ENV.GOOGLE_CLIENT_SECRET);
 
 export interface GooglePayload {
   googleId: string;
