@@ -26,6 +26,15 @@ export function useAuth() {
     },
   })
 
+  // Google OAuth mutation
+  const googleAuthMutation = useMutation({
+    mutationFn: (credentialOrToken: string) => authApi.googleAuth(credentialOrToken),
+    onSuccess: (data) => {
+      setSession(data.token, data.user)
+      queryClient.invalidateQueries()
+    },
+  })
+
   // Logout handler
   const logout = () => {
     clearSession()
@@ -39,9 +48,11 @@ export function useAuth() {
     isLoading,
     login: loginMutation.mutateAsync,
     register: registerMutation.mutateAsync,
+    googleAuth: googleAuthMutation.mutateAsync,
     logout,
     loginMutation,
     registerMutation,
+    googleAuthMutation,
   }
 }
 

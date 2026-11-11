@@ -25,6 +25,7 @@ export interface EnvConfig {
   JWT_SECRET: string;
   CLIENT_URL: string;
   JWT_EXPIRES_IN: string;
+  GOOGLE_CLIENT_ID?: string;
 }
 
 const criticalEnvKeys: Array<keyof EnvConfig> = ['MONGODB_URI', 'JWT_SECRET'];
@@ -42,4 +43,5 @@ export const ENV: EnvConfig = {
   JWT_SECRET: process.env.JWT_SECRET as string,
   CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
 };

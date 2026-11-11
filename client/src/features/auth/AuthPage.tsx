@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Mail,
@@ -9,8 +9,8 @@ import {
   AlertCircle,
   Loader2,
 } from "@/components/shared/icons";
-import { useAuthStore } from "@/stores/authStore";
 import { useAuth } from "./hooks/useAuth";
+import { authApi } from "./api/authApi";
 import { cn } from "@/lib/utils";
 import { AuthPromoBanner } from "./components/AuthPromoBanner";
 import { SplashScreen } from "@/components/shared/SplashScreen";
@@ -25,8 +25,7 @@ export interface AuthPageProps {
 export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { setSession } = useAuthStore();
-  const { login, register, loginMutation, registerMutation } = useAuth();
+  const { login, register, googleAuth, loginMutation, registerMutation, googleAuthMutation } = useAuth();
 
   // Normalize initial mode to 'login' or 'register'
   const resolveMode = () => {
@@ -41,6 +40,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
   const [isSuccessSplash, setIsSuccessSplash] = useState(false);
   const [splashMessage, setSplashMessage] = useState("Loading Your Account...");
 
+  // Real-time email availability status for register mode
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<{
+    available: boolean;
+    message: string;
+    isGoogleAccount?: boolean;
+  } | null>(null);
+
   // Form validation hook with real-time & on-blur validation
   const {
     values,
@@ -51,6 +58,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     handleBlur,
     validate,
     setServerErrors,
+    setFieldError,
     setGeneralError,
     reset,
   } = useFormValidation(
@@ -63,16 +71,86 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     { validateOnChange: true, validateOnBlur: true }
   );
 
-  const isLoading = loginMutation.isPending || registerMutation.isPending;
+  const isLoading =
+    loginMutation.isPending ||
+    registerMutation.isPending ||
+    googleAuthMutation.isPending;
 
   const handleModeSwitch = (newMode: "login" | "register") => {
     setMode(newMode);
+    setEmailStatus(null);
+    setIsCheckingEmail(false);
     reset({
       name: "",
-      email: values.email, // keep typed email
+      email: values.email, // preserve already typed email
       password: "",
     });
   };
+
+  // Debounced real-time email availability check for registration
+  useEffect(() => {
+    const trimmedEmail = values.email.trim();
+    if (mode !== "register" || !trimmedEmail) {
+      setEmailStatus(null);
+      setIsCheckingEmail(false);
+      return;
+    }
+
+    // Basic format check before querying pre-flight endpoint
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setEmailStatus(null);
+      setIsCheckingEmail(false);
+      return;
+    }
+
+    let isMounted = true;
+    const timer = setTimeout(async () => {
+      try {
+        setIsCheckingEmail(true);
+        const res = await authApi.checkEmail(trimmedEmail);
+        if (!isMounted) return;
+
+        if (!res.available) {
+          setEmailStatus({
+            available: false,
+            message: res.isGoogleAccount
+              ? "This email is registered with Google. Use Google login below."
+              : "This email is already registered. Log in instead.",
+            isGoogleAccount: res.isGoogleAccount,
+          });
+          setFieldError(
+            "email",
+            res.isGoogleAccount
+              ? "Account registered via Google OAuth. Please sign in with Google."
+              : "This email is already registered. Please log in instead."
+          );
+        } else {
+          setEmailStatus({
+            available: true,
+            message: "Email is available",
+          });
+          if (
+            errors.email?.includes("already registered") ||
+            errors.email?.includes("Google")
+          ) {
+            setFieldError("email", undefined);
+          }
+        }
+      } catch {
+        // Pre-flight check failure shouldn't block the user
+      } finally {
+        if (isMounted) {
+          setIsCheckingEmail(false);
+        }
+      }
+    }, 400);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [values.email, mode]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -81,6 +159,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     // Trigger validation
     const isValid = validate();
     if (!isValid) return;
+
+    if (mode === "register" && emailStatus && !emailStatus.available) {
+      setFieldError(
+        "email",
+        emailStatus.isGoogleAccount
+          ? "Account registered via Google OAuth. Please sign in with Google."
+          : "This email is already registered. Please log in instead."
+      );
+      return;
+    }
 
     try {
       const destination =
@@ -114,20 +202,27 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     }
   };
 
-  // 1-Click Google / Demo Login
-  const handleGoogleLogin = () => {
-    setSession("demo-jwt-token", {
-      id: "demo-user-id",
-      email: "demo@dakhli.app",
-      name: "Demo User",
-    });
-    setSplashMessage("Loading your Account...");
-    setIsSuccessSplash(true);
-    setTimeout(() => {
-      const destination =
-        (location.state as { from?: Location })?.from?.pathname || "/";
-      navigate(destination, { replace: true });
-    }, 850);
+  // Google OAuth / 1-Click Verification
+  const handleGoogleLogin = async () => {
+    try {
+      setGeneralError(null);
+      // In development / demo environment, this passes "demo-jwt-token" to /api/auth/google
+      // which is verified on the backend, provisioned in MongoDB, and issued a secure session JWT.
+      const token = "demo-jwt-token";
+      await googleAuth(token);
+      setSplashMessage("Welcome! Loading your Google-authenticated account...");
+      setIsSuccessSplash(true);
+      setTimeout(() => {
+        const destination =
+          (location.state as { from?: Location })?.from?.pathname || "/";
+        navigate(destination, { replace: true });
+      }, 850);
+    } catch (err: unknown) {
+      const apiErr = err as ApiError;
+      setGeneralError(
+        apiErr?.message || "Google authentication failed. Please try again."
+      );
+    }
   };
 
   if (isSuccessSplash) {
@@ -141,9 +236,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
       errors.email?.toLowerCase().includes("create an account"));
 
   return (
-    <div className="w-screen h-screen overflow-hidden bg-[#111215] text-white flex flex-col lg:flex-row select-none">
+    <div className="w-screen h-screen overflow-hidden bg-[#0D0E12] text-white flex flex-col lg:flex-row select-none">
       {/* ================= LEFT COLUMN: Form Area (35% width, strictly no scroll) ================= */}
-      <div className="w-full lg:w-[35%] flex-shrink-0 h-full flex flex-col justify-between px-6 sm:px-8 xl:px-10 py-5 sm:py-6 bg-[#111215] border-r border-white/[0.06] overflow-hidden">
+      <div className="w-full lg:w-[35%] flex-shrink-0 h-full flex flex-col justify-between px-6 sm:px-8 xl:px-10 py-5 sm:py-6 bg-[#13151B] border-r border-white/[0.06] overflow-hidden">
         {/* Top: Brand Header */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <div className="w-6 h-6 rounded-md bg-[#E5A855]/15 border border-[#E5A855]/30 flex items-center justify-center">
@@ -160,7 +255,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
           <span className="text-sm font-bold tracking-tight text-white">
             Dakhli
           </span>
-          <span className="text-[10px] text-slate-500 font-medium ml-1">
+          <span className="text-[10px] text-slate-500 font-mono ml-1">
             Financial OS
           </span>
         </div>
@@ -174,20 +269,20 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
             </h1>
             <p className="text-[11.5px] text-slate-400 mt-1">
               {mode === "login"
-                ? "Enter your credentials to access your financial System."
+                ? "Enter your credentials to access your financial system."
                 : "Start tracking liquidity, savings, and overheads in one hub."}
             </p>
           </div>
 
           {/* Segmented Switcher: Login / Register */}
-          <div className="grid grid-cols-2 p-0.5 bg-[#181A22] border border-white/[0.08] rounded-xl w-full mt-3.5">
+          <div className="grid grid-cols-2 p-0.5 bg-[#1A1D26] border border-white/[0.08] rounded-xl w-full mt-3.5">
             <button
               type="button"
               onClick={() => handleModeSwitch("login")}
               className={cn(
                 "py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer",
                 mode === "login"
-                  ? "bg-[#272A36] text-white shadow-sm"
+                  ? "bg-[#242835] text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               )}
             >
@@ -199,7 +294,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
               className={cn(
                 "py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer",
                 mode === "register"
-                  ? "bg-[#272A36] text-white shadow-sm"
+                  ? "bg-[#242835] text-white shadow-sm"
                   : "text-slate-400 hover:text-white"
               )}
             >
@@ -218,7 +313,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                 <button
                   type="button"
                   onClick={() => handleModeSwitch("register")}
-                  className="text-left text-[11px] text-[#E5A855] hover:underline font-semibold pl-5 cursor-pointer"
+                  className="text-left text-[11px] text-[#E5A855] hover:underline font-semibold pl-5 cursor-pointer font-mono"
                 >
                   Need an account? Click here to register →
                 </button>
@@ -236,7 +331,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                 </label>
                 <div
                   className={cn(
-                    "bg-[#181A22] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
+                    "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
                     errors.name && (touched.name || errors.name)
                       ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
                       : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
@@ -262,14 +357,28 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
 
             {/* Email Address */}
             <div className="space-y-1">
-              <label className="text-[11px] font-medium text-slate-300">
-                Email Address
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-medium text-slate-300">
+                  Email Address
+                </label>
+                {mode === "register" && isCheckingEmail && (
+                  <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> checking...
+                  </span>
+                )}
+                {mode === "register" && !isCheckingEmail && emailStatus?.available && !errors.email && (
+                  <span className="text-[10px] font-mono font-medium text-emerald-400 flex items-center gap-0.5">
+                    ✓ Available
+                  </span>
+                )}
+              </div>
               <div
                 className={cn(
-                  "bg-[#181A22] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
+                  "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
                   errors.email && (touched.email || errors.email)
                     ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
+                    : emailStatus?.available && !errors.email
+                    ? "border-emerald-500/40 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30"
                     : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
                 )}
               >
@@ -282,11 +391,23 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
                   placeholder="name@example.com"
                   className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
                 />
+                {isCheckingEmail && (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500 flex-shrink-0" />
+                )}
               </div>
               {errors.email && (touched.email || errors.email) && (
-                <p className="text-[10.5px] text-red-400 font-medium pl-1">
-                  {errors.email}
-                </p>
+                <div className="flex items-center justify-between text-[10.5px] text-red-400 font-medium pl-1">
+                  <span>{errors.email}</span>
+                  {mode === "register" && emailStatus && !emailStatus.available && (
+                    <button
+                      type="button"
+                      onClick={() => handleModeSwitch("login")}
+                      className="text-[#E5A855] hover:underline font-mono text-[10.5px] font-semibold ml-2 cursor-pointer flex-shrink-0"
+                    >
+                      Log in →
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -297,7 +418,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
               </label>
               <div
                 className={cn(
-                  "bg-[#181A22] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
+                  "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
                   errors.password && (touched.password || errors.password)
                     ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
                     : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
@@ -338,9 +459,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full h-9 sm:h-10 rounded-xl bg-[#E5A855] hover:bg-[#d99b48] active:scale-[0.99] text-[#121316] font-bold text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-3 disabled:opacity-50"
+              className="w-full h-9 sm:h-10 rounded-xl bg-[#E5A855] hover:bg-[#d99b48] active:scale-[0.99] text-[#121316] font-bold text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-3 disabled:opacity-50 font-mono"
             >
-              {isLoading ? (
+              {loginMutation.isPending || registerMutation.isPending ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-[#121316]" />
               ) : (
                 <span>{mode === "login" ? "Login" : "Create Account"}</span>
@@ -353,7 +474,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/[0.08]" />
             </div>
-            <span className="relative bg-[#111215] px-2 text-[10px] uppercase tracking-wider text-slate-500">
+            <span className="relative bg-[#13151B] px-2 text-[10px] uppercase font-mono tracking-wider text-slate-500">
               or
             </span>
           </div>
@@ -362,37 +483,44 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full h-9 sm:h-10 rounded-xl bg-[#181A22] hover:bg-[#20232E] border border-white/10 hover:border-white/20 flex items-center justify-center gap-2.5 text-xs font-medium text-white transition-all cursor-pointer shadow-sm active:scale-[0.99]"
+            disabled={isLoading}
+            className="w-full h-9 sm:h-10 rounded-xl bg-[#1A1D26] hover:bg-[#222633] border border-white/10 hover:border-white/20 flex items-center justify-center gap-2.5 text-xs font-medium text-white transition-all cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-50"
           >
-            <svg
-              viewBox="0 0 24 24"
-              className="w-3.5 h-3.5 flex-shrink-0"
-              aria-hidden="true"
-            >
-              <path
-                fill="#EA4335"
-                d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
-              />
-              <path
-                fill="#4285F4"
-                d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.8z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.5s.7 4.8 1.9 7.2l3.7-2.9z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 17C3.7 20.7 7.5 23.5 12 23.5z"
-              />
-            </svg>
-            <span>Continue with Google</span>
+            {googleAuthMutation.isPending ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+            ) : (
+              <>
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-3.5 h-3.5 flex-shrink-0"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="#EA4335"
+                    d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.8z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.5s.7 4.8 1.9 7.2l3.7-2.9z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 17C3.7 20.7 7.5 23.5 12 23.5z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </>
+            )}
           </button>
         </div>
 
         {/* Bottom: Footer */}
         <div className="pt-2.5 border-t border-white/[0.04] flex items-center justify-between text-[11px] text-slate-500 flex-shrink-0">
-          <span>© Dakhli</span>
+          <span className="font-mono">© Dakhli</span>
           <div className="flex items-center gap-3">
             <span className="hover:text-slate-300 transition-colors cursor-pointer">
               Terms

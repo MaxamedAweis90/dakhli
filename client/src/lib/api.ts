@@ -8,7 +8,7 @@ import type { ApiError, ApiErrorResponse } from '@/types/api'
 export const TOKEN_STORAGE_KEY = 'dakhli_token'
 export const AUTH_UNAUTHORIZED_EVENT = 'dakhli:unauthorized'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'
+const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api/v1'
 
 export const api = axios.create({
   baseURL,

@@ -128,6 +128,13 @@ export function useFormValidation<T extends Record<string, any>>(
     []
   )
 
+  const setFieldError = useCallback((field: keyof T, error?: string) => {
+    setErrors((prev) => ({
+      ...prev,
+      [field]: error,
+    }))
+  }, [])
+
   const clearErrors = useCallback(() => {
     setErrors({})
     setGeneralError(null)
@@ -153,6 +160,7 @@ export function useFormValidation<T extends Record<string, any>>(
     setFieldValue,
     validate,
     setServerErrors,
+    setFieldError,
     setGeneralError,
     clearErrors,
     reset,

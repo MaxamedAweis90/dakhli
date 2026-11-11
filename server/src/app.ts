@@ -24,8 +24,9 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// API Routes
+// API Routes (supports both /api/v1 and /api)
 app.use('/api/v1', apiRouter);
+app.use('/api', apiRouter);
 
 // Catch-all 404 handler for unknown routes
 app.use((_req: Request, res: Response) => {

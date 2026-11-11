@@ -46,5 +46,26 @@ export const registerSchema = z.object({
     .default(1),
 });
 
+export const checkEmailSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required.')
+    .email('Please enter a valid email address.')
+    .toLowerCase(),
+});
+
+export const googleAuthSchema = z
+  .object({
+    idToken: z.string().trim().optional(),
+    credential: z.string().trim().optional(),
+    token: z.string().trim().optional(),
+  })
+  .refine((data) => Boolean(data.idToken || data.credential || data.token), {
+    message: 'Google credential or idToken is required.',
+  });
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+export type CheckEmailInput = z.infer<typeof checkEmailSchema>;
+export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;

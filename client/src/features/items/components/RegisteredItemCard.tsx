@@ -148,16 +148,21 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
           {/* Subtle top scrim to guarantee title contrast */}
           <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none z-10" />
 
-          {/* Top-right Actions: Grab Handle + Quick Edit */}
+          {/* Top-right Actions: Grab Handle + Quick Edit (Both appear smoothly on card hover) */}
           <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
-            {/* Grab Handle */}
+            {/* Grab Handle - visible only on hover, matching Quick Edit button */}
             {isDraggable && (
               <div
                 draggable
                 onDragStart={(e) => onDragStart?.(e, index ?? 0)}
                 onDragEnd={onDragEnd}
                 title="Drag to reorder"
-                className="opacity-40 hover:opacity-100 text-slate-400 transition-opacity cursor-grab active:cursor-grabbing p-1.5 bg-[#13151B]/80 backdrop-blur rounded-md border border-white/5 shadow-md flex items-center justify-center select-none"
+                className={cn(
+                  'w-7 h-7 rounded-lg bg-black/70 hover:bg-black/95 backdrop-blur-md text-[#C5C8D4] hover:text-white flex items-center justify-center border border-white/15 cursor-grab active:cursor-grabbing shadow-md active:scale-95 select-none transition-all duration-200',
+                  isDragging
+                    ? 'opacity-100 scale-95 ring-1 ring-[#D4A359]/50'
+                    : 'opacity-0 group-hover:opacity-100'
+                )}
               >
                 <GripVertical className="w-3.5 h-3.5" />
               </div>

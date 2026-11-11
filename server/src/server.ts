@@ -5,8 +5,17 @@ import { ENV } from './config/env';
 const startServer = async (): Promise<void> => {
   await connectDB();
 
-  app.listen(ENV.PORT, () => {
+  const server = app.listen(ENV.PORT, () => {
     console.log(`[Server] Dakhli API running on port ${ENV.PORT} (${ENV.NODE_ENV})`);
+  });
+
+  server.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[Server] Fatal Error: Port ${ENV.PORT} is already in use by another application. Please free port ${ENV.PORT} or change PORT in .env.`);
+    } else {
+      console.error('[Server] Fatal server error:', err);
+    }
+    process.exit(1);
   });
 };
 
