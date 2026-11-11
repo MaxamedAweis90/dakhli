@@ -27,7 +27,13 @@ export const register = async (
     if (existingUser) {
       res.status(409).json({
         success: false,
-        error: { message: 'An account with this email already exists.' },
+        error: {
+          message: 'An account with this email already exists.',
+          code: 'EMAIL_ALREADY_EXISTS',
+          fieldErrors: {
+            email: 'An account with this email already exists. Try signing in instead.',
+          },
+        },
       });
       return;
     }
@@ -101,7 +107,13 @@ export const login = async (
     if (!user) {
       res.status(401).json({
         success: false,
-        error: { message: 'Invalid email or password.' },
+        error: {
+          message: 'Invalid email or password.',
+          code: 'INVALID_CREDENTIALS',
+          fieldErrors: {
+            email: 'Account not found with this email. Please check your spelling or create an account.',
+          },
+        },
       });
       return;
     }
@@ -110,7 +122,13 @@ export const login = async (
     if (!isMatch) {
       res.status(401).json({
         success: false,
-        error: { message: 'Invalid email or password.' },
+        error: {
+          message: 'Invalid email or password.',
+          code: 'INVALID_CREDENTIALS',
+          fieldErrors: {
+            password: 'Incorrect password. Please verify and try again.',
+          },
+        },
       });
       return;
     }

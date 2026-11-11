@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { X, KeyRound, Home, Wifi, Dumbbell, Zap, Shield, Music } from 'lucide-react'
 import type { OverheadBill, UpdateOverheadPayload } from '../types/overhead.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
+import { useFormValidation } from '@/hooks/useFormValidation'
+import { overheadFormSchema } from '../schemas/overheadSchemas'
+import type { ApiError } from '@/types/api'
 
 export interface EditBillModalProps {
   isOpen: boolean
-  onClose: () => void
   bill: OverheadBill | null
+  onClose: () => void
   onSave: (id: string, payload: UpdateOverheadPayload) => Promise<any> | void
   isSubmitting?: boolean
 }
@@ -25,68 +28,82 @@ const CATEGORIES: { key: string; label: string; icon: React.ComponentType<{ clas
 
 export const EditBillModal: React.FC<EditBillModalProps> = ({
   isOpen,
-  onClose,
   bill,
+  onClose,
   onSave,
   isSubmitting = false,
 }) => {
-  const [title, setTitle] = useState('')
-  const [amount, setAmount] = useState('')
-  const [dueDay, setDueDay] = useState('1')
-  const [category, setCategory] = useState<string>('home')
-  const [notes, setNotes] = useState('')
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
-
   const store = useLiquidityStore()
   const currentCode = (store.currency in CURRENCY_CONFIGS
     ? store.currency
     : 'USD') as CurrencyCode
   const config = CURRENCY_CONFIGS[currentCode]
 
+  const {
+    values,
+    errors,
+    touched,
+    generalError,
+    handleChange,
+    handleBlur,
+    validate,
+    setServerErrors,
+    setGeneralError,
+    reset,
+  } = useFormValidation(
+    overheadFormSchema,
+    {
+      title: '',
+      amount: '',
+      dueDay: '1',
+      category: 'home',
+      notes: '',
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  )
+
   useEffect(() => {
-    if (bill) {
-      setTitle(bill.title || '')
-      setAmount(String(bill.amount ?? ''))
-      setDueDay(String(bill.dueDay ?? '1'))
-      setCategory(bill.iconKey || 'home')
-      setNotes(bill.notes || '')
-      setErrorMsg(null)
+    if (bill && isOpen) {
+      reset({
+        title: bill.title || '',
+        amount: String(bill.amount ?? ''),
+        dueDay: String(bill.dueDay ?? '1'),
+        category: bill.iconKey || 'home',
+        notes: bill.notes || '',
+      })
     }
-  }, [bill, isOpen])
+  }, [bill, isOpen, reset])
 
   if (!isOpen || !bill) return null
 
+  const handleClose = () => {
+    reset()
+    onClose()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErrorMsg(null)
 
-    const numericAmount = parseFloat(amount)
-    const numericDueDay = parseInt(dueDay, 10)
-
-    if (!title.trim()) {
-      setErrorMsg('Please enter a bill title.')
-      return
-    }
-    if (isNaN(numericAmount) || numericAmount <= 0) {
-      setErrorMsg('Please enter a valid positive amount.')
-      return
-    }
-    if (isNaN(numericDueDay) || numericDueDay < 1 || numericDueDay > 31) {
-      setErrorMsg('Due day must be between 1 and 31.')
-      return
-    }
+    const isValid = validate()
+    if (!isValid) return
 
     try {
       await onSave(bill.id, {
-        title: title.trim(),
-        amount: numericAmount,
-        dueDay: numericDueDay,
-        iconKey: category,
-        notes: notes.trim() || undefined,
+        title: values.title.trim(),
+        amount: Number(values.amount),
+        dueDay: Number(values.dueDay),
+        iconKey: values.category,
+        notes: values.notes?.trim() || undefined,
       })
-      onClose()
+
+      handleClose()
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Failed to update overhead bill.')
+      const apiErr = err as ApiError
+      if (apiErr?.fieldErrors && Object.keys(apiErr.fieldErrors).length > 0) {
+        setServerErrors(apiErr.fieldErrors, apiErr.message)
+      } else {
+        setGeneralError(apiErr?.message || 'Failed to update overhead bill.')
+      }
     }
   }
 
@@ -103,7 +120,7 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({
           </h3>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="Close modal"
             className="w-8 h-8 rounded-full bg-[#22242D] hover:bg-[#2C2F3B] text-[#9A9EAF] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
           >
@@ -111,26 +128,34 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({
           </button>
         </div>
 
-        {errorMsg && (
+        {generalError && (
           <div className="mt-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
-            {errorMsg}
+            {generalError}
           </div>
         )}
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
+        <form onSubmit={handleSubmit} noValidate className="mt-5 space-y-4">
           <div>
             <label className="block text-[0.78rem] font-medium text-[#9A9EAF] mb-1.5">
               Bill Name
             </label>
             <input
               type="text"
-              required
               placeholder="e.g. Rent, Gym, Internet, Apple Music"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full h-11 px-3.5 rounded-xl bg-[#1E2028] border border-white/[0.06] text-white text-[0.88rem] outline-none focus:border-[#F7B668] transition-colors"
+              value={values.title}
+              onChange={(e) => handleChange('title', e.target.value)}
+              onBlur={() => handleBlur('title')}
+              className={cn(
+                'w-full h-11 px-3.5 rounded-xl bg-[#1E2028] border text-white text-[0.88rem] outline-none transition-colors',
+                errors.title && (touched.title || errors.title)
+                  ? 'border-red-500/60 focus:border-red-500'
+                  : 'border-white/[0.06] focus:border-[#F7B668]'
+              )}
             />
+            {errors.title && (touched.title || errors.title) && (
+              <p className="text-[11px] text-red-400 mt-1 pl-1">{errors.title}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3.5">
@@ -140,14 +165,22 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({
               </label>
               <input
                 type="number"
-                required
                 min="0.01"
                 step="any"
                 placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-xl bg-[#1E2028] border border-white/[0.06] text-white text-[0.88rem] outline-none focus:border-[#F7B668] transition-colors"
+                value={values.amount}
+                onChange={(e) => handleChange('amount', e.target.value)}
+                onBlur={() => handleBlur('amount')}
+                className={cn(
+                  'w-full h-11 px-3.5 rounded-xl bg-[#1E2028] border text-white text-[0.88rem] outline-none transition-colors',
+                  errors.amount && (touched.amount || errors.amount)
+                    ? 'border-red-500/60 focus:border-red-500'
+                    : 'border-white/[0.06] focus:border-[#F7B668]'
+                )}
               />
+              {errors.amount && (touched.amount || errors.amount) && (
+                <p className="text-[11px] text-red-400 mt-1 pl-1">{errors.amount}</p>
+              )}
             </div>
 
             <div>
@@ -156,14 +189,22 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({
               </label>
               <input
                 type="number"
-                required
                 min="1"
                 max="31"
                 placeholder="e.g. 1, 15, 25"
-                value={dueDay}
-                onChange={(e) => setDueDay(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-xl bg-[#1E2028] border border-white/[0.06] text-white text-[0.88rem] outline-none focus:border-[#F7B668] transition-colors"
+                value={values.dueDay}
+                onChange={(e) => handleChange('dueDay', e.target.value)}
+                onBlur={() => handleBlur('dueDay')}
+                className={cn(
+                  'w-full h-11 px-3.5 rounded-xl bg-[#1E2028] border text-white text-[0.88rem] outline-none transition-colors',
+                  errors.dueDay && (touched.dueDay || errors.dueDay)
+                    ? 'border-red-500/60 focus:border-red-500'
+                    : 'border-white/[0.06] focus:border-[#F7B668]'
+                )}
               />
+              {errors.dueDay && (touched.dueDay || errors.dueDay) && (
+                <p className="text-[11px] text-red-400 mt-1 pl-1">{errors.dueDay}</p>
+              )}
             </div>
           </div>
 
@@ -174,13 +215,13 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({
             <div className="flex gap-2">
               {CATEGORIES.map((cat) => {
                 const Icon = cat.icon
-                const isSelected = category === cat.key
+                const isSelected = values.category === cat.key
                 return (
                   <button
                     key={cat.key}
                     type="button"
                     title={cat.label}
-                    onClick={() => setCategory(cat.key)}
+                    onClick={() => handleChange('category', cat.key)}
                     className={cn(
                       'flex-1 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer border',
                       isSelected
@@ -202,17 +243,26 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({
             <input
               type="text"
               placeholder="e.g. Split with roommate, autopay enabled"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full h-11 px-3.5 rounded-xl bg-[#1E2028] border border-white/[0.06] text-white text-[0.88rem] outline-none focus:border-[#F7B668] transition-colors"
+              value={values.notes}
+              onChange={(e) => handleChange('notes', e.target.value)}
+              onBlur={() => handleBlur('notes')}
+              className={cn(
+                'w-full h-11 px-3.5 rounded-xl bg-[#1E2028] border text-white text-[0.88rem] outline-none transition-colors',
+                errors.notes && (touched.notes || errors.notes)
+                  ? 'border-red-500/60 focus:border-red-500'
+                  : 'border-white/[0.06] focus:border-[#F7B668]'
+              )}
             />
+            {errors.notes && (touched.notes || errors.notes) && (
+              <p className="text-[11px] text-red-400 mt-1 pl-1">{errors.notes}</p>
+            )}
           </div>
 
           <div className="pt-3 flex gap-2.5">
             <button
               type="button"
               disabled={isSubmitting}
-              onClick={onClose}
+              onClick={handleClose}
               className="flex-1 h-11 rounded-xl bg-[#1E2028] hover:bg-[#252833] text-[#9A9EAF] hover:text-white text-[0.85rem] font-medium transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancel
@@ -232,4 +282,3 @@ export const EditBillModal: React.FC<EditBillModalProps> = ({
 }
 
 export default EditBillModal
-

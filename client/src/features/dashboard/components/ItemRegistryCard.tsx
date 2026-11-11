@@ -17,12 +17,13 @@ export interface ItemRegistryCardProps {
 }
 
 const TABS: { key: TierKey; label: string }[] = [
+  { key: 'all', label: 'All' },
   { key: 'essentials', label: 'Essentials' },
   { key: 'future', label: 'Future Needs' },
   { key: 'wants', label: 'Wants' },
 ]
 
-const REGISTRY_DATA: Record<TierKey, RegistryItem[]> = {
+const REGISTRY_DATA: Record<Exclude<TierKey, 'all'>, RegistryItem[]> = {
   essentials: [
     {
       id: 'serum',
@@ -151,20 +152,22 @@ const REGISTRY_DATA: Record<TierKey, RegistryItem[]> = {
   ],
 }
 
-const mapTabToContractTier = (tab: TierKey): 'essentials' | 'future_needs' | 'wants' => {
+const mapTabToContractTier = (tab: TierKey): 'essentials' | 'future_needs' | 'wants' | null => {
   if (tab === 'essentials') return 'essentials'
   if (tab === 'future') return 'future_needs'
-  return 'wants'
+  if (tab === 'wants') return 'wants'
+  return null
 }
 
-const mapTabToStoreTier = (tab: TierKey): 'Essentials' | 'Future Needs' | 'Wants' => {
+const mapTabToStoreTier = (tab: TierKey): 'All' | 'Essentials' | 'Future Needs' | 'Wants' => {
+  if (tab === 'all') return 'All'
   if (tab === 'essentials') return 'Essentials'
   if (tab === 'future') return 'Future Needs'
   return 'Wants'
 }
 
 export const ItemRegistryCard: React.FC<ItemRegistryCardProps> = ({ className }) => {
-  const [tab, setTab] = useState<TierKey>('essentials')
+  const [tab, setTab] = useState<TierKey>('all')
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const navigate = useNavigate()
   const { allUnboughtItems, createItem, isCreating } = useItems()
@@ -172,15 +175,19 @@ export const ItemRegistryCard: React.FC<ItemRegistryCardProps> = ({ className })
 
   const contractTier = mapTabToContractTier(tab)
 
-  const liveTierItems: RegistryItem[] = allUnboughtItems
-    .filter((item) => item.tier === contractTier)
+  const liveTierItems: RegistryItem[] = (
+    tab === 'all'
+      ? allUnboughtItems
+      : allUnboughtItems.filter((item) => item.tier === contractTier)
+  )
     .slice(0, 7)
     .map((item) => ({
       id: item.id,
       name: item.title || item.name,
       imageUrl: item.imageUrl,
-      tier: tab,
+      tier: item.tier === 'future_needs' ? 'future' : item.tier === 'wants' ? 'wants' : 'essentials',
       targetPrice: item.targetPrice,
+      savePlanId: item.savePlanId,
       savedAmount:
         item.savedAmount !== undefined
           ? item.savedAmount
@@ -189,8 +196,19 @@ export const ItemRegistryCard: React.FC<ItemRegistryCardProps> = ({ className })
           : undefined,
     }))
 
+  const fallbackAllItems: RegistryItem[] = [
+    ...REGISTRY_DATA.essentials.slice(0, 3),
+    ...REGISTRY_DATA.future.slice(0, 2),
+    ...REGISTRY_DATA.wants.slice(0, 2),
+  ]
+
   // If the user has any live items in the registry, use live tier items; otherwise fall back to preview tiles
-  const items = allUnboughtItems.length > 0 ? liveTierItems : REGISTRY_DATA[tab]
+  const items =
+    allUnboughtItems.length > 0
+      ? liveTierItems
+      : tab === 'all'
+      ? fallbackAllItems
+      : REGISTRY_DATA[tab]
 
   const handleOpenItemOnPage = () => {
     setActiveTier(mapTabToStoreTier(tab))

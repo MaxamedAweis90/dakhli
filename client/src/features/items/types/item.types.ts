@@ -18,6 +18,7 @@ export interface RegistryItem {
   tag?: string;
   inSavePlan?: boolean;
   savePlanId?: string | null;
+  sortOrder?: number;
   targetProgress?: number;
   savedAmount?: number;
   boughtDate?: string;

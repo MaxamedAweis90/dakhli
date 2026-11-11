@@ -51,12 +51,14 @@ api.interceptors.response.use(
     const payload = error.response?.data
     let message = 'A network error occurred. Please try again.'
     let code: string | undefined = error.code
+    let fieldErrors: Record<string, string> | undefined = undefined
 
     if (payload && typeof payload === 'object') {
       if ('error' in payload && payload.error && typeof payload.error === 'object') {
         const backendError = payload.error as ApiError
         message = backendError.message || message
         code = backendError.code || code
+        fieldErrors = backendError.fieldErrors
       } else if ('message' in payload && typeof payload.message === 'string') {
         message = payload.message
       }
@@ -67,6 +69,7 @@ api.interceptors.response.use(
     const normalizedError: ApiError = {
       message,
       code,
+      fieldErrors,
       details: payload,
     }
 

@@ -58,6 +58,7 @@ const formatItem = (item: IItem) => {
     targetProgress: item.targetProgress,
     inSavePlan: Boolean(item.inSavePlan),
     savePlanId: item.savePlanId ? item.savePlanId.toString() : null,
+    sortOrder: Number(item.sortOrder ?? 0),
     boughtAt: item.boughtAt ? item.boughtAt.toISOString() : null,
     createdAt: item.createdAt ? item.createdAt.toISOString() : new Date().toISOString(),
     updatedAt: item.updatedAt ? item.updatedAt.toISOString() : new Date().toISOString(),
@@ -90,7 +91,7 @@ export const listItems = async (
       query.status = { $nin: ['removed', 'cancelled'] };
     }
 
-    const items = await Item.find(query).sort({ createdAt: -1 });
+    const items = await Item.find(query).sort({ sortOrder: 1, createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -342,6 +343,37 @@ export const deleteItem = async (
       success: true,
       data: { message: 'Item marked as removed.', item: formatItem(item) },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reorderItems = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const { orderedIds } = req.body as { orderedIds?: string[] };
+
+    if (!Array.isArray(orderedIds)) {
+      res.status(400).json({ success: false, message: 'orderedIds must be an array of IDs' });
+      return;
+    }
+
+    const bulkOps = orderedIds.map((id, index) => ({
+      updateOne: {
+        filter: { _id: new Types.ObjectId(id), userId: new Types.ObjectId(userId) },
+        update: { $set: { sortOrder: index } },
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await Item.bulkWrite(bulkOps);
+    }
+
+    res.status(200).json({ success: true, message: 'Items reordered successfully' });
   } catch (error) {
     next(error);
   }

@@ -22,6 +22,7 @@ export interface IItem extends Document {
   targetProgress?: number;
   inSavePlan: boolean;
   savePlanId?: Types.ObjectId | null;
+  sortOrder?: number;
   boughtAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -98,6 +99,11 @@ const itemSchema = new Schema<IItem>(
       ref: 'SavePlan',
       default: null,
     },
+    sortOrder: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
     boughtAt: {
       type: Date,
       default: null,
@@ -111,6 +117,7 @@ const itemSchema = new Schema<IItem>(
 
 itemSchema.index({ userId: 1, tier: 1 });
 itemSchema.index({ userId: 1, status: 1 });
+itemSchema.index({ userId: 1, sortOrder: 1 });
 itemSchema.index({ savePlanId: 1 });
 
 export const Item = model<IItem>('Item', itemSchema);

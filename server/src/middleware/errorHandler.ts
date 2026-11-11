@@ -4,6 +4,8 @@ import { ENV } from '../config/env';
 export interface AppError extends Error {
   statusCode?: number;
   code?: string;
+  fieldErrors?: Record<string, string>;
+  errors?: Record<string, { message: string }>;
 }
 
 export const errorHandler = (
@@ -12,14 +14,29 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ): void => {
-  const statusCode = err.statusCode || (err.name === 'ValidationError' ? 400 : 500);
-  const message = err.message || 'An unexpected internal server error occurred.';
+  const isMongooseValidation = err.name === 'ValidationError' && err.errors;
+  const statusCode = err.statusCode || (isMongooseValidation ? 400 : 500);
+
+  let message = err.message || 'An unexpected internal server error occurred.';
+  let fieldErrors: Record<string, string> | undefined = err.fieldErrors;
+
+  if (isMongooseValidation) {
+    fieldErrors = {};
+    for (const [key, val] of Object.entries(err.errors!)) {
+      fieldErrors[key] = val.message;
+    }
+    const firstMessage = Object.values(fieldErrors)[0];
+    if (firstMessage) {
+      message = firstMessage;
+    }
+  }
 
   const response: {
     success: false;
     error: {
       message: string;
       code?: string;
+      fieldErrors?: Record<string, string>;
       stack?: string;
     };
   } = {
@@ -27,6 +44,7 @@ export const errorHandler = (
     error: {
       message,
       ...(err.code ? { code: err.code } : {}),
+      ...(fieldErrors && Object.keys(fieldErrors).length > 0 ? { fieldErrors } : {}),
     },
   };
 

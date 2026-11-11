@@ -5,6 +5,7 @@ import {
   deleteItem,
   getItemSummary,
   listItems,
+  reorderItems,
   unbuyItem,
   updateItem,
 } from '../controllers/itemController';
@@ -17,6 +18,7 @@ router.use(authenticate);
 router.get('/', listItems);
 router.get('/summary', getItemSummary);
 router.post('/', createItem);
+router.patch('/reorder', reorderItems);
 router.patch('/:id', updateItem);
 router.patch('/:id/buy', buyItem);
 router.post('/:id/buy', buyItem);

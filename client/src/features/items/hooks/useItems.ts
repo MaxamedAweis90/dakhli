@@ -41,8 +41,31 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
 
   // Enrich items with any linked save plan progress
   const enrichedItems = useMemo(() => {
-    const raw = query.data ?? []
-    return raw.map((item) => {
+    const storeFallback = useItemsStore.getState().items.map((i) => ({
+      id: i.id,
+      userId: 'demo',
+      title: i.name,
+      name: i.name,
+      targetPrice: i.price,
+      price: i.price,
+      tier: i.tier === 'Essentials' ? 'essentials' : i.tier === 'Future Needs' ? 'future_needs' : 'wants',
+      displayTier: i.tier,
+      status: i.status === 'bought' ? 'bought' : 'planned',
+      imageUrl: i.imageUrl,
+      tag: i.tag,
+      targetProgress: i.targetProgress,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    } as RegistryItem))
+
+    const raw = (query.data && query.data.length > 0) ? query.data : storeFallback
+    const sorted = [...raw].sort((a, b) => {
+      const orderA = a.sortOrder ?? 0
+      const orderB = b.sortOrder ?? 0
+      if (orderA !== orderB) return orderA - orderB
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
+    return sorted.map((item) => {
       const itemTitleLower = (item.title || item.name || '').toLowerCase().trim()
       const linkedPlan = savePlans.find(
         (p) =>
@@ -228,6 +251,39 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
     },
   })
 
+  const reorderMutation = useMutation({
+    mutationFn: (orderedIds: string[]) => itemsApi.reorderItems(orderedIds),
+    onMutate: async (orderedIds: string[]) => {
+      await queryClient.cancelQueries({ queryKey: ITEMS_QUERY_KEY })
+      const previousItems = queryClient.getQueryData<RegistryItem[]>(ITEMS_QUERY_KEY)
+
+      if (previousItems) {
+        const orderMap = new Map(orderedIds.map((id, index) => [id, index]))
+        const reordered = [...previousItems]
+          .map((item) => {
+            if (orderMap.has(item.id)) {
+              return { ...item, sortOrder: orderMap.get(item.id)! }
+            }
+            return item
+          })
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+        queryClient.setQueryData<RegistryItem[]>(ITEMS_QUERY_KEY, reordered)
+      }
+
+      return { previousItems }
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousItems) {
+        queryClient.setQueryData(ITEMS_QUERY_KEY, context.previousItems)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ITEMS_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+
   const toggleBought = async (id: string) => {
     const target = enrichedItems.find((i) => i.id === id)
     if (!target) return
@@ -289,6 +345,7 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
     toggleBought,
     deleteItem: deleteMutation.mutateAsync,
     removeItem: deleteMutation.mutateAsync,
+    reorderItems: reorderMutation.mutateAsync,
     isMutating:
       createMutation.isPending ||
       updateMutation.isPending ||

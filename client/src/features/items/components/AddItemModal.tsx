@@ -13,6 +13,10 @@ import { QRCodeSVG } from 'qrcode.react'
 import type { ItemTier } from '@/stores/itemsStore'
 import type { CreateItemPayload } from '../types/item.types'
 import { uploadApi } from '../api/uploadApi'
+import { useFormValidation } from '@/hooks/useFormValidation'
+import { itemFormSchema } from '../schemas/itemSchemas'
+import { cn } from '@/lib/utils'
+import type { ApiError } from '@/types/api'
 
 export interface AddItemModalProps {
   isOpen: boolean
@@ -27,9 +31,6 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   onAdd,
   isSubmitting = false,
 }) => {
-  const [name, setName] = useState('')
-  const [price, setPrice] = useState('')
-  const [tier, setTier] = useState<ItemTier>('Wants')
   const [imageUrl, setImageUrl] = useState('')
   const [hasTarget, setHasTarget] = useState(false)
   const [targetProgress, setTargetProgress] = useState('15')
@@ -45,6 +46,27 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
   const directInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  const {
+    values,
+    errors,
+    touched,
+    generalError,
+    handleChange,
+    handleBlur,
+    validate,
+    setServerErrors,
+    setGeneralError,
+    reset,
+  } = useFormValidation(
+    itemFormSchema,
+    {
+      name: '',
+      price: '',
+      tier: 'Wants',
+    },
+    { validateOnChange: true, validateOnBlur: true }
+  )
 
   // Clear polling on unmount or when modal closes
   useEffect(() => {
@@ -98,39 +120,41 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
       startPolling(session.sessionId)
     } catch (err: any) {
       console.error('[AddItemModal] Failed to create upload session:', err)
-      setUploadError('Failed to initialize QR session. Please try direct upload.')
+      setUploadError('Could not start QR session. Try direct upload.')
     } finally {
       setIsCreatingSession(false)
     }
   }
 
   const handleCloseQrMode = () => {
+    setIsQrMode(false)
+    setQrSessionId(null)
     if (pollIntervalRef.current) {
       clearInterval(pollIntervalRef.current)
       pollIntervalRef.current = null
     }
-    setIsQrMode(false)
-    setQrSessionId(null)
   }
 
+  // Handle direct file upload (Desktop & Mobile)
   const handleUploadFile = async (file: File) => {
     if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setUploadError('Please select a valid image file (PNG, JPG, WEBP).')
+
+    // Quick size validation: 10MB limit
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Image size exceeds 10MB limit.')
       return
     }
 
     setIsUploading(true)
     setUploadError(null)
+
     try {
-      const res = await uploadApi.uploadDirect(file)
-      setImageUrl(res.imageUrl)
+      const response = await uploadApi.uploadDirect(file)
+      setImageUrl(response.imageUrl)
+      handleCloseQrMode()
     } catch (err: any) {
-      console.error('[AddItemModal] Direct upload failed:', err)
-      setUploadError(
-        err?.response?.data?.error?.message ||
-          'Failed to upload image. Please try again.'
-      )
+      console.error('[AddItemModal] Upload failed:', err)
+      setUploadError(err?.message || 'Failed to upload image. Please try again.')
     } finally {
       setIsUploading(false)
     }
@@ -141,7 +165,6 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     if (file) {
       await handleUploadFile(file)
     }
-    // reset input value so user can reselect the same file if needed
     e.target.value = ''
   }
 
@@ -175,32 +198,45 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const numPrice = parseFloat(price)
-    if (!name.trim() || isNaN(numPrice) || numPrice <= 0) return
-
-    await onAdd({
-      title: name.trim(),
-      name: name.trim(),
-      targetPrice: numPrice,
-      price: numPrice,
-      imageUrl: imageUrl.trim() || undefined,
-      tier,
-      tag: hasTarget ? 'In Save Plan' : tier,
-      targetProgress: hasTarget
-        ? Math.min(100, Math.max(0, parseInt(targetProgress, 10) || 15))
-        : undefined,
-    })
-
-    // Reset form
-    setName('')
-    setPrice('')
-    setTier('Wants')
+  const handleClose = () => {
+    reset()
     setImageUrl('')
     setHasTarget(false)
     handleCloseQrMode()
     onClose()
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    const isValid = validate()
+    if (!isValid) return
+
+    const numPrice = parseFloat(values.price)
+
+    try {
+      await onAdd({
+        title: values.name.trim(),
+        name: values.name.trim(),
+        targetPrice: numPrice,
+        price: numPrice,
+        imageUrl: imageUrl.trim() || undefined,
+        tier: values.tier as ItemTier,
+        tag: hasTarget ? 'In Save Plan' : values.tier,
+        targetProgress: hasTarget
+          ? Math.min(100, Math.max(0, parseInt(targetProgress, 10) || 15))
+          : undefined,
+      })
+
+      handleClose()
+    } catch (err: any) {
+      const apiErr = err as ApiError
+      if (apiErr?.fieldErrors && Object.keys(apiErr.fieldErrors).length > 0) {
+        setServerErrors(apiErr.fieldErrors, apiErr.message)
+      } else {
+        setGeneralError(apiErr?.message || 'Failed to create item.')
+      }
+    }
   }
 
   const qrUrl = qrSessionId
@@ -208,29 +244,38 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     : ''
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-lg rounded-[1.25rem] bg-[#17181D] border border-white/[0.08] shadow-[0_16px_48px_rgba(0,0,0,0.6)] p-6 select-none flex flex-col gap-5 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-1 border-b border-white/[0.05]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+      <div
+        className="w-full max-w-md rounded-2xl bg-[#17181D] border border-white/[0.08] p-6 text-white shadow-2xl overflow-y-auto max-h-[90vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header */}
+        <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-white/[0.06]">
           <div>
-            <h3 className="text-[1.18rem] font-semibold text-white tracking-tight">
+            <h3 className="text-base font-semibold text-white tracking-tight">
               Add Wishlist Item
             </h3>
-            <p className="text-[0.78rem] text-[#8E92A0] mt-0.5">
-              Register a target item to track into your 3-tier wishlist.
+            <p className="text-[11px] text-[#8E92A0]">
+              Track a purchase target or wishlist item
             </p>
           </div>
-
           <button
             type="button"
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-[#20222B] text-[#8E92A0] hover:text-white flex items-center justify-center border border-white/[0.05] transition-colors cursor-pointer"
+            onClick={handleClose}
+            aria-label="Close"
+            className="w-7 h-7 rounded-full bg-[#20222B] text-[#8E92A0] hover:text-white hover:bg-[#282B37] flex items-center justify-center transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Hidden inputs for direct and camera capture */}
+        {generalError && (
+          <div className="mb-4 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+            {generalError}
+          </div>
+        )}
+
+        {/* Hidden File Inputs */}
         <input
           ref={directInputRef}
           type="file"
@@ -248,7 +293,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
         />
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           {/* Item Name */}
           <div>
             <label className="block text-[0.8rem] font-medium text-[#C5C8D4] mb-1.5">
@@ -256,12 +301,20 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
             </label>
             <input
               type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={values.name}
+              onChange={(e) => handleChange('name', e.target.value)}
+              onBlur={() => handleBlur('name')}
               placeholder="e.g. MacBook Pro M3"
-              className="w-full h-[2.5rem] px-3.5 rounded-xl bg-[#20222B] border border-white/[0.06] text-white text-[0.875rem] placeholder:text-[#5F6370] outline-none focus:border-[#D4A359]/60 transition-colors"
+              className={cn(
+                'w-full h-[2.5rem] px-3.5 rounded-xl bg-[#20222B] border text-white text-[0.875rem] placeholder:text-[#5F6370] outline-none transition-colors',
+                errors.name && (touched.name || errors.name)
+                  ? 'border-red-500/60 focus:border-red-500'
+                  : 'border-white/[0.06] focus:border-[#D4A359]/60'
+              )}
             />
+            {errors.name && (touched.name || errors.name) && (
+              <p className="text-[11px] text-red-400 mt-1 pl-1">{errors.name}</p>
+            )}
           </div>
 
           {/* Price & Tier Row */}
@@ -271,19 +324,29 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
               <label className="block text-[0.8rem] font-medium text-[#C5C8D4] mb-1.5">
                 Estimated Price ($)
               </label>
-              <div className="h-[2.5rem] px-3.5 rounded-xl bg-[#20222B] border border-white/[0.06] flex items-center gap-1 focus-within:border-[#D4A359]/60 transition-colors">
+              <div
+                className={cn(
+                  'h-[2.5rem] px-3.5 rounded-xl bg-[#20222B] border flex items-center gap-1 transition-colors',
+                  errors.price && (touched.price || errors.price)
+                    ? 'border-red-500/60 focus-within:border-red-500'
+                    : 'border-white/[0.06] focus-within:border-[#D4A359]/60'
+                )}
+              >
                 <span className="text-[0.95rem] font-semibold text-[#8E92A0]">$</span>
                 <input
                   type="number"
-                  min="1"
+                  min="0.01"
                   step="any"
-                  required
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  value={values.price}
+                  onChange={(e) => handleChange('price', e.target.value)}
+                  onBlur={() => handleBlur('price')}
                   placeholder="500"
                   className="w-full bg-transparent text-white text-[0.875rem] outline-none"
                 />
               </div>
+              {errors.price && (touched.price || errors.price) && (
+                <p className="text-[11px] text-red-400 mt-1 pl-1">{errors.price}</p>
+              )}
             </div>
 
             {/* Tier Selector */}
@@ -292,8 +355,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 Tier
               </label>
               <select
-                value={tier}
-                onChange={(e) => setTier(e.target.value as ItemTier)}
+                value={values.tier}
+                onChange={(e) => handleChange('tier', e.target.value as ItemTier)}
                 className="w-full h-[2.5rem] px-3 rounded-xl bg-[#20222B] border border-white/[0.06] text-white text-[0.85rem] outline-none focus:border-[#D4A359]/60 transition-colors cursor-pointer"
               >
                 <option value="Essentials">Essentials</option>
@@ -303,7 +366,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
             </div>
           </div>
 
-          {/* Photo Section (Replaced Photo Preset with Upload, Mobile Camera & QR Option) */}
+          {/* Photo Section */}
           <div>
             <label className="block text-[0.8rem] font-medium text-[#C5C8D4] mb-1.5 flex items-center justify-between">
               <span>Item Photo</span>
@@ -419,9 +482,9 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 </div>
               </div>
             ) : (
-              /* Case C: No image selected - options for Mobile & Desktop */
+              /* Case C: No image selected */
               <div className="flex flex-col gap-2">
-                {/* Mobile Viewport Actions (Camera & Library) */}
+                {/* Mobile Viewport Actions */}
                 <div className="grid grid-cols-2 gap-2 sm:hidden">
                   <button
                     type="button"
@@ -444,9 +507,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                   </button>
                 </div>
 
-                {/* Desktop Viewport Actions (Upload Drop Zone + QR Scan Option) */}
+                {/* Desktop Viewport Actions */}
                 <div className="hidden sm:grid sm:grid-cols-5 gap-2.5">
-                  {/* Upload Direct Button / Zone */}
                   <div
                     onClick={() => directInputRef.current?.click()}
                     onDragOver={handleDragOver}
@@ -546,7 +608,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.05]">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="h-[2.3rem] px-4 rounded-xl bg-[#20222B] hover:bg-[#282B37] active:scale-95 text-[#A1A1AA] hover:text-white text-[0.825rem] font-medium transition-all cursor-pointer"
             >
               Cancel

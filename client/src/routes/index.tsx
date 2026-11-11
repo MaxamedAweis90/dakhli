@@ -87,6 +87,7 @@ export const router = createBrowserRouter([
               { path: '/daily', element: <DailyPage /> },
               { path: '/save-plans', element: <SavePlansPage /> },
               { path: '/items', element: <ItemsPage /> },
+              { path: '/item-registry', element: <Navigate to="/items" replace /> },
               { path: '/settings', element: <SettingsPage /> },
             ],
           },

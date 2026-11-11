@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Pencil, Check } from 'lucide-react'
+import { Pencil, Check, GripVertical } from 'lucide-react'
 import type { RegisteredItem } from '@/stores/itemsStore'
 import type { RegistryItem } from '../types/item.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { useSavingsStore } from '@/stores/savingsStore'
 import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
@@ -16,6 +17,15 @@ export interface RegisteredItemCardProps {
   isHighlighted?: boolean
   badgeLabel?: string
   className?: string
+  // Drag & drop reordering
+  index?: number
+  isDraggable?: boolean
+  isDragging?: boolean
+  isDragOver?: boolean
+  onDragStart?: (e: React.DragEvent, index: number) => void
+  onDragOver?: (e: React.DragEvent, index: number) => void
+  onDragEnd?: (e: React.DragEvent) => void
+  onDrop?: (e: React.DragEvent, index: number) => void
 }
 
 const fmt = (n: number): string =>
@@ -30,6 +40,14 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
   isHighlighted = false,
   badgeLabel = 'Just Added',
   className,
+  index,
+  isDraggable = false,
+  isDragging = false,
+  isDragOver = false,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  onDrop,
 }) => {
   const [isExiting, setIsExiting] = useState(false)
   const [isDipping, setIsDipping] = useState(false)
@@ -53,6 +71,7 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
   }
 
   const liquidityStore = useLiquidityStore()
+  const savingsStore = useSavingsStore()
   const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS
     ? liquidityStore.currency
     : 'USD') as CurrencyCode
@@ -66,6 +85,24 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
       ? item.targetPrice
       : item.price
   const convertedPrice = rawPrice * rate
+
+  // Affordability Engine calculation
+  const netSpendable = liquidityStore.netSpendable ?? 0
+  let availableFunds = netSpendable
+  const linkedPlanId = ('savePlanId' in item && item.savePlanId) ? item.savePlanId : undefined
+
+  if (linkedPlanId) {
+    const linkedPlan = savingsStore.plans.find((p) => p.id === linkedPlanId || p.linkedItemId === item.id)
+    if (linkedPlan) {
+      availableFunds = linkedPlan.currentAmount ?? linkedPlan.currentSaved ?? 0
+    }
+  } else if ('savedAmount' in item && typeof item.savedAmount === 'number' && item.savedAmount > 0) {
+    availableFunds = item.savedAmount
+  }
+
+  const isAffordable = availableFunds >= rawPrice
+  const shortfall = Math.max(0, rawPrice - availableFunds)
+  const convertedShortfall = shortfall * rate
 
   const isBought = item.status === 'bought'
   const isInSavePlan =
@@ -82,11 +119,15 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
   return (
     <div
       id={`item-card-${item.id}`}
+      onDragOver={(e) => isDraggable && onDragOver?.(e, index ?? 0)}
+      onDrop={(e) => isDraggable && onDrop?.(e, index ?? 0)}
       className={cn(
-        'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-3.5 sm:p-4 select-none flex flex-col justify-between border transition-all duration-700 ease-out',
+        'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-3.5 sm:p-4 select-none flex flex-col justify-between border transition-all duration-300 ease-out',
         isHighlighted
           ? 'border-[#D4A359] ring-2 ring-[#D4A359]/70 shadow-[0_4px_24px_rgba(212,163,89,0.22)] bg-[#1B1B22]'
           : 'border-white/[0.03] hover:border-white/[0.08]',
+        isDragging && 'opacity-40 scale-[0.98] border-amber-500/30',
+        isDragOver && !isDragging && 'ring-2 ring-[#D4A359]/60 scale-[1.01]',
         isExiting &&
           'translate-y-10 opacity-0 scale-[0.96] pointer-events-none blur-[0.5px] transition-all duration-280 ease-in',
         isDipping &&
@@ -107,23 +148,39 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
           {/* Subtle top scrim to guarantee title contrast */}
           <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none z-10" />
 
-          {/* Quick Edit shortcut on top-right of image - visible only on hover */}
-          {onEdit && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit(item)
-              }}
-              title="Edit Item"
-              className="absolute top-3 right-3 z-20 w-7 h-7 rounded-lg bg-black/70 hover:bg-black/95 backdrop-blur-md text-[#C5C8D4] hover:text-white flex items-center justify-center border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer shadow-md active:scale-95"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
-          )}
+          {/* Top-right Actions: Grab Handle + Quick Edit */}
+          <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
+            {/* Grab Handle */}
+            {isDraggable && (
+              <div
+                draggable
+                onDragStart={(e) => onDragStart?.(e, index ?? 0)}
+                onDragEnd={onDragEnd}
+                title="Drag to reorder"
+                className="opacity-40 hover:opacity-100 text-slate-400 transition-opacity cursor-grab active:cursor-grabbing p-1.5 bg-[#13151B]/80 backdrop-blur rounded-md border border-white/5 shadow-md flex items-center justify-center select-none"
+              >
+                <GripVertical className="w-3.5 h-3.5" />
+              </div>
+            )}
+
+            {/* Quick Edit shortcut on top-right of image - visible only on hover */}
+            {onEdit && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit(item)
+                }}
+                title="Edit Item"
+                className="w-7 h-7 rounded-lg bg-black/70 hover:bg-black/95 backdrop-blur-md text-[#C5C8D4] hover:text-white flex items-center justify-center border border-white/15 opacity-0 group-hover:opacity-100 transition-all duration-200 cursor-pointer shadow-md active:scale-95"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
 
           {/* Title Overlay on top-left of image */}
-          <h3 className="absolute top-3 left-3 text-[1.02rem] sm:text-[1.05rem] font-medium text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] z-20">
+          <h3 className="absolute top-3 left-3 text-[1.02rem] sm:text-[1.05rem] font-medium text-white tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] z-20 pr-16 truncate max-w-[85%]">
             {displayName}
           </h3>
 
@@ -147,21 +204,35 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
               {currencyConfig.symbol}{isMasked ? getDynamicBullets(convertedPrice) : fmt(convertedPrice)}
             </span>
 
-            {/* Tag Pill */}
-            {item.tag && (
-              <span
-                className={cn(
-                  'text-[0.72rem] font-medium px-2.5 py-0.5 rounded-full border tracking-tight shrink-0',
-                  item.tag === 'In Save Plan'
-                    ? 'bg-[#2E2419] text-[#FCD34D] border-amber-500/30'
-                    : item.tag === 'Wants' || item.tag === 'Want'
-                    ? 'bg-[#24211D] text-[#D4A359] border-amber-500/20'
-                    : 'bg-[#20222B] text-[#D1D5DB] border-white/[0.06]'
-                )}
-              >
-                {item.tag}
-              </span>
-            )}
+            {/* Tag Pill & Affordability Badge Row */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Affordability Badge */}
+              {isAffordable ? (
+                <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[10px] px-1.5 py-0.5 rounded font-medium tabular-nums tracking-wide">
+                  READY
+                </span>
+              ) : (
+                <span className="bg-white/5 text-slate-400 border border-white/5 font-mono text-[10px] px-1.5 py-0.5 rounded font-medium tabular-nums tracking-wide">
+                  SHORT {currencyConfig.symbol}{isMasked ? getDynamicBullets(convertedShortfall) : fmt(convertedShortfall)}
+                </span>
+              )}
+
+              {/* Tier Tag */}
+              {item.tag && (
+                <span
+                  className={cn(
+                    'text-[0.72rem] font-medium px-2.5 py-0.5 rounded-full border tracking-tight shrink-0',
+                    item.tag === 'In Save Plan'
+                      ? 'bg-[#2E2419] text-[#FCD34D] border-amber-500/30'
+                      : item.tag === 'Wants' || item.tag === 'Want'
+                      ? 'bg-[#24211D] text-[#D4A359] border-amber-500/20'
+                      : 'bg-[#20222B] text-[#D1D5DB] border-white/[0.06]'
+                  )}
+                >
+                  {item.tag}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Universal Progress Bar Present on Every Card */}

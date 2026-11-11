@@ -44,9 +44,55 @@ export const ItemsPage: React.FC = () => {
     updateItem,
     toggleBought,
     removeItem,
+    reorderItems,
     isCreating,
     isMutating,
   } = useItems(activeTier);
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const currentList = [...unboughtItems];
+    const [movedItem] = currentList.splice(draggedIndex, 1);
+    currentList.splice(targetIndex, 0, movedItem);
+
+    const orderedIds = currentList.map((item) => item.id);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    try {
+      await reorderItems(orderedIds);
+    } catch (err) {
+      console.error("[ItemsPage] Failed to persist reordering:", err);
+    }
+  };
 
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(
     null,
@@ -215,10 +261,18 @@ export const ItemsPage: React.FC = () => {
       {/* Section 1: Active Unbought Items 3-Column Card Grid */}
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 lg:gap-6 items-stretch">
-          {unboughtItems.map((item) => (
+          {unboughtItems.map((item, index) => (
             <RegisteredItemCard
               key={item.id}
               item={item}
+              index={index}
+              isDraggable={true}
+              isDragging={draggedIndex === index}
+              isDragOver={dragOverIndex === index}
+              onDragStart={handleDragStart}
+              onDragOver={handleDragOver}
+              onDragEnd={handleDragEnd}
+              onDrop={handleDrop}
               isHighlighted={highlightedItemId === item.id}
               badgeLabel={highlightedBadgeLabel}
               onToggleBought={handleToggleBought}

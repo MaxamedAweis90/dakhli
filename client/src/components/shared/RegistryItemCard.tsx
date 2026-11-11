@@ -1,8 +1,12 @@
 import React from 'react'
 import { Plus } from '@/components/shared/icons'
+import { useLiquidityStore } from '@/stores/liquidityStore'
+import { useSavingsStore } from '@/stores/savingsStore'
+import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
+import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
-export type TierKey = 'essentials' | 'future' | 'wants'
+export type TierKey = 'all' | 'essentials' | 'future' | 'wants'
 
 export interface RegistryItem {
   id: string
@@ -13,6 +17,7 @@ export interface RegistryItem {
   /** Amount saved toward this item. If undefined, item is not in a saving plan */
   savedAmount?: number
   savingPlanId?: string
+  savePlanId?: string | null
 }
 
 export interface RegistryItemCardProps {
@@ -32,6 +37,30 @@ export const RegistryItemCard: React.FC<RegistryItemCardProps> = ({
   className,
   onClick,
 }) => {
+  const liquidityStore = useLiquidityStore()
+  const savingsStore = useSavingsStore()
+  const netSpendable = liquidityStore.netSpendable ?? 0
+  const isMasked = usePrivacyStore((state) => state.isMasked)
+  const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS ? liquidityStore.currency : 'USD') as CurrencyCode
+  const currencyConfig = CURRENCY_CONFIGS[currentCode]
+  const rate = currencyConfig.rate ?? 1
+
+  let availableFunds = netSpendable
+  const linkedPlanId = item.savingPlanId || item.savePlanId
+  if (linkedPlanId) {
+    const linkedPlan = savingsStore.plans.find((p) => p.id === linkedPlanId || p.linkedItemId === item.id)
+    if (linkedPlan) {
+      availableFunds = linkedPlan.currentAmount ?? linkedPlan.currentSaved ?? 0
+    }
+  } else if (item.savedAmount !== undefined && item.savedAmount !== null && item.savedAmount > 0) {
+    availableFunds = item.savedAmount
+  }
+
+  const rawPrice = item.targetPrice ?? 0
+  const isAffordable = rawPrice <= 0 || availableFunds >= rawPrice
+  const shortfall = Math.max(0, rawPrice - availableFunds)
+  const convertedShortfall = shortfall * rate
+
   const hasPlan = item.savedAmount !== undefined && item.savedAmount !== null && (item.targetPrice ?? 0) > 0
   const percentage = hasPlan
     ? Math.min(100, Math.max(0, Math.round(((item.savedAmount ?? 0) / (item.targetPrice ?? 1)) * 100)))
@@ -46,6 +75,17 @@ export const RegistryItemCard: React.FC<RegistryItemCardProps> = ({
       <div className="w-full rounded-[0.95rem] bg-[#1E2028] p-1.5 flex flex-col items-center justify-between border border-white/[0.04] shadow-[0_2px_12px_rgba(0,0,0,0.25)] group-hover:border-white/[0.09] group-hover:bg-[#222530] transition-all">
         {/* Square with radius shaped image */}
         <div className="w-full aspect-square rounded-[0.7rem] overflow-hidden bg-[#242732] relative flex items-center justify-center">
+          {/* Understated Affordability Badge inside image */}
+          {isAffordable ? (
+            <span className="absolute top-1 left-1 z-10 bg-emerald-500/80 backdrop-blur-md text-emerald-100 font-mono text-[8px] px-1 py-0.2 rounded font-medium tabular-nums shadow-sm">
+              READY
+            </span>
+          ) : (
+            <span className="absolute top-1 left-1 z-10 bg-black/75 backdrop-blur-md text-slate-300 font-mono text-[8px] px-1 py-0.2 rounded font-medium tabular-nums shadow-sm border border-white/5">
+              SHORT {currencyConfig.symbol}{isMasked ? getDynamicBullets(convertedShortfall) : Math.round(convertedShortfall)}
+            </span>
+          )}
+
           <img
             src={item.imageUrl}
             alt={item.name}

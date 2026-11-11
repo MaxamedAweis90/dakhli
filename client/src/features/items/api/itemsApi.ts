@@ -87,6 +87,7 @@ export const normalizeItem = (raw: any): RegistryItem => {
     tag,
     inSavePlan,
     savePlanId: raw.savePlanId || null,
+    sortOrder: Number(raw.sortOrder ?? 0),
     targetProgress:
       raw.targetProgress !== undefined ? Number(raw.targetProgress) : undefined,
     savedAmount:
@@ -153,6 +154,10 @@ export const itemsApi = {
 
   deleteItem: async (id: string): Promise<void> => {
     await api.delete(`/items/${id}`)
+  },
+
+  reorderItems: async (orderedIds: string[]): Promise<void> => {
+    await api.patch('/items/reorder', { orderedIds })
   },
 }
 
