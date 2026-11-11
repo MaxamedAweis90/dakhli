@@ -17,6 +17,7 @@ export interface AuthState {
   isLoading: boolean
   isInitialized: boolean
   setSession: (token: string, user: AuthUser) => void
+  updateUser: (partialUser: Partial<AuthUser>) => void
   clearSession: () => void
   initialize: () => Promise<void> | void
 }

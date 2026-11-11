@@ -12,9 +12,11 @@ const DailyPage = lazy(() => import('@/features/daily/DailyPage'))
 const SavePlansPage = lazy(() => import('@/features/save-plans/SavePlansPage'))
 const ItemsPage = lazy(() => import('@/features/items/ItemsPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
+const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'))
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
 const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage'))
+const AccountDeactivatedPage = lazy(() => import('@/features/auth/pages/AccountDeactivatedPage'))
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'))
 const MobileUploadPage = lazy(() => import('@/features/items/pages/MobileUploadPage'))
 
@@ -33,6 +35,9 @@ const RootEntry: React.FC = () => {
   }
 
   if (isAuthenticated) {
+    if (user && user.isDeactivated === true) {
+      return <Navigate to="/account-deactivated" replace />
+    }
     if (user && user.isVerified === false) {
       return <Navigate to="/verify-email" replace />
     }
@@ -61,6 +66,10 @@ export const router = createBrowserRouter([
       {
         path: '/verify-email',
         element: <VerifyEmailPage />,
+      },
+      {
+        path: '/account-deactivated',
+        element: <AccountDeactivatedPage />,
       },
       {
         path: '/landing',
@@ -98,6 +107,7 @@ export const router = createBrowserRouter([
               { path: '/items', element: <ItemsPage /> },
               { path: '/item-registry', element: <Navigate to="/items" replace /> },
               { path: '/settings', element: <SettingsPage /> },
+              { path: '/profile', element: <ProfilePage /> },
             ],
           },
         ],

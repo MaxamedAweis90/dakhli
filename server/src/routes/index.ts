@@ -6,10 +6,12 @@ import dailyRoutes from './dailyRoutes';
 import savePlanRoutes from './savePlanRoutes';
 import itemRoutes from './itemRoutes';
 import uploadRoutes from './uploadRoutes';
+import userRoutes from './userRoutes';
 
 const apiRouter = Router();
 
 apiRouter.use('/auth', authRoutes);
+apiRouter.use('/users', userRoutes);
 apiRouter.use('/baseline', balanceRoutes);
 apiRouter.use('/balance', balanceRoutes);
 apiRouter.use('/overhead', overheadRoutes);

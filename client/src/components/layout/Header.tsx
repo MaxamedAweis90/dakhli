@@ -19,6 +19,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/save-plans': 'Save Plans',
   '/items': 'Registered Items',
   '/settings': 'Settings',
+  '/profile': 'Profile Settings',
 }
 
 export const Header: React.FC = () => {

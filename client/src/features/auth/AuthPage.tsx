@@ -10,7 +10,7 @@ import {
   Loader2,
 } from "@/components/shared/icons";
 import { useAuth } from "./hooks/useAuth";
-import { authApi } from "./api/authApi";
+import { authApi, isDeactivatedResponse } from "./api/authApi";
 import { cn } from "@/lib/utils";
 import { AuthPromoBanner } from "./components/AuthPromoBanner";
 import { SplashScreen } from "@/components/shared/SplashScreen";
@@ -175,6 +175,26 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         (location.state as { from?: Location })?.from?.pathname || "/";
       if (mode === "login") {
         const loginData = await login({ email: values.email.trim(), password: values.password });
+
+        // Intercept deactivated account in grace period
+        if (isDeactivatedResponse(loginData)) {
+          try {
+            sessionStorage.setItem('dakhli_restoration', JSON.stringify(loginData));
+          } catch {
+            // ignore storage quota error
+          }
+          navigate("/account-deactivated", {
+            replace: true,
+            state: {
+              email: loginData.email,
+              name: loginData.name,
+              deletionScheduledAt: loginData.deletionScheduledAt,
+              restorationToken: loginData.restorationToken,
+            },
+          });
+          return;
+        }
+
         if (loginData.user.isVerified === false) {
           setSplashMessage("Please verify your email address...");
           setIsSuccessSplash(true);
@@ -222,7 +242,27 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
       // In development / demo environment, this passes "demo-jwt-token" to /api/auth/google
       // which is verified on the backend, provisioned in MongoDB, and issued a secure session JWT.
       const token = "demo-jwt-token";
-      await googleAuth(token);
+      const googleData = await googleAuth(token);
+
+      // Intercept deactivated account in grace period
+      if (isDeactivatedResponse(googleData)) {
+        try {
+          sessionStorage.setItem('dakhli_restoration', JSON.stringify(googleData));
+        } catch {
+          // ignore storage quota error
+        }
+        navigate("/account-deactivated", {
+          replace: true,
+          state: {
+            email: googleData.email,
+            name: googleData.name,
+            deletionScheduledAt: googleData.deletionScheduledAt,
+            restorationToken: googleData.restorationToken,
+          },
+        });
+        return;
+      }
+
       setSplashMessage("Welcome! Loading your Google-authenticated account...");
       setIsSuccessSplash(true);
       setTimeout(() => {

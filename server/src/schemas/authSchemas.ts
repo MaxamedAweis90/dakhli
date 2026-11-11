@@ -88,9 +88,34 @@ export const resendOtpSchema = z.object({
     .toLowerCase(),
 });
 
+export const updateProfileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Name must be at least 2 characters.')
+    .max(50, 'Name must not exceed 50 characters.'),
+});
+
+export const updatePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required.'),
+  newPassword: z.string().min(8, 'New password must be at least 8 characters long.'),
+});
+
+export const deactivateAccountSchema = z.object({
+  confirmation: z.string().trim().optional(),
+});
+
+export const restoreAccountSchema = z.object({
+  restorationToken: z.string().trim().optional(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type CheckEmailInput = z.infer<typeof checkEmailSchema>;
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
+export type DeactivateAccountInput = z.infer<typeof deactivateAccountSchema>;
+export type RestoreAccountInput = z.infer<typeof restoreAccountSchema>;

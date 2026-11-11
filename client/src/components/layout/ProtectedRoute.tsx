@@ -15,6 +15,13 @@ export const ProtectedRoute: React.FC = () => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Intercept deactivated accounts and redirect to /account-deactivated
+  if (user && user.isDeactivated === true) {
+    if (location.pathname !== "/account-deactivated") {
+      return <Navigate to="/account-deactivated" state={{ from: location }} replace />;
+    }
+  }
+
   // Intercept unverified sessions and redirect to /verify-email
   if (user && user.isVerified === false) {
     if (location.pathname !== "/verify-email") {
@@ -34,6 +41,10 @@ export const PublicRoute: React.FC = () => {
   }
 
   if (isAuthenticated) {
+    // If authenticated but deactivated, intercept and send to /account-deactivated
+    if (user && user.isDeactivated === true) {
+      return <Navigate to="/account-deactivated" replace />;
+    }
     // If authenticated but not verified, intercept and send to /verify-email
     if (user && user.isVerified === false) {
       return <Navigate to="/verify-email" replace />;

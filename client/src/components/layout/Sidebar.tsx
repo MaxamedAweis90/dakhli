@@ -134,7 +134,7 @@ export const Sidebar: React.FC = () => {
         {/* Dropdown Menu for Logout / Account */}
         {isMenuOpen && (
           <div
-            className="absolute bottom-full mb-2 left-0 w-full bg-[#1b1c22] border border-white/10 rounded-xl p-1.5 shadow-xl z-50 backdrop-blur-md"
+            className="absolute bottom-full mb-2 left-0 w-full bg-[#13151B] border border-white/[0.08] rounded-xl py-1.5 px-1 shadow-2xl z-50 backdrop-blur-md"
             onMouseLeave={() => setIsMenuOpen(false)}
           >
             <NavLink
@@ -142,23 +142,38 @@ export const Sidebar: React.FC = () => {
               onClick={() => setIsMenuOpen(false)}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-2.5 w-full px-2.5 py-2 text-xs rounded-lg transition-colors cursor-pointer group',
+                  'flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-mono rounded-lg transition-colors cursor-pointer group',
                   isActive
-                    ? 'bg-[#272932] text-white font-medium'
-                    : 'text-[#c2c2c2] hover:text-white hover:bg-[#22242c]'
+                    ? 'bg-[#1A1D26] text-white font-medium'
+                    : 'text-slate-300 hover:text-white hover:bg-[#1A1D26]'
                 )
               }
             >
-              <Settings className="w-3.5 h-3.5 text-[#8e909a] group-hover:text-white transition-colors" />
+              <Settings className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
               <span>Settings</span>
             </NavLink>
-            <div className="h-[1px] bg-white/[0.06] my-1" />
+            <NavLink
+              to="/profile"
+              onClick={() => setIsMenuOpen(false)}
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-mono rounded-lg transition-colors cursor-pointer group',
+                  isActive
+                    ? 'bg-[#1A1D26] text-white font-medium'
+                    : 'text-slate-300 hover:text-white hover:bg-[#1A1D26]'
+                )
+              }
+            >
+              <UserIcon className="w-4 h-4 text-slate-400 group-hover:text-white transition-colors" />
+              <span>Profile Settings</span>
+            </NavLink>
+            <div className="border-t border-white/5 my-1" />
             <button
               type="button"
               onClick={handleSignOut}
-              className="flex items-center gap-2 w-full px-2.5 py-2 text-xs text-red-400 hover:text-white hover:bg-red-500/20 rounded-lg transition-colors cursor-pointer"
+              className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-mono text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-4 h-4 text-rose-400" />
               <span>Sign out</span>
             </button>
           </div>

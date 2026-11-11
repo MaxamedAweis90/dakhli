@@ -2,12 +2,16 @@ import app from './app';
 import { connectDB } from './config/db';
 import { ENV } from './config/env';
 import { emailService } from './services/emailService';
+import { purgeService } from './services/purgeService';
 
 const startServer = async (): Promise<void> => {
   await connectDB();
 
   // Non-blocking email transport verification on server boot
   void emailService.verifyTransport();
+
+  // Start background 30-day purge worker
+  purgeService.startPurgeWorker();
 
   const server = app.listen(ENV.PORT, () => {
     console.log(`[Server] Dakhli API running on port ${ENV.PORT} (${ENV.NODE_ENV})`);

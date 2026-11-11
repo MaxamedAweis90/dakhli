@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { authApi, type LoginDto, type RegisterDto } from '../api/authApi'
+import { authApi, isDeactivatedResponse, type LoginDto, type RegisterDto } from '../api/authApi'
 
 export function useAuth() {
   const queryClient = useQueryClient()
@@ -12,6 +12,9 @@ export function useAuth() {
   const loginMutation = useMutation({
     mutationFn: (credentials: LoginDto) => authApi.login(credentials),
     onSuccess: (data) => {
+      if (isDeactivatedResponse(data)) {
+        return
+      }
       setSession(data.token, data.user)
       queryClient.invalidateQueries()
     },
@@ -30,6 +33,9 @@ export function useAuth() {
   const googleAuthMutation = useMutation({
     mutationFn: (credentialOrToken: string) => authApi.googleAuth(credentialOrToken),
     onSuccess: (data) => {
+      if (isDeactivatedResponse(data)) {
+        return
+      }
       setSession(data.token, data.user)
       queryClient.invalidateQueries()
     },
@@ -49,6 +55,15 @@ export function useAuth() {
     mutationFn: (email: string) => authApi.resendOtp(email),
   })
 
+  // Restore Account mutation
+  const restoreAccountMutation = useMutation({
+    mutationFn: (restorationToken?: string) => authApi.restoreAccount(restorationToken),
+    onSuccess: (data) => {
+      setSession(data.token, data.user)
+      queryClient.invalidateQueries()
+    },
+  })
+
   // Logout handler
   const logout = () => {
     clearSession()
@@ -65,12 +80,14 @@ export function useAuth() {
     googleAuth: googleAuthMutation.mutateAsync,
     verifyOtp: verifyOtpMutation.mutateAsync,
     resendOtp: resendOtpMutation.mutateAsync,
+    restoreAccount: restoreAccountMutation.mutateAsync,
     logout,
     loginMutation,
     registerMutation,
     googleAuthMutation,
     verifyOtpMutation,
     resendOtpMutation,
+    restoreAccountMutation,
   }
 }
 

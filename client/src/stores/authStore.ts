@@ -31,6 +31,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     })
   },
 
+  updateUser: (partialUser: Partial<AuthUser>) => {
+    const current = get().user
+    if (!current) return
+    const updated = { ...current, ...partialUser }
+    try {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated))
+    } catch {
+      // Ignore storage write errors
+    }
+    set({ user: updated })
+  },
+
   clearSession: () => {
     try {
       localStorage.removeItem(TOKEN_STORAGE_KEY)
