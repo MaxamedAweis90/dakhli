@@ -14,23 +14,28 @@ const ItemsPage = lazy(() => import('@/features/items/ItemsPage'))
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage'))
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'))
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'))
+const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage'))
 const LandingPage = lazy(() => import('@/features/landing/LandingPage'))
 const MobileUploadPage = lazy(() => import('@/features/items/pages/MobileUploadPage'))
 
 /**
  * RootEntry smart dispatcher:
  * - When loading initial auth state (on refresh/boot) -> show full SplashScreen
- * - If user is authenticated -> render DashboardPage inside AppShell
+ * - If user is authenticated and verified -> render DashboardPage inside AppShell
+ * - If user is authenticated but unverified -> redirect to /verify-email
  * - If user is unauthenticated -> render LandingPage
  */
 const RootEntry: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuthStore()
+  const { isAuthenticated, isLoading, user } = useAuthStore()
 
   if (isLoading) {
     return <SplashScreen message="Loading Dakhli..." />
   }
 
   if (isAuthenticated) {
+    if (user && user.isVerified === false) {
+      return <Navigate to="/verify-email" replace />
+    }
     return (
       <AppShell>
         <DashboardPage />
@@ -52,6 +57,10 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: <RootEntry />,
+      },
+      {
+        path: '/verify-email',
+        element: <VerifyEmailPage />,
       },
       {
         path: '/landing',

@@ -174,7 +174,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
       const destination =
         (location.state as { from?: Location })?.from?.pathname || "/";
       if (mode === "login") {
-        await login({ email: values.email.trim(), password: values.password });
+        const loginData = await login({ email: values.email.trim(), password: values.password });
+        if (loginData.user.isVerified === false) {
+          setSplashMessage("Please verify your email address...");
+          setIsSuccessSplash(true);
+          setTimeout(() => {
+            navigate("/verify-email", { replace: true, state: { email: values.email.trim() } });
+          }, 850);
+          return;
+        }
         setSplashMessage("Welcome back! Loading your account...");
       } else {
         await register({
@@ -182,7 +190,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
           email: values.email.trim(),
           password: values.password,
         });
-        setSplashMessage("Account created! Setting up your account...");
+        setSplashMessage("Account created! Please verify your email...");
+        setIsSuccessSplash(true);
+        setTimeout(() => {
+          navigate("/verify-email", { replace: true, state: { email: values.email.trim() } });
+        }, 850);
+        return;
       }
 
       setIsSuccessSplash(true);

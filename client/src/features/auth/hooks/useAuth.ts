@@ -35,6 +35,20 @@ export function useAuth() {
     },
   })
 
+  // Verify OTP mutation
+  const verifyOtpMutation = useMutation({
+    mutationFn: (payload: { email: string; otp: string }) => authApi.verifyOtp(payload),
+    onSuccess: (data) => {
+      setSession(data.token, data.user)
+      queryClient.invalidateQueries()
+    },
+  })
+
+  // Resend OTP mutation
+  const resendOtpMutation = useMutation({
+    mutationFn: (email: string) => authApi.resendOtp(email),
+  })
+
   // Logout handler
   const logout = () => {
     clearSession()
@@ -49,10 +63,14 @@ export function useAuth() {
     login: loginMutation.mutateAsync,
     register: registerMutation.mutateAsync,
     googleAuth: googleAuthMutation.mutateAsync,
+    verifyOtp: verifyOtpMutation.mutateAsync,
+    resendOtp: resendOtpMutation.mutateAsync,
     logout,
     loginMutation,
     registerMutation,
     googleAuthMutation,
+    verifyOtpMutation,
+    resendOtpMutation,
   }
 }
 

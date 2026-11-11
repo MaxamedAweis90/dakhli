@@ -3,6 +3,9 @@ export interface AuthUser {
   email: string
   name?: string
   avatar?: string
+  authProvider?: 'LOCAL' | 'GOOGLE'
+  isVerified?: boolean
+  isDeactivated?: boolean
   createdAt?: string
 }
 

@@ -67,6 +67,9 @@ export const authApi = {
         id: (rawUser.id || rawUser._id) as string,
         email: rawUser.email,
         name: rawUser.name,
+        authProvider: rawUser.authProvider,
+        isVerified: rawUser.isVerified,
+        isDeactivated: rawUser.isDeactivated,
         createdAt: rawUser.createdAt,
       },
     }
@@ -96,6 +99,9 @@ export const authApi = {
         id: (rawUser.id || rawUser._id) as string,
         email: rawUser.email,
         name: rawUser.name,
+        authProvider: rawUser.authProvider,
+        isVerified: rawUser.isVerified,
+        isDeactivated: rawUser.isDeactivated,
         createdAt: rawUser.createdAt,
       },
     }
@@ -134,8 +140,55 @@ export const authApi = {
         id: (rawUser.id || rawUser._id) as string,
         email: rawUser.email,
         name: rawUser.name,
+        authProvider: rawUser.authProvider,
+        isVerified: rawUser.isVerified,
+        isDeactivated: rawUser.isDeactivated,
         createdAt: rawUser.createdAt,
       },
+    }
+  },
+
+  /**
+   * Verify 6-digit email verification OTP
+   * POST /api/auth/verify-otp
+   */
+  verifyOtp: async (payload: { email: string; otp: string }): Promise<AuthResponse> => {
+    const res = (await api.post('/auth/verify-otp', {
+      email: payload.email.trim(),
+      otp: payload.otp.trim(),
+    })) as ApiResponse<AuthResponseData>
+
+    if (!res.data?.token || !res.data?.user) {
+      throw new Error('Invalid verification response from server.')
+    }
+
+    const rawUser = res.data.user
+    return {
+      token: res.data.token,
+      user: {
+        id: (rawUser.id || rawUser._id) as string,
+        email: rawUser.email,
+        name: rawUser.name,
+        authProvider: rawUser.authProvider,
+        isVerified: rawUser.isVerified,
+        isDeactivated: rawUser.isDeactivated,
+        createdAt: rawUser.createdAt,
+      },
+    }
+  },
+
+  /**
+   * Resend 6-digit verification code with 60-second cooldown
+   * POST /api/auth/resend-otp
+   */
+  resendOtp: async (email: string): Promise<{ success: boolean; message: string }> => {
+    const res = (await api.post('/auth/resend-otp', {
+      email: email.trim(),
+    })) as ApiResponse<{ message?: string }>
+
+    return {
+      success: true,
+      message: res.data?.message || 'Verification code resent.',
     }
   },
 
@@ -153,6 +206,9 @@ export const authApi = {
       id: (rawUser.id || rawUser._id) as string,
       email: rawUser.email,
       name: rawUser.name,
+      authProvider: rawUser.authProvider,
+      isVerified: rawUser.isVerified,
+      isDeactivated: rawUser.isDeactivated,
       createdAt: rawUser.createdAt,
     }
   },

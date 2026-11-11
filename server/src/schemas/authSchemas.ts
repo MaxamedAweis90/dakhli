@@ -65,7 +65,32 @@ export const googleAuthSchema = z
     message: 'Google credential or idToken is required.',
   });
 
+export const verifyOtpSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required.')
+    .email('Please enter a valid email address.')
+    .toLowerCase(),
+  otp: z
+    .string()
+    .trim()
+    .length(6, 'Verification code must be exactly 6 digits.')
+    .regex(/^\d{6}$/, 'Verification code must consist of 6 digits only.'),
+});
+
+export const resendOtpSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email is required.')
+    .email('Please enter a valid email address.')
+    .toLowerCase(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type CheckEmailInput = z.infer<typeof checkEmailSchema>;
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
+export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export type ResendOtpInput = z.infer<typeof resendOtpSchema>;

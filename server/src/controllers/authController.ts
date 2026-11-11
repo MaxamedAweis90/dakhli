@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
@@ -6,6 +7,7 @@ import { Balance, User } from '../models';
 import { withTransaction } from '../services/transactionHelper';
 import { AuthRequest } from '../middleware/auth';
 import { verifyGoogleToken } from '../services/googleAuthService';
+import { emailService } from '../services/emailService';
 
 // Helper to project safe user payload
 export const toSafeUser = (user: any) => ({
@@ -56,6 +58,10 @@ export const register = async (
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    // Generate 6-digit verification OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const codeHash = crypto.createHash('sha256').update(otp).digest('hex');
+
     const result = await withTransaction(async (session) => {
       const user = new User({
         email: normalizedEmail,
@@ -63,6 +69,12 @@ export const register = async (
         name: name.trim(),
         authProvider: 'LOCAL',
         isVerified: false,
+        verificationOtp: {
+          codeHash,
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+          attempts: 0,
+          lastSentAt: new Date(),
+        },
       });
       await user.save({ session });
 
@@ -77,6 +89,9 @@ export const register = async (
 
       return { user, balance };
     });
+
+    // Send verification email asynchronously
+    void emailService.sendVerificationOtp(result.user.email, result.user.name, otp);
 
     const token = jwt.sign(
       { userId: result.user._id.toString() },
@@ -364,6 +379,184 @@ export const getMe = async (
       data: {
         user: toSafeUser(user),
         balance,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Verify OTP Code
+ * POST /api/auth/verify-otp
+ */
+export const verifyOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email, otp } = req.body;
+
+    const normalizedEmail = (email || '').toLowerCase().trim();
+    const cleanOtp = (otp || '').trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'Account not found with this email.', code: 'USER_NOT_FOUND' },
+      });
+      return;
+    }
+
+    if (user.isVerified) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Account is already verified.', code: 'ALREADY_VERIFIED' },
+      });
+      return;
+    }
+
+    if (user.isDeactivated) {
+      res.status(403).json({
+        success: false,
+        error: { message: 'This account has been deactivated.', code: 'ACCOUNT_DEACTIVATED' },
+      });
+      return;
+    }
+
+    const otpRecord = user.verificationOtp;
+    if (!otpRecord || !otpRecord.expiresAt || new Date() > new Date(otpRecord.expiresAt)) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Verification code has expired. Please request a new code.', code: 'OTP_EXPIRED' },
+      });
+      return;
+    }
+
+    if ((otpRecord.attempts || 0) >= 5) {
+      res.status(429).json({
+        success: false,
+        error: { message: 'Too many invalid attempts. Please request a new code.', code: 'TOO_MANY_ATTEMPTS' },
+      });
+      return;
+    }
+
+    const incomingHash = crypto.createHash('sha256').update(cleanOtp).digest('hex');
+    if (incomingHash !== otpRecord.codeHash) {
+      user.verificationOtp.attempts = (user.verificationOtp.attempts || 0) + 1;
+      await user.save();
+      const remaining = Math.max(0, 5 - user.verificationOtp.attempts);
+      res.status(400).json({
+        success: false,
+        error: {
+          message: `Invalid verification code. Attempts remaining: ${remaining}.`,
+          code: 'INVALID_OTP',
+          remainingAttempts: remaining,
+        },
+      });
+      return;
+    }
+
+    // Success: activate account and clear OTP record
+    user.isVerified = true;
+    user.verificationOtp = {
+      codeHash: null as any,
+      expiresAt: null as any,
+      attempts: 0,
+      lastSentAt: null as any,
+    };
+    await user.save();
+
+    // Trigger Welcome Email asynchronously
+    void emailService.sendWelcomeEmail(user.email, user.name);
+
+    // Issue updated session JWT token
+    const token = jwt.sign(
+      { userId: user._id.toString() },
+      ENV.JWT_SECRET,
+      { expiresIn: (ENV.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'] }
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        token,
+        user: toSafeUser(user),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Throttled Resend OTP
+ * POST /api/auth/resend-otp
+ */
+export const resendOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const { email } = req.body;
+    const normalizedEmail = (email || '').toLowerCase().trim();
+
+    const user = await User.findOne({ email: normalizedEmail });
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'Account not found with this email.', code: 'USER_NOT_FOUND' },
+      });
+      return;
+    }
+
+    if (user.isVerified) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Account is already verified.', code: 'ALREADY_VERIFIED' },
+      });
+      return;
+    }
+
+    // Throttling: 60-second cooldown
+    if (user.verificationOtp?.lastSentAt) {
+      const elapsedMs = Date.now() - new Date(user.verificationOtp.lastSentAt).getTime();
+      if (elapsedMs < 60000) {
+        const remainingSeconds = Math.ceil((60000 - elapsedMs) / 1000);
+        res.status(429).json({
+          success: false,
+          error: {
+            message: `Resend cooldown active. Please wait ${remainingSeconds}s.`,
+            code: 'RESEND_COOLDOWN',
+            remainingSeconds,
+          },
+        });
+        return;
+      }
+    }
+
+    // Generate fresh 6-digit OTP
+    const newOtp = crypto.randomInt(100000, 1000000).toString();
+    const hashedCode = crypto.createHash('sha256').update(newOtp).digest('hex');
+
+    user.verificationOtp = {
+      codeHash: hashedCode,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 mins
+      attempts: 0,
+      lastSentAt: new Date(),
+    };
+    await user.save();
+
+    // Dispatch verification email
+    await emailService.sendVerificationOtp(user.email, user.name, newOtp);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        message: 'Verification code sent.',
       },
     });
   } catch (error) {
