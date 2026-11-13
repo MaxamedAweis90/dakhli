@@ -4,6 +4,7 @@ import { LayoutGroup } from 'motion/react'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
 import { SearchPalette } from './SearchPalette'
+import { OnboardingModal } from '@/features/onboarding/components/OnboardingModal'
 import { NAV_ITEMS } from './navItems'
 import { Search } from '@/components/shared/icons'
 import { useSearchStore } from '@/stores/searchStore'
@@ -19,6 +20,9 @@ export const AppShell: React.FC<{ children?: React.ReactNode }> = ({ children })
       <div className="w-screen h-screen overflow-hidden bg-[#111215] text-white flex">
         {/* Full-screen animated search overlay */}
         <SearchPalette />
+
+        {/* Welcome Onboarding Stepper for New Users */}
+        <OnboardingModal />
 
         {/* Left rail (desktop) */}
         <Sidebar />

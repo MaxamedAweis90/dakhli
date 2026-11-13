@@ -11,12 +11,15 @@ export interface IUser extends Document {
   email: string;
   passwordHash?: string;
   name: string;
+  avatar?: string | null;
   authProvider: 'LOCAL' | 'GOOGLE';
   googleId?: string;
   isVerified: boolean;
   verificationOtp: IOtpToken;
   passwordResetOtp: IOtpToken;
+  passwordChangeOtp: IOtpToken;
   isDeactivated: boolean;
+  isOnboarded: boolean;
   deactivatedAt: Date | null;
   deletionScheduledAt: Date | null;
   dormantCycles: string[];
@@ -54,6 +57,10 @@ const userSchema = new Schema<IUser>(
       required: [true, 'Name is required'],
       trim: true,
     },
+    avatar: {
+      type: String,
+      default: null,
+    },
     authProvider: {
       type: String,
       enum: ['LOCAL', 'GOOGLE'],
@@ -86,7 +93,20 @@ const userSchema = new Schema<IUser>(
         lastSentAt: null,
       }),
     },
+    passwordChangeOtp: {
+      type: otpSchema,
+      default: () => ({
+        codeHash: null,
+        expiresAt: null,
+        attempts: 0,
+        lastSentAt: null,
+      }),
+    },
     isDeactivated: {
+      type: Boolean,
+      default: false,
+    },
+    isOnboarded: {
       type: Boolean,
       default: false,
     },

@@ -11,6 +11,7 @@ export interface OverheadBillsLedgerBannerProps {
   totalUnpaid: number
   isFutureCycle?: boolean
   isPastCycle?: boolean
+  isDormant?: boolean
   className?: string
 }
 
@@ -24,6 +25,7 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
   totalPaid,
   totalUnpaid,
   isFutureCycle = false,
+  isDormant = false,
   className,
 }) => {
   const store = useLiquidityStore()
@@ -33,9 +35,9 @@ export const OverheadBillsLedgerBanner: React.FC<OverheadBillsLedgerBannerProps>
   const config = CURRENCY_CONFIGS[currentCode]
 
   const rate = config.rate ?? 1
-  const convertedTotal = totalOverhead * rate
-  const convertedPaid = isFutureCycle ? 0 : totalPaid * rate
-  const convertedUnpaid = totalUnpaid * rate
+  const convertedTotal = isDormant ? 0 : totalOverhead * rate
+  const convertedPaid = isDormant || isFutureCycle ? 0 : totalPaid * rate
+  const convertedUnpaid = isDormant ? 0 : totalUnpaid * rate
 
   return (
     <div

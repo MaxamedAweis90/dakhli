@@ -6,6 +6,7 @@ export interface MonthlyBillingRibbonCardProps {
   percentage: number
   onAddBill?: () => void
   isPastCycle?: boolean
+  isDormant?: boolean
   className?: string
 }
 
@@ -18,34 +19,40 @@ export const MonthlyBillingRibbonCard: React.FC<MonthlyBillingRibbonCardProps> =
   percentage,
   onAddBill,
   isPastCycle = false,
+  isDormant = false,
   className,
 }) => {
+  const isLocked = isPastCycle || isDormant
+
   return (
     <div
       className={cn(
         'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] px-6 py-5 lg:px-8 lg:py-5.5 select-none flex items-center justify-between gap-6 lg:gap-8',
+        isDormant && 'opacity-60',
         className
       )}
     >
       {/* Left: Monthly Billing Ribbon spanning full available width */}
       <div className="flex-1 min-w-0">
-        <MonthlyBillingRibbon percentage={percentage} />
+        <MonthlyBillingRibbon percentage={isDormant ? 0 : percentage} />
       </div>
 
       {/* Right: Add Bill Button vertically centered with ribbon */}
       <div className="shrink-0 flex items-center">
         <button
           type="button"
-          onClick={isPastCycle ? undefined : onAddBill}
-          disabled={isPastCycle}
+          onClick={isLocked ? undefined : onAddBill}
+          disabled={isLocked}
           title={
-            isPastCycle
+            isDormant
+              ? 'Dormant cycle: Cannot add bills to dormant months'
+              : isPastCycle
               ? 'Archived cycle: Cannot add bills to past months'
               : undefined
           }
           className={cn(
             'h-[2.45rem] px-5 sm:px-6 rounded-xl font-semibold text-[0.875rem] transition-all flex items-center justify-center tracking-tight',
-            isPastCycle
+            isLocked
               ? 'bg-white/5 text-[#70727a] border border-white/[0.04] opacity-40 cursor-not-allowed'
               : 'bg-gradient-to-r from-[#F7B668] to-[#EEA850] text-[#16171B] shadow-[0_0_20px_rgba(247,182,104,0.35)] hover:brightness-105 active:scale-95 cursor-pointer'
           )}

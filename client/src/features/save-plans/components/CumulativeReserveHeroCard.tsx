@@ -2,6 +2,7 @@ import React, { useState, useId } from 'react'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
 import { useLiquidityStore } from '@/stores/liquidityStore'
 import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useBaseline } from '@/features/settings/hooks/useBaseline'
 import {
   CURRENCY_CONFIGS,
@@ -117,6 +118,37 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
   const today = new Date()
   const currentMonthIdx = today.getMonth()
 
+  const { user } = useAuthStore()
+  const dormantCycles = user?.dormantCycles || []
+
+  // Compute past cumulative amounts iteratively (dormant cycles contribute 0 accumulation -> flat horizontal line)
+  const pastValues: number[] = [cumulativeTotal]
+  let currentBackVal = cumulativeTotal
+  for (let off = -1; off >= -3; off--) {
+    const targetDate = new Date(today.getFullYear(), currentMonthIdx + off + 1, 1)
+    const followingMonthKey = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`
+    const wasDormant = dormantCycles.includes(followingMonthKey)
+    if (!wasDormant) {
+      currentBackVal = Math.max(0, currentBackVal - monthlyDeduction)
+    }
+    pastValues.unshift(currentBackVal)
+  }
+
+  // Compute future cumulative amounts
+  const futureValues: number[] = []
+  let futureForwardVal = cumulativeTotal
+  for (let off = 1; off <= 3; off++) {
+    const targetDate = new Date(today.getFullYear(), currentMonthIdx + off, 1)
+    const futureMonthKey = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`
+    const isFutureDormant = dormantCycles.includes(futureMonthKey)
+    if (!isPaused && !isFutureDormant) {
+      futureForwardVal += monthlyDeduction
+    }
+    futureValues.push(futureForwardVal)
+  }
+
+  const allValues = [...pastValues.slice(0, 3), cumulativeTotal, ...futureValues]
+
   const trajectory = [-3, -2, -1, 0, 1, 2, 3].map((offset, i) => {
     const targetDate = new Date(
       today.getFullYear(),
@@ -125,15 +157,7 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
     )
     const label = `${monthNames[targetDate.getMonth()]} ${targetDate.getFullYear()}`
     const shortLabel = monthNames[targetDate.getMonth()]
-
-    let val = cumulativeTotal
-    if (offset < 0) {
-      val = Math.max(0, cumulativeTotal + offset * monthlyDeduction)
-    } else if (offset > 0) {
-      val = isPaused
-        ? cumulativeTotal
-        : cumulativeTotal + offset * monthlyDeduction
-    }
+    const val = allValues[i] ?? cumulativeTotal
 
     return {
       index: i,

@@ -1,4 +1,4 @@
-export type OverheadStatus = 'paid' | 'unpaid';
+export type OverheadStatus = 'paid' | 'unpaid' | 'dormant';
 
 export interface OverheadBill {
   id: string;
@@ -6,10 +6,11 @@ export interface OverheadBill {
   title: string;          // e.g., "Rent", "Gym", "Internet", "Apple Music"
   amount: number;         // e.g., 200, 20
   dueDay: number;         // 1 to 31 (day of month)
-  status: OverheadStatus; // 'paid' | 'unpaid'
+  status: OverheadStatus; // 'paid' | 'unpaid' | 'dormant'
   iconKey?: string;       // e.g., 'home', 'dumbbell', 'wifi', 'music', 'key', 'flash', 'shield'
   isRecurring: boolean;
   isActive?: boolean;
+  isDormant?: boolean;
   archivedAtMonthKey?: string | null;
   notes?: string;
   paidAt?: string | null;
@@ -44,4 +45,5 @@ export interface OverheadSummary {
   billsCount: number;
   unpaidCount: number;
   percentagePaid: number;
+  isDormant?: boolean;
 }

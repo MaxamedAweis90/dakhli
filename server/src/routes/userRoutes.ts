@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getMe,
   updateProfile,
+  requestPasswordOtp,
   updatePassword,
   deactivateAccount,
   restoreAccount,
@@ -10,6 +11,7 @@ import { authenticate } from '../middleware/auth';
 import { validateRequest } from '../middleware/validate';
 import {
   updateProfileSchema,
+  requestPasswordOtpSchema,
   updatePasswordSchema,
 } from '../schemas/authSchemas';
 
@@ -22,6 +24,7 @@ router.use(authenticate);
 
 router.get('/profile', getMe);
 router.patch('/profile', validateRequest({ body: updateProfileSchema }), updateProfile);
+router.post('/request-password-otp', validateRequest({ body: requestPasswordOtpSchema }), requestPasswordOtp);
 router.patch('/update-password', validateRequest({ body: updatePasswordSchema }), updatePassword);
 router.post('/deactivate', deactivateAccount);
 

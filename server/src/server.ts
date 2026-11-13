@@ -3,12 +3,16 @@ import { connectDB } from './config/db';
 import { ENV } from './config/env';
 import { emailService } from './services/emailService';
 import { purgeService } from './services/purgeService';
+import { initBlobFolders } from './services/blobService';
 
 const startServer = async (): Promise<void> => {
   await connectDB();
 
   // Non-blocking email transport verification on server boot
   void emailService.verifyTransport();
+
+  // Non-blocking storage folders verification ('items/', 'avatars/') in Vercel Blob
+  void initBlobFolders();
 
   // Start background 30-day purge worker
   purgeService.startPurgeWorker();

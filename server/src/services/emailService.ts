@@ -270,7 +270,7 @@ export const sendPasswordResetOtp = async (
 
   const contentHtml = `
     <h1 style="margin: 0 0 16px 0; color: #EDEDED; font-size: 20px; font-weight: 600; letter-spacing: -0.01em;">
-      Reset your master password
+      Reset your password
     </h1>
     <p style="margin: 0 0 24px 0; color: #94A3B8; font-size: 14px; line-height: 22px;">
       Hello ${safeName},<br>
@@ -297,7 +297,7 @@ export const sendPasswordResetOtp = async (
 
   const text = `DAKHLI // PERSONAL FINANCE OS
 
-Reset your master password
+Reset your password
 
 Hello ${safeName},
 A password reset was initiated for your Dakhli account. Use the authorization code below to complete the reset process.
@@ -497,6 +497,129 @@ Timestamp: ${timestamp}`;
 };
 
 /**
+ * Template F: Password Change Authorization OTP (CHANGE_PASSWORD_OTP)
+ * Trigger: Dispatched when an authenticated user requests to change or set their password in Profile Settings.
+ */
+export const sendPasswordChangeOtp = async (
+  email: string,
+  name: string,
+  otp: string
+): Promise<boolean> => {
+  const safeName = name?.trim() || 'User';
+  const subject = `[Dakhli Security] Password change authorization code — ${otp}`;
+  const previewText = `Your Dakhli password authorization code is ${otp}`;
+  const timestamp = new Date().toISOString();
+
+  const contentHtml = `
+    <h1 style="margin: 0 0 16px 0; color: #EDEDED; font-size: 20px; font-weight: 600; letter-spacing: -0.01em;">
+      Authorize password update
+    </h1>
+    <p style="margin: 0 0 24px 0; color: #94A3B8; font-size: 14px; line-height: 22px;">
+      Hello ${safeName},<br>
+      A request was received to update or set the password on your Dakhli account. Use the following 6-digit authorization code to apply the new password. This code expires in 15 minutes.
+    </p>
+
+    <!-- Hero OTP Tile -->
+    <div style="background-color: #1A1D26; border: 1px solid #2D3345; border-radius: 8px; padding: 24px; margin: 24px 0; text-align: center;">
+      <div style="font-size: 32px; font-weight: 700; letter-spacing: 8px; color: #FFFFFF; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; line-height: 1;">
+        ${otp}
+      </div>
+      <div style="margin-top: 10px; color: #64748B; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase;">
+        EXPIRES IN 15 MINUTES
+      </div>
+    </div>
+
+    <!-- Security Notice -->
+    <div style="background-color: #1A1D26; border-left: 3px solid #E5A855; padding: 12px 16px; border-radius: 4px; margin-top: 24px;">
+      <p style="margin: 0; color: #94A3B8; font-size: 12px; line-height: 18px;">
+        <strong style="color: #E5A855;">Security Notice:</strong> Never share this code with anyone. Dakhli staff will never ask for your verification code. If you did not initiate this request, your account may be compromised.
+      </p>
+    </div>
+  `;
+
+  const text = `DAKHLI // PERSONAL FINANCE OS
+
+Authorize password update
+
+Hello ${safeName},
+A request was received to update or set the password on your Dakhli account. Use the following 6-digit authorization code to apply the new password. This code expires in 15 minutes.
+
+AUTHORIZATION CODE: ${otp}
+(Expires in 15 minutes)
+
+Security Notice: Never share this code with anyone. If you did not initiate this request, your account may be compromised.
+
+--
+This is an automated system dispatch from your Dakhli instance. Do not reply to this email.
+Timestamp: ${timestamp}`;
+
+  const html = renderEmailLayout(contentHtml, previewText);
+  return sendEmail({ to: email, subject, html, text });
+};
+
+/**
+ * Template G: Password Changed Confirmation Notice (PASSWORD_CHANGED_CONFIRMATION)
+ * Trigger: Dispatched immediately after password has been successfully applied via OTP verification.
+ */
+export const sendPasswordChangedConfirmation = async (
+  email: string,
+  name: string
+): Promise<boolean> => {
+  const safeName = name?.trim() || 'User';
+  const subject = `[Dakhli Security Alert] Password updated successfully`;
+  const previewText = `Your Dakhli password has been successfully updated.`;
+  const timestamp = new Date().toISOString();
+  const timestampFormatted = formatUtcDate(new Date());
+
+  const contentHtml = `
+    <h1 style="margin: 0 0 16px 0; color: #EDEDED; font-size: 20px; font-weight: 600; letter-spacing: -0.01em;">
+      Security alert: Password updated
+    </h1>
+    <p style="margin: 0 0 24px 0; color: #94A3B8; font-size: 14px; line-height: 22px;">
+      Hello ${safeName},<br>
+      The password for your Dakhli account (${email}) was successfully updated on <strong>${timestampFormatted}</strong>.
+    </p>
+
+    <!-- Key Parameters Block -->
+    <div style="background-color: #1A1D26; border: 1px solid #2D3345; border-radius: 6px; padding: 18px 20px; margin: 24px 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; line-height: 24px; color: #CBD5E1;">
+      <div><span style="color: #94A3B8;">Event:</span> <span style="color: #10B981; font-weight: 600;">PASSWORD_UPDATED</span></div>
+      <div><span style="color: #94A3B8;">Status:</span> <span style="color: #EDEDED; font-weight: 600;">Active &amp; Secured</span></div>
+      <div><span style="color: #94A3B8;">Account:</span> <span style="color: #EDEDED;">${email}</span></div>
+      <div><span style="color: #94A3B8;">Timestamp:</span> <span style="color: #EDEDED;">${timestamp}</span></div>
+    </div>
+
+    <!-- Security Advisory Notice -->
+    <div style="background-color: #1A1D26; border-left: 3px solid #E5A855; padding: 12px 16px; border-radius: 4px; margin-top: 24px;">
+      <p style="margin: 0; color: #94A3B8; font-size: 12px; line-height: 18px;">
+        <strong style="color: #E5A855;">Didn't make this change?</strong> If you did not authorize this action, someone else may have gained access to your account. Please reset your password immediately or contact support.
+      </p>
+    </div>
+  `;
+
+  const text = `DAKHLI // PERSONAL FINANCE OS
+
+Security alert: Password updated
+
+Hello ${safeName},
+The password for your Dakhli account (${email}) was successfully updated on ${timestampFormatted}.
+
+KEY PARAMETERS:
+- Event: PASSWORD_UPDATED
+- Status: Active & Secured
+- Account: ${email}
+- Timestamp: ${timestamp}
+
+Didn't make this change? If you did not authorize this action, someone else may have gained access to your account. Please reset your password immediately.
+
+--
+This is an automated system dispatch from your Dakhli instance. Do not reply to this email.
+Timestamp: ${timestamp}`;
+
+  const html = renderEmailLayout(contentHtml, previewText);
+  return sendEmail({ to: email, subject, html, text });
+};
+
+/**
  * Exported Email Service Object matching required interface
  */
 export const emailService = {
@@ -504,6 +627,8 @@ export const emailService = {
   sendEmail,
   sendVerificationOtp,
   sendPasswordResetOtp,
+  sendPasswordChangeOtp,
+  sendPasswordChangedConfirmation,
   sendWelcomeEmail,
   sendDeactivationNotice,
   sendRestorationNotice,

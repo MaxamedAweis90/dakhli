@@ -9,6 +9,7 @@ export interface DailyTimelineFeedProps {
   editingRecordId: string | null
   defaultDailyCap?: number
   isSubmitting?: boolean
+  isDormant?: boolean
   onRecordToday: (data: { cap: number; spent: number; note: string }) => void
   onUpdateRecord: (id: string, updates: { cap: number; spent: number; note: string }) => void
   onSetEditingId: (id: string | null) => void
@@ -43,6 +44,7 @@ export const DailyTimelineFeed: React.FC<DailyTimelineFeedProps> = ({
   editingRecordId,
   defaultDailyCap = 30,
   isSubmitting = false,
+  isDormant = false,
   onRecordToday,
   onUpdateRecord,
   onSetEditingId,
@@ -53,33 +55,47 @@ export const DailyTimelineFeed: React.FC<DailyTimelineFeedProps> = ({
   // Ensure items are ordered latest date first
   const displayRecords = [...records].sort((a, b) => b.date.localeCompare(a.date))
 
-  // If today is not in the list, synthesize a pending entry at the top
+  // If cycle is dormant, do not synthesize pending checkoff entry
   const hasToday = displayRecords.some((r) => r.date === todayStr)
-  const timelineItems: (DailyRecord & { isToday: boolean; isRecorded: boolean })[] = [
-    ...(!hasToday
-      ? [
-          {
-            id: `pending-${todayStr}`,
-            userId: '',
-            date: todayStr,
-            cap: defaultDailyCap,
-            spent: 0,
-            savedDelta: defaultDailyCap,
-            status: 'on_budget' as const,
-            note: '',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            isToday: true,
-            isRecorded: false,
-          },
-        ]
-      : []),
-    ...displayRecords.map((r) => ({
-      ...r,
-      isToday: r.date === todayStr,
-      isRecorded: true,
-    })),
-  ]
+  const timelineItems: (DailyRecord & { isToday: boolean; isRecorded: boolean })[] = isDormant
+    ? displayRecords.map((r) => ({
+        ...r,
+        isToday: false,
+        isRecorded: true,
+      }))
+    : [
+        ...(!hasToday
+          ? [
+              {
+                id: `pending-${todayStr}`,
+                userId: '',
+                date: todayStr,
+                cap: defaultDailyCap,
+                spent: 0,
+                savedDelta: defaultDailyCap,
+                status: 'on_budget' as const,
+                note: '',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                isToday: true,
+                isRecorded: false,
+              },
+            ]
+          : []),
+        ...displayRecords.map((r) => ({
+          ...r,
+          isToday: r.date === todayStr,
+          isRecorded: true,
+        })),
+      ]
+
+  if (isDormant && timelineItems.length === 0) {
+    return (
+      <div className={cn('p-12 text-center text-slate-500 font-mono text-xs bg-[#17181D] rounded-2xl border border-white/[0.04]', className)}>
+        Cycle skipped due to account deactivation. Daily ledger tracking suspended for this period.
+      </div>
+    )
+  }
 
   return (
     <div className={cn('flex flex-col', className)}>

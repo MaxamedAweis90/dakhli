@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
-import { OverheadItem, OverheadMonthlyRecord } from '../models';
+import { OverheadItem, OverheadMonthlyRecord, User } from '../models';
 import {
   getMonthOverheads,
   markOverheadPaid,
@@ -20,6 +20,9 @@ export const listOverheads = async (
       (req.query.monthKey as string) ||
       new Date().toISOString().slice(0, 7);
 
+    const user = await User.findById(userId);
+    const isDormant = Boolean(user?.dormantCycles?.includes(monthKey));
+
     const entries = await getMonthOverheads(userId, monthKey);
 
     const formatted = entries.map(({ item, record }) => ({
@@ -28,10 +31,11 @@ export const listOverheads = async (
       title: item.title,
       amount: record.billedAmount ?? item.defaultAmount,
       dueDay: item.dueDate,
-      status: (record.isPaid ? 'paid' : 'unpaid') as 'paid' | 'unpaid',
+      status: isDormant ? ('dormant' as const) : ((record.isPaid ? 'paid' : 'unpaid') as 'paid' | 'unpaid'),
       iconKey: item.iconKey || 'home',
       isRecurring: !item.isArchived,
       isActive: item.isActive !== false,
+      isDormant,
       notes: item.notes || '',
       paidAt: record.paidAt,
       createdAt: item.createdAt ? item.createdAt.toISOString() : new Date().toISOString(),
@@ -42,6 +46,11 @@ export const listOverheads = async (
 
     res.status(200).json({
       success: true,
+      isDormant,
+      cycleStatus: isDormant ? 'DORMANT' : 'ACTIVE',
+      totalOverhead: isDormant ? 0 : undefined,
+      paid: isDormant ? 0 : undefined,
+      unpaid: isDormant ? 0 : undefined,
       data: formatted,
       entries,
     });
@@ -239,7 +248,18 @@ export const updateMonthlyBilled = async (
     }
 
     const currentRealMonthKey = new Date().toISOString().slice(0, 7);
-    if (monthKey < currentRealMonthKey) {
+    const targetMonth = monthKey || currentRealMonthKey;
+
+    const user = await User.findById(userId);
+    if (user?.dormantCycles?.includes(targetMonth)) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Cycle is dormant. Operations cannot be performed on dormant cycles.', code: 'DORMANT_CYCLE' },
+      });
+      return;
+    }
+
+    if (targetMonth < currentRealMonthKey) {
       res.status(400).json({
         success: false,
         error: { message: 'Archived cycle: Past months are read-only.' },
@@ -279,6 +299,15 @@ export const payOverhead = async (
     const currentRealMonthKey = new Date().toISOString().slice(0, 7);
     const targetMonth = monthKey || currentRealMonthKey;
 
+    const user = await User.findById(userId);
+    if (user?.dormantCycles?.includes(targetMonth)) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Cycle is dormant. Operations cannot be performed on dormant cycles.', code: 'DORMANT_CYCLE' },
+      });
+      return;
+    }
+
     if (targetMonth < currentRealMonthKey) {
       res.status(400).json({
         success: false,
@@ -310,6 +339,15 @@ export const updateOverheadStatus = async (
 
     const currentRealMonthKey = new Date().toISOString().slice(0, 7);
     const targetMonth = monthKey || currentRealMonthKey;
+
+    const user = await User.findById(userId);
+    if (user?.dormantCycles?.includes(targetMonth)) {
+      res.status(400).json({
+        success: false,
+        error: { message: 'Cycle is dormant. Operations cannot be performed on dormant cycles.', code: 'DORMANT_CYCLE' },
+      });
+      return;
+    }
 
     if (targetMonth < currentRealMonthKey) {
       res.status(400).json({

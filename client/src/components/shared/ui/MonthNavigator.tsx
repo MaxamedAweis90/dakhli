@@ -1,5 +1,6 @@
 import React from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
 
 export interface MonthNavigatorProps {
@@ -8,6 +9,7 @@ export interface MonthNavigatorProps {
   onNext: () => void
   isPrevDisabled?: boolean
   isNextDisabled?: boolean
+  isDormant?: boolean
   className?: string
 }
 
@@ -17,17 +19,28 @@ export const MonthNavigator: React.FC<MonthNavigatorProps> = ({
   onNext,
   isPrevDisabled = false,
   isNextDisabled = false,
+  isDormant,
   className,
 }) => {
+  const { user } = useAuthStore()
+  const effectiveIsDormant = isDormant !== undefined ? isDormant : Boolean(user?.dormantCycles?.includes(currentMonth))
+
   const [yearStr, monthStr] = currentMonth.split('-')
   const date = new Date(Number(yearStr), Number(monthStr) - 1, 1)
   const monthName = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <h1 className="text-[1.35rem] lg:text-[1.5rem] font-semibold leading-none tracking-[-0.015em] text-white">
-        {monthName}
-      </h1>
+      <div className="flex items-center gap-2">
+        <h1 className="text-[1.35rem] lg:text-[1.5rem] font-semibold leading-none tracking-[-0.015em] text-white">
+          {monthName}
+        </h1>
+        {effectiveIsDormant && (
+          <span className="text-slate-400 bg-white/5 border border-white/5 font-mono text-[10px] px-2 py-0.5 rounded tracking-wider uppercase select-none">
+            DORMANT
+          </span>
+        )}
+      </div>
 
       <div className="flex items-center gap-1.5">
         {/* Previous Month Chevron (clamped to user account registration month) */}

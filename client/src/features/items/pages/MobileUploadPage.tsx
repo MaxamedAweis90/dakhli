@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Camera, Image as ImageIcon, CheckCircle2, AlertCircle, Loader2, ArrowLeft } from 'lucide-react'
-import { uploadApi, type SessionStatusResponse } from '../api/uploadApi'
+import { uploadApi, validateImageFile, type SessionStatusResponse } from '../api/uploadApi'
 
 export const MobileUploadPage: React.FC = () => {
   const [searchParams] = useSearchParams()
@@ -49,6 +49,12 @@ export const MobileUploadPage: React.FC = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      const validation = validateImageFile(file, { isAvatar: false })
+      if (!validation.valid) {
+        setErrorMsg(validation.error || 'Please select a valid image (JPEG, PNG, WebP, AVIF up to 5MB).')
+        return
+      }
+      setErrorMsg(null)
       setSelectedFile(file)
       const localUrl = URL.createObjectURL(file)
       setPreviewUrl(localUrl)
@@ -174,7 +180,7 @@ export const MobileUploadPage: React.FC = () => {
             <input
               ref={cameraInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/avif"
               capture="environment"
               onChange={handleFileSelect}
               className="hidden"
@@ -182,7 +188,7 @@ export const MobileUploadPage: React.FC = () => {
             <input
               ref={galleryInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp,image/avif"
               onChange={handleFileSelect}
               className="hidden"
             />

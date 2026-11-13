@@ -80,21 +80,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return
       }
 
-      // Fast-path cached user from localStorage
+      // Fast-path cached user from localStorage for instant UI rendering
       const rawUser = typeof window !== 'undefined' ? localStorage.getItem(USER_STORAGE_KEY) : null
       const cachedUser: AuthUser | null = rawUser ? JSON.parse(rawUser) : null
-
-      // Support 1-click dev demo session
-      if (token === 'demo-jwt-token') {
-        await new Promise((resolve) => setTimeout(resolve, 350))
-        set({
-          token,
-          user: cachedUser || { id: 'demo-user-id', email: 'demo@dakhli.app', name: 'Demo User' },
-          isAuthenticated: true,
-          isLoading: false,
-          isInitialized: true,
-        })
-        return
+      if (cachedUser) {
+        set({ user: cachedUser, isAuthenticated: true })
       }
 
       // Rehydrate user session via backend /auth/me

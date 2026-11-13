@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
-import { DailyLog } from '../models';
+import { DailyLog, User } from '../models';
 import {
   getDailySavingsTracker,
   recordDailyCheckoff,
@@ -33,6 +33,19 @@ export const checkoff = async (
       res.status(400).json({
         success: false,
         error: { message: 'cap (or plannedCap) and spent (or actualSpend) are required fields.' },
+      });
+      return;
+    }
+
+    const cycleMonth = finalDate.slice(0, 7);
+    const user = await User.findById(userId);
+    if (user?.dormantCycles?.includes(cycleMonth)) {
+      res.status(400).json({
+        success: false,
+        error: {
+          message: 'This cycle was dormant due to account deactivation. Financial tracking cannot be recorded for dormant cycles.',
+          code: 'DORMANT_CYCLE',
+        },
       });
       return;
     }
@@ -80,6 +93,20 @@ export const getLogs = async (
     const userId = req.userId!;
     const monthKey = (req.query.monthKey as string) || new Date().toISOString().slice(0, 7);
 
+    const user = await User.findById(userId);
+    const isDormant = Boolean(user?.dormantCycles?.includes(monthKey));
+
+    if (isDormant) {
+      res.status(200).json({
+        success: true,
+        isDormant: true,
+        cycleStatus: 'DORMANT',
+        data: [],
+        logs: [],
+      });
+      return;
+    }
+
     const logs = await DailyLog.find({
       userId: new Types.ObjectId(userId),
       monthKey,
@@ -120,6 +147,24 @@ export const getSavingsPreview = async (
   try {
     const userId = req.userId!;
     const monthKey = (req.query.monthKey as string) || new Date().toISOString().slice(0, 7);
+
+    const user = await User.findById(userId);
+    const isDormant = Boolean(user?.dormantCycles?.includes(monthKey));
+
+    if (isDormant) {
+      res.status(200).json({
+        success: true,
+        data: {
+          todayRecord: null,
+          currentStreak: 0,
+          monthlySavedFromDaily: 0,
+          recentLogs: [],
+          isDormant: true,
+          cycleStatus: 'DORMANT',
+        },
+      });
+      return;
+    }
 
     const preview = await getDailySavingsTracker(userId, monthKey);
 

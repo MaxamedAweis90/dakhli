@@ -36,14 +36,15 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
   const query = useQuery<RegistryItem[]>({
     queryKey: ITEMS_QUERY_KEY,
     queryFn: () => itemsApi.getItems(),
-    staleTime: 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache validity
+    gcTime: 15 * 60 * 1000, // 15 minutes garbage collection retention
   })
 
   // Enrich items with any linked save plan progress
   const enrichedItems = useMemo(() => {
     const storeFallback = useItemsStore.getState().items.map((i) => ({
       id: i.id,
-      userId: 'demo',
+      userId: '',
       title: i.name,
       name: i.name,
       targetPrice: i.price,

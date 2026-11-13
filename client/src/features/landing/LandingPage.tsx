@@ -9,8 +9,12 @@ import ComparisonMatrix from './components/ComparisonMatrix'
 import ManifestoSection from './components/ManifestoSection'
 import LandingFooter from './components/LandingFooter'
 import ScrollToTop from '@/components/shared/ScrollToTop'
+import { useGoogleOneTap } from '@/features/auth/hooks/useGoogleOneTap'
 
 export const LandingPage: React.FC = () => {
+  // Prompt unauthenticated visitors with Google One-Tap on the landing page
+  useGoogleOneTap()
+
   return (
     <div className="min-h-screen bg-[#FAFAF9] text-stone-900 selection:bg-stone-900 selection:text-stone-50 font-sans">
       {/* Top Sticky Header */}

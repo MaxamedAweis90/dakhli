@@ -2,10 +2,13 @@ export interface User {
   id: string
   email: string
   name?: string
-  avatar?: string
+  avatar?: string | null
   authProvider?: 'LOCAL' | 'GOOGLE'
+  hasPassword?: boolean
   isVerified?: boolean
   isDeactivated?: boolean
+  isOnboarded?: boolean
+  dormantCycles?: string[]
   createdAt?: string
 }
 

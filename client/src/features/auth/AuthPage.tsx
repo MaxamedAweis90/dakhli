@@ -10,6 +10,7 @@ import {
   Loader2,
 } from "@/components/shared/icons";
 import { useAuth } from "./hooks/useAuth";
+import { useGoogleAuth, type GoogleAuthPayload } from "./hooks/useGoogleAuth";
 import { authApi, isDeactivatedResponse } from "./api/authApi";
 import { cn } from "@/lib/utils";
 import { AuthPromoBanner } from "./components/AuthPromoBanner";
@@ -71,15 +72,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     { validateOnChange: true, validateOnBlur: true }
   );
 
-  const isLoading =
-    loginMutation.isPending ||
-    registerMutation.isPending ||
-    googleAuthMutation.isPending;
+  // Forward declare Google error reset for mode switch
+  const [googleAuthError, setGoogleAuthError] = useState<string | null>(null);
 
   const handleModeSwitch = (newMode: "login" | "register") => {
     setMode(newMode);
     setEmailStatus(null);
     setIsCheckingEmail(false);
+    setGoogleAuthError(null);
     reset({
       name: "",
       email: values.email, // preserve already typed email
@@ -235,14 +235,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     }
   };
 
-  // Google OAuth / 1-Click Verification
-  const handleGoogleLogin = async () => {
+  // Google OAuth / Real Authentication Handler
+  const handleGoogleAuthSuccess = async (payload: GoogleAuthPayload) => {
     try {
       setGeneralError(null);
-      // In development / demo environment, this passes "demo-jwt-token" to /api/auth/google
-      // which is verified on the backend, provisioned in MongoDB, and issued a secure session JWT.
-      const token = "demo-jwt-token";
-      const googleData = await googleAuth(token);
+      setGoogleAuthError(null);
+      const googleData = await googleAuth(payload);
 
       // Intercept deactivated account in grace period
       if (isDeactivatedResponse(googleData)) {
@@ -263,7 +261,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
         return;
       }
 
-      setSplashMessage("Welcome! Loading your Google-authenticated account...");
+      setSplashMessage("Welcome back! Loading your account...");
       setIsSuccessSplash(true);
       setTimeout(() => {
         const destination =
@@ -272,11 +270,26 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
       }, 850);
     } catch (err: unknown) {
       const apiErr = err as ApiError;
-      setGeneralError(
-        apiErr?.message || "Google authentication failed. Please try again."
-      );
+      const message = apiErr?.message || "Google authentication failed. Please try again.";
+      setGeneralError(message);
+      throw err;
     }
   };
+
+  const {
+    triggerGoogleLogin,
+    isGoogleLoading,
+    googleError,
+  } = useGoogleAuth({
+    onSuccess: handleGoogleAuthSuccess,
+  });
+
+  // Combined loading state for form and Google OAuth
+  const isLoading =
+    loginMutation.isPending ||
+    registerMutation.isPending ||
+    googleAuthMutation.isPending ||
+    isGoogleLoading;
 
   if (isSuccessSplash) {
     return <SplashScreen message={splashMessage} />;
@@ -356,11 +369,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
           </div>
 
           {/* General / Server Error Banner */}
-          {generalError && (
+          {(googleError || googleAuthError || generalError) && (
             <div className="mt-2.5 p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex flex-col gap-1.5 animate-in fade-in duration-200">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{generalError}</span>
+                <span>{googleError || googleAuthError || generalError}</span>
               </div>
               {isAccountNotFound && (
                 <button
@@ -535,11 +548,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
           {/* Google Only Login Button */}
           <button
             type="button"
-            onClick={handleGoogleLogin}
+            onClick={triggerGoogleLogin}
             disabled={isLoading}
             className="w-full h-9 sm:h-10 rounded-xl bg-[#1A1D26] hover:bg-[#222633] border border-white/10 hover:border-white/20 flex items-center justify-center gap-2.5 text-xs font-medium text-white transition-all cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-50"
           >
-            {googleAuthMutation.isPending ? (
+            {googleAuthMutation.isPending || isGoogleLoading ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
             ) : (
               <>

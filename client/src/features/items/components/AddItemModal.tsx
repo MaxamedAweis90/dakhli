@@ -12,7 +12,8 @@ import {
 import { QRCodeSVG } from 'qrcode.react'
 import type { ItemTier } from '@/stores/itemsStore'
 import type { CreateItemPayload } from '../types/item.types'
-import { uploadApi } from '../api/uploadApi'
+import { uploadApi, validateImageFile } from '../api/uploadApi'
+import { LazyImage } from '@/components/shared/LazyImage'
 import { useFormValidation } from '@/hooks/useFormValidation'
 import { itemFormSchema } from '../schemas/itemSchemas'
 import { cn } from '@/lib/utils'
@@ -135,13 +136,14 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     }
   }
 
-  // Handle direct file upload (Desktop & Mobile)
+  // Handle direct file upload (Desktop & Mobile) - Max 5MB, JPEG/PNG/WebP/AVIF
   const handleUploadFile = async (file: File) => {
     if (!file) return
 
-    // Quick size validation: 10MB limit
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError('Image size exceeds 10MB limit.')
+    // Strict client-side validation
+    const validation = validateImageFile(file, { isAvatar: false })
+    if (!validation.valid) {
+      setUploadError(validation.error || 'Invalid item image file.')
       return
     }
 
@@ -149,7 +151,8 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
     setUploadError(null)
 
     try {
-      const response = await uploadApi.uploadDirect(file)
+      // Upload directly into 'items/' folder in dakhli-item-assets
+      const response = await uploadApi.uploadItem(file)
       setImageUrl(response.imageUrl)
       handleCloseQrMode()
     } catch (err: any) {
@@ -279,14 +282,14 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
         <input
           ref={directInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/avif"
           onChange={handleDirectFileSelect}
           className="hidden"
         />
         <input
           ref={cameraInputRef}
           type="file"
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/avif"
           capture="environment"
           onChange={handleDirectFileSelect}
           className="hidden"
@@ -391,9 +394,10 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                 }`}
               >
                 <div className="w-16 h-16 rounded-xl overflow-hidden bg-black/40 border border-white/10 shrink-0">
-                  <img
+                  <LazyImage
                     src={imageUrl}
                     alt="Uploaded Item"
+                    containerClassName="w-full h-full"
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -543,7 +547,7 @@ export const AddItemModal: React.FC<AddItemModalProps> = ({
                           Click to browse or drag & drop
                         </span>
                         <span className="text-[10px] text-[#5F6370]">
-                          PNG, JPG, WEBP up to 10MB
+                          PNG, JPG, WEBP, AVIF up to 5MB
                         </span>
                       </>
                     )}

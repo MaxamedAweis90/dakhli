@@ -8,6 +8,7 @@ import {
   SavePlanCategory,
   SavePlanStatus,
   SavePlanType,
+  User,
 } from '../models';
 import { adjustGrossBalance } from './balanceService';
 import { withTransaction } from './transactionHelper';
@@ -289,6 +290,12 @@ export const processSystemReserveMonthlyCut = async (
     const now = new Date();
     const currentMonthKey = now.toISOString().slice(0, 7); // 'YYYY-MM'
     const todayDay = now.getDate();
+
+    // Check if current month is dormant
+    const user = await User.findById(new Types.ObjectId(userId)).session(activeSession);
+    if (user?.dormantCycles?.includes(currentMonthKey)) {
+      return plan;
+    }
 
     // 1. Auto-unpause if paused in an earlier month
     // "if this month end it unpauses auto so charging next month will happen until user pause it"

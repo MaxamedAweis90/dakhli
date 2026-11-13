@@ -60,10 +60,15 @@ export const googleAuthSchema = z
     idToken: z.string().trim().optional(),
     credential: z.string().trim().optional(),
     token: z.string().trim().optional(),
+    code: z.string().trim().optional(),
+    accessToken: z.string().trim().optional(),
   })
-  .refine((data) => Boolean(data.idToken || data.credential || data.token), {
-    message: 'Google credential or idToken is required.',
-  });
+  .refine(
+    (data) => Boolean(data.idToken || data.credential || data.token || data.code || data.accessToken),
+    {
+      message: 'Google credential, authorization code, or idToken is required.',
+    }
+  );
 
 export const verifyOtpSchema = z.object({
   email: z
@@ -88,17 +93,38 @@ export const resendOtpSchema = z.object({
     .toLowerCase(),
 });
 
-export const updateProfileSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, 'Name must be at least 2 characters.')
-    .max(50, 'Name must not exceed 50 characters.'),
+export const updateProfileSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, 'Name must be at least 2 characters.')
+      .max(50, 'Name must not exceed 50 characters.')
+      .optional(),
+    avatar: z
+      .string()
+      .trim()
+      .max(2000000, 'Avatar string too long.')
+      .nullable()
+      .optional(),
+    isOnboarded: z.boolean().optional(),
+  })
+  .refine((data) => data.name !== undefined || data.avatar !== undefined, {
+    message: 'At least one field (name or avatar) must be provided.',
+  });
+
+export const requestPasswordOtpSchema = z.object({
+  currentPassword: z.string().optional(),
 });
 
 export const updatePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required.'),
+  currentPassword: z.string().optional(),
   newPassword: z.string().min(8, 'New password must be at least 8 characters long.'),
+  otp: z
+    .string()
+    .trim()
+    .length(6, 'Verification code must be exactly 6 digits.')
+    .regex(/^\d{6}$/, 'Verification code must consist of 6 digits only.'),
 });
 
 export const deactivateAccountSchema = z.object({
@@ -116,6 +142,7 @@ export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
 export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
 export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type RequestPasswordOtpInput = z.infer<typeof requestPasswordOtpSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
 export type DeactivateAccountInput = z.infer<typeof deactivateAccountSchema>;
 export type RestoreAccountInput = z.infer<typeof restoreAccountSchema>;

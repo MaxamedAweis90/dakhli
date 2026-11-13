@@ -28,6 +28,7 @@ export interface OverheadLedgerTableProps {
   isCurrentCycle?: boolean
   isFutureCycle?: boolean
   isPastCycle?: boolean
+  isDormant?: boolean
   isUpdating?: boolean
   className?: string
 }
@@ -81,6 +82,7 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
   isCurrentCycle = true,
   isFutureCycle = false,
   isPastCycle = false,
+  isDormant = false,
   isUpdating = false,
   className,
 }) => {
@@ -182,6 +184,14 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
 
   // Temporal Status Rendering without button badges or borders
   const renderStatus = (bill: OverheadBill) => {
+    if (isDormant || bill.status === 'dormant' || bill.isDormant) {
+      return (
+        <span className="text-slate-400 bg-white/5 border border-white/5 font-mono text-[10px] px-2 py-0.5 rounded tracking-wider uppercase">
+          CYCLE SKIPPED (DORMANT)
+        </span>
+      )
+    }
+
     if (bill.isActive === false) {
       return <span className="text-[#8E92A0]">Inactive</span>
     }
@@ -258,6 +268,7 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
     <div
       className={cn(
         'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-6 lg:p-7 select-none',
+        isDormant && 'opacity-60',
         className
       )}
     >
@@ -402,7 +413,16 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                     <td className="py-4 pr-2 text-right relative">
                       <div className="inline-flex items-center gap-2">
                         {/* Mark Paid / Status Button */}
-                        {isPastCycle ? (
+                        {isDormant ? (
+                          <div
+                            title="Cycle skipped due to account deactivation"
+                            className="inline-flex items-center"
+                          >
+                            <span className="h-[1.95rem] px-3 rounded-xl bg-white/[0.03] text-[#70727a] text-[0.78rem] font-medium border border-white/[0.04] inline-flex items-center cursor-not-allowed">
+                              Skipped
+                            </span>
+                          </div>
+                        ) : isPastCycle ? (
                           // Past cycle: locked/read-only
                           <div
                             title="Archived cycle: Past months are read-only"
@@ -457,7 +477,7 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                         )}
 
                         {/* 3-Dot Vertical Context Menu Trigger */}
-                        {!isPastCycle && (
+                        {!isPastCycle && !isDormant && (
                           <button
                             ref={(el) => {
                               triggerRefs.current[bill.id] = el

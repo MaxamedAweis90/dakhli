@@ -18,9 +18,12 @@ export interface AuthResponseData {
     _id?: string
     email: string
     name?: string
+    avatar?: string | null
     authProvider?: 'LOCAL' | 'GOOGLE'
+    hasPassword?: boolean
     isVerified?: boolean
     isDeactivated?: boolean
+    dormantCycles?: string[]
     createdAt?: string
   }
 }
@@ -31,9 +34,12 @@ export interface MeResponseData {
     _id?: string
     email: string
     name?: string
+    avatar?: string | null
     authProvider?: 'LOCAL' | 'GOOGLE'
+    hasPassword?: boolean
     isVerified?: boolean
     isDeactivated?: boolean
+    dormantCycles?: string[]
     createdAt?: string
   }
   balance?: unknown
@@ -62,6 +68,20 @@ export const isDeactivatedResponse = (
   return 'isDeactivated' in res && res.isDeactivated === true
 }
 
+export const normalizeUser = (rawUser: any): User => ({
+  id: (rawUser.id || rawUser._id) as string,
+  email: rawUser.email,
+  name: rawUser.name,
+  avatar: rawUser.avatar || null,
+  authProvider: rawUser.authProvider,
+  hasPassword: Boolean(rawUser.hasPassword),
+  isVerified: Boolean(rawUser.isVerified),
+  isDeactivated: Boolean(rawUser.isDeactivated),
+  isOnboarded: Boolean(rawUser.isOnboarded),
+  dormantCycles: rawUser.dormantCycles || [],
+  createdAt: rawUser.createdAt,
+})
+
 export const authApi = {
   /**
    * Log in user with email & password
@@ -87,18 +107,9 @@ export const authApi = {
       throw new Error('Invalid login response from server.')
     }
 
-    const rawUser = res.data.user
     return {
       token: res.data.token,
-      user: {
-        id: (rawUser.id || rawUser._id) as string,
-        email: rawUser.email,
-        name: rawUser.name,
-        authProvider: rawUser.authProvider,
-        isVerified: rawUser.isVerified,
-        isDeactivated: rawUser.isDeactivated,
-        createdAt: rawUser.createdAt,
-      },
+      user: normalizeUser(res.data.user),
     }
   },
 
@@ -119,18 +130,9 @@ export const authApi = {
       throw new Error('Invalid registration response from server.')
     }
 
-    const rawUser = res.data.user
     return {
       token: res.data.token,
-      user: {
-        id: (rawUser.id || rawUser._id) as string,
-        email: rawUser.email,
-        name: rawUser.name,
-        authProvider: rawUser.authProvider,
-        isVerified: rawUser.isVerified,
-        isDeactivated: rawUser.isDeactivated,
-        createdAt: rawUser.createdAt,
-      },
+      user: normalizeUser(res.data.user),
     }
   },
 
@@ -147,14 +149,26 @@ export const authApi = {
   },
 
   /**
-   * Authenticate or auto-provision account via Google OAuth ID token
+   * Authenticate or auto-provision account via Google OAuth
    * POST /api/auth/google
    */
-  googleAuth: async (credentialOrToken: string): Promise<AuthResult> => {
-    const res = (await api.post('/auth/google', {
-      credential: credentialOrToken,
-      idToken: credentialOrToken,
-    })) as any
+  googleAuth: async (
+    payload:
+      | string
+      | {
+          code?: string
+          credential?: string
+          idToken?: string
+          token?: string
+          accessToken?: string
+        }
+  ): Promise<AuthResult> => {
+    const body =
+      typeof payload === 'string'
+        ? { credential: payload, idToken: payload, token: payload }
+        : payload
+
+    const res = (await api.post('/auth/google', body)) as any
 
     if (res?.isDeactivated || res?.data?.isDeactivated) {
       const data = res.data?.isDeactivated ? res.data : res
@@ -171,18 +185,9 @@ export const authApi = {
       throw new Error('Invalid Google authentication response from server.')
     }
 
-    const rawUser = res.data.user
     return {
       token: res.data.token,
-      user: {
-        id: (rawUser.id || rawUser._id) as string,
-        email: rawUser.email,
-        name: rawUser.name,
-        authProvider: rawUser.authProvider,
-        isVerified: rawUser.isVerified,
-        isDeactivated: rawUser.isDeactivated,
-        createdAt: rawUser.createdAt,
-      },
+      user: normalizeUser(res.data.user),
     }
   },
 
@@ -200,18 +205,9 @@ export const authApi = {
       throw new Error('Invalid verification response from server.')
     }
 
-    const rawUser = res.data.user
     return {
       token: res.data.token,
-      user: {
-        id: (rawUser.id || rawUser._id) as string,
-        email: rawUser.email,
-        name: rawUser.name,
-        authProvider: rawUser.authProvider,
-        isVerified: rawUser.isVerified,
-        isDeactivated: rawUser.isDeactivated,
-        createdAt: rawUser.createdAt,
-      },
+      user: normalizeUser(res.data.user),
     }
   },
 
@@ -239,58 +235,64 @@ export const authApi = {
       throw new Error('Failed to rehydrate user profile.')
     }
 
-    const rawUser = res.data.user
-    return {
-      id: (rawUser.id || rawUser._id) as string,
-      email: rawUser.email,
-      name: rawUser.name,
-      authProvider: rawUser.authProvider,
-      isVerified: rawUser.isVerified,
-      isDeactivated: rawUser.isDeactivated,
-      createdAt: rawUser.createdAt,
-    }
+    return normalizeUser(res.data.user)
   },
 
   /**
-   * Update Profile Information (Name)
+   * Update Profile Information (Name, Avatar, Onboarding State)
    * PATCH /api/users/profile
    */
-  updateProfile: async (payload: { name: string }): Promise<User> => {
+  updateProfile: async (payload: {
+    name?: string
+    avatar?: string | null
+    isOnboarded?: boolean
+  }): Promise<User> => {
     const res = (await api.patch('/users/profile', {
-      name: payload.name.trim(),
+      name: payload.name !== undefined ? payload.name.trim() : undefined,
+      avatar: payload.avatar !== undefined ? (payload.avatar ? payload.avatar.trim() : null) : undefined,
+      isOnboarded: payload.isOnboarded,
     })) as ApiResponse<{ user: AuthResponseData['user'] }>
 
     if (!res.data?.user) {
       throw new Error('Failed to update profile.')
     }
 
-    const rawUser = res.data.user
+    return normalizeUser(res.data.user)
+  },
+
+  /**
+   * Request OTP code to authorize password update/creation
+   * POST /api/auth/request-password-otp
+   */
+  requestPasswordOtp: async (currentPassword?: string): Promise<{ success: boolean; message: string }> => {
+    const res = (await api.post('/auth/request-password-otp', {
+      currentPassword: currentPassword || undefined,
+    })) as ApiResponse<{ expiresIn?: string }>
+
     return {
-      id: (rawUser.id || rawUser._id) as string,
-      email: rawUser.email,
-      name: rawUser.name,
-      authProvider: rawUser.authProvider,
-      isVerified: rawUser.isVerified,
-      isDeactivated: rawUser.isDeactivated,
-      createdAt: rawUser.createdAt,
+      success: true,
+      message: res.message || 'Verification code sent to your registered email.',
     }
   },
 
   /**
-   * Update Master Password
+   * Update or set password with verified OTP
    * PATCH /api/auth/update-password
    */
   updatePassword: async (payload: {
-    currentPassword: string
+    currentPassword?: string
     newPassword: string
-  }): Promise<{ message: string }> => {
+    otp: string
+  }): Promise<{ message: string; user?: User }> => {
     const res = (await api.patch('/auth/update-password', {
-      currentPassword: payload.currentPassword,
+      currentPassword: payload.currentPassword || undefined,
       newPassword: payload.newPassword,
-    })) as ApiResponse<{ message?: string }>
+      otp: payload.otp.trim(),
+    })) as ApiResponse<{ user?: any; message?: string }>
 
     return {
-      message: res.message || res.data?.message || 'Password updated successfully.',
+      message: res.message || 'Password updated successfully.',
+      user: res.data?.user ? normalizeUser(res.data.user) : undefined,
     }
   },
 
@@ -323,15 +325,7 @@ export const authApi = {
 
     return {
       token,
-      user: {
-        id: (rawUser.id || rawUser._id) as string,
-        email: rawUser.email,
-        name: rawUser.name,
-        authProvider: rawUser.authProvider,
-        isVerified: rawUser.isVerified,
-        isDeactivated: rawUser.isDeactivated,
-        createdAt: rawUser.createdAt,
-      },
+      user: normalizeUser(rawUser),
     }
   },
 }

@@ -31,7 +31,17 @@ export function useAuth() {
 
   // Google OAuth mutation
   const googleAuthMutation = useMutation({
-    mutationFn: (credentialOrToken: string) => authApi.googleAuth(credentialOrToken),
+    mutationFn: (
+      payload:
+        | string
+        | {
+            code?: string
+            credential?: string
+            idToken?: string
+            token?: string
+            accessToken?: string
+          }
+    ) => authApi.googleAuth(payload),
     onSuccess: (data) => {
       if (isDeactivatedResponse(data)) {
         return

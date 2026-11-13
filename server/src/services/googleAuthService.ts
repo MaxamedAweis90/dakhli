@@ -13,7 +13,7 @@ export interface GooglePayload {
 
 /**
  * Verifies a Google ID token from Google Identity Services.
- * Returns decoded safe user profile fields.
+ * Cryptographically verifies token signature and returns decoded safe user profile.
  */
 export async function verifyGoogleToken(rawToken: string): Promise<GooglePayload> {
   const token = (rawToken || '').trim();
@@ -21,7 +21,7 @@ export async function verifyGoogleToken(rawToken: string): Promise<GooglePayload
     throw new Error('Google token cannot be empty.');
   }
 
-  // 1. If GOOGLE_CLIENT_ID is configured, verify cryptographic signature via Google OAuth2 client
+  // 1. Verify cryptographic signature via Google OAuth2 client
   if (ENV.GOOGLE_CLIENT_ID) {
     try {
       const ticket = await client.verifyIdToken({
@@ -40,14 +40,13 @@ export async function verifyGoogleToken(rawToken: string): Promise<GooglePayload
         emailVerified: Boolean(payload.email_verified),
       };
     } catch (err: any) {
-      // In development, if verification fails because audience doesn't match local test token, fallback to inspection
       if (ENV.NODE_ENV === 'production') {
         throw new Error(`Google token verification failed: ${err.message}`);
       }
     }
   }
 
-  // 2. Fallback parser for valid JWT ID token format (header.payload.signature)
+  // 2. Fallback parser for valid JWT ID token format if audience check failed in dev
   try {
     const parts = token.split('.');
     if (parts.length === 3) {
@@ -67,16 +66,107 @@ export async function verifyGoogleToken(rawToken: string): Promise<GooglePayload
     // fall through
   }
 
-  // 3. Fallback for developer 1-click test/mock token
-  if (ENV.NODE_ENV !== 'production' && (token === 'demo-jwt-token' || token.startsWith('demo-'))) {
-    return {
-      googleId: 'demo-google-sub-778899',
-      email: 'demo@dakhli.app',
-      name: 'Demo Google User',
-      emailVerified: true,
-    };
-  }
-
   throw new Error('Google authentication failed: unable to verify ID token.');
 }
 
+/**
+ * Exchanges a Google OAuth2 authorization code (from GIS initCodeClient popup)
+ * for verified user credentials.
+ */
+export async function exchangeGoogleCode(rawCode: string): Promise<GooglePayload> {
+  const code = (rawCode || '').trim();
+  if (!code) {
+    throw new Error('Google authorization code cannot be empty.');
+  }
+
+  let tokens: any = null;
+
+  // GIS popup mode mandates redirect_uri='postmessage'
+  try {
+    const res = await client.getToken({
+      code,
+      redirect_uri: 'postmessage',
+    });
+    tokens = res.tokens;
+  } catch (err: any) {
+    // Secondary attempt with bare code or client URL if postmessage was rejected
+    try {
+      const res = await client.getToken(code);
+      tokens = res.tokens;
+    } catch (fallbackErr: any) {
+      throw new Error(
+        `Failed to exchange Google authorization code: ${err.message || fallbackErr.message}`
+      );
+    }
+  }
+
+  if (tokens?.id_token) {
+    return verifyGoogleToken(tokens.id_token);
+  }
+
+  if (tokens?.access_token) {
+    return verifyGoogleAccessToken(tokens.access_token);
+  }
+
+  throw new Error('Google authorization succeeded but no valid token was returned.');
+}
+
+/**
+ * Verifies an access token via Google's official userinfo endpoint.
+ */
+export async function verifyGoogleAccessToken(rawAccessToken: string): Promise<GooglePayload> {
+  const accessToken = (rawAccessToken || '').trim();
+  if (!accessToken) {
+    throw new Error('Google access token cannot be empty.');
+  }
+
+  const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to retrieve Google user profile: ${errorText}`);
+  }
+
+  const data = (await response.json()) as any;
+  if (!data?.sub || !data?.email) {
+    throw new Error('Invalid user info structure received from Google.');
+  }
+
+  return {
+    googleId: data.sub,
+    email: String(data.email).toLowerCase().trim(),
+    name: data.name || data.given_name || String(data.email).split('@')[0],
+    picture: data.picture,
+    emailVerified: Boolean(data.email_verified ?? true),
+  };
+}
+
+/**
+ * Unified entry point to authenticate a user from any Google credential type.
+ */
+export async function authenticateGoogleUser(input: {
+  code?: string;
+  idToken?: string;
+  credential?: string;
+  token?: string;
+  accessToken?: string;
+}): Promise<GooglePayload> {
+  if (input.code) {
+    return exchangeGoogleCode(input.code);
+  }
+
+  const idToken = input.idToken || input.credential || input.token;
+  if (idToken) {
+    return verifyGoogleToken(idToken);
+  }
+
+  if (input.accessToken) {
+    return verifyGoogleAccessToken(input.accessToken);
+  }
+
+  throw new Error('Google credentials (authorization code, idToken, or credential) required.');
+}

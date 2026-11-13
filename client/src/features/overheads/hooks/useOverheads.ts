@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { overheadsApi, computeSummary } from '../api/overheadsApi'
+import { useAuthStore } from '@/stores/authStore'
 import type {
   OverheadBill,
   CreateOverheadPayload,
@@ -13,9 +14,11 @@ export const OVERHEADS_QUERY_KEY = ['overheads']
 
 export const useOverheads = (monthKey?: string) => {
   const queryClient = useQueryClient()
+  const { user } = useAuthStore()
   const nowKey = new Date().toISOString().slice(0, 7)
   const targetMonth = monthKey || nowKey
 
+  const isDormant = Boolean(user?.dormantCycles?.includes(targetMonth))
   const isCurrentCycle = targetMonth === nowKey
   const isFutureCycle = targetMonth > nowKey
   const isPastCycle = targetMonth < nowKey
@@ -24,7 +27,16 @@ export const useOverheads = (monthKey?: string) => {
 
   const query = useQuery<{ bills: OverheadBill[]; summary: OverheadSummary }>({
     queryKey,
-    queryFn: () => overheadsApi.getOverheads(targetMonth),
+    queryFn: async () => {
+      const res = await overheadsApi.getOverheads(targetMonth)
+      if (isDormant) {
+        return {
+          bills: res.bills.map((b) => ({ ...b, status: 'dormant' as const, isDormant: true })),
+          summary: computeSummary(res.bills, isFutureCycle, true),
+        }
+      }
+      return res
+    },
     staleTime: 60 * 1000,
   })
 
@@ -174,6 +186,7 @@ export const useOverheads = (monthKey?: string) => {
     isCurrentCycle,
     isFutureCycle,
     isPastCycle,
+    isDormant,
     isLoading: query.isLoading,
     isError: query.isError,
     error: query.error,

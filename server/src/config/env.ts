@@ -35,6 +35,7 @@ export interface EnvConfig {
   SMTP_USER: string;
   SMTP_PASS: string;
   EMAIL_FROM: string;
+  BLOB_READ_WRITE_TOKEN?: string;
 }
 
 const criticalEnvKeys: Array<keyof EnvConfig> = ["MONGODB_URI", "JWT_SECRET"];
@@ -64,4 +65,5 @@ export const ENV: EnvConfig = {
   SMTP_PASS: process.env.SMTP_PASS || "",
   EMAIL_FROM:
     process.env.EMAIL_FROM || '"Dakhli OS" <notifications@dakhli.app>',
+  BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN || "",
 };

@@ -6,8 +6,9 @@ import { ENV } from '../config/env';
 import { Balance, User } from '../models';
 import { withTransaction } from '../services/transactionHelper';
 import { AuthRequest } from '../middleware/auth';
-import { verifyGoogleToken } from '../services/googleAuthService';
+import { authenticateGoogleUser, verifyGoogleToken } from '../services/googleAuthService';
 import { emailService } from '../services/emailService';
+import { reconciliationService } from '../services/reconciliationService';
 
 // Helper to project safe user payload
 export const toSafeUser = (user: any) => ({
@@ -15,9 +16,12 @@ export const toSafeUser = (user: any) => ({
   _id: user._id.toString(),
   email: user.email,
   name: user.name,
+  avatar: user.avatar || null,
   authProvider: user.authProvider || 'LOCAL',
+  hasPassword: Boolean(user.passwordHash),
   isVerified: Boolean(user.isVerified),
   isDeactivated: Boolean(user.isDeactivated),
+  isOnboarded: Boolean(user.isOnboarded),
   dormantCycles: user.dormantCycles || [],
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
@@ -288,19 +292,24 @@ export const googleAuth = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { idToken, credential, token: rawToken } = req.body;
-    const tokenToVerify = idToken || credential || rawToken;
+    const { idToken, credential, token: rawToken, code, accessToken } = req.body;
 
-    if (!tokenToVerify) {
+    if (!idToken && !credential && !rawToken && !code && !accessToken) {
       res.status(400).json({
         success: false,
-        error: { message: 'Google credential or idToken is required.' },
+        error: { message: 'Google credential, authorization code, or idToken is required.' },
       });
       return;
     }
 
-    const googlePayload = await verifyGoogleToken(tokenToVerify);
-    const { googleId, email, name } = googlePayload;
+    const googlePayload = await authenticateGoogleUser({
+      idToken,
+      credential,
+      token: rawToken,
+      code,
+      accessToken,
+    });
+    const { googleId, email, name, picture } = googlePayload;
 
     // 1. Look up existing user by googleId or email
     let user = await User.findOne({
@@ -347,7 +356,7 @@ export const googleAuth = async (
         return;
       }
 
-      // Link googleId or update verification state if previously registered locally
+      // Link googleId or update verification state or avatar if previously missing
       let hasUpdates = false;
       if (!user.googleId) {
         user.googleId = googleId;
@@ -355,6 +364,10 @@ export const googleAuth = async (
       }
       if (!user.isVerified) {
         user.isVerified = true;
+        hasUpdates = true;
+      }
+      if (!user.avatar && picture) {
+        user.avatar = picture;
         hasUpdates = true;
       }
       if (hasUpdates) {
@@ -366,6 +379,7 @@ export const googleAuth = async (
         const newUser = new User({
           email,
           name: name.trim() || email.split('@')[0],
+          avatar: picture || null,
           authProvider: 'GOOGLE',
           googleId,
           isVerified: true,
@@ -419,7 +433,7 @@ export const getMe = async (
 ): Promise<void> => {
   try {
     const userId = req.userId!;
-    const user = await User.findById(userId).select('-passwordHash -verificationOtp -passwordResetOtp');
+    const user = await User.findById(userId).select('-verificationOtp -passwordResetOtp -passwordChangeOtp');
 
     if (!user) {
       res.status(404).json({
@@ -622,7 +636,7 @@ export const resendOtp = async (
 };
 
 /**
- * Update Profile Information (Name)
+ * Update Profile Information (Name, Avatar)
  * PATCH /api/users/profile or PATCH /api/auth/profile
  */
 export const updateProfile = async (
@@ -632,7 +646,7 @@ export const updateProfile = async (
 ): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { name } = req.body;
+    const { name, avatar, isOnboarded } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -643,7 +657,15 @@ export const updateProfile = async (
       return;
     }
 
-    user.name = name.trim();
+    if (name !== undefined) {
+      user.name = name.trim();
+    }
+    if (avatar !== undefined) {
+      user.avatar = avatar ? String(avatar).trim() : null;
+    }
+    if (isOnboarded !== undefined) {
+      user.isOnboarded = Boolean(isOnboarded);
+    }
     await user.save();
 
     res.status(200).json({
@@ -659,17 +681,17 @@ export const updateProfile = async (
 };
 
 /**
- * Update Master Password
- * PATCH /api/auth/update-password
+ * Request OTP for Password Update/Set
+ * POST /api/auth/request-password-otp
  */
-export const updatePassword = async (
+export const requestPasswordOtp = async (
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { currentPassword, newPassword } = req.body;
+    const { currentPassword } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -680,37 +702,191 @@ export const updatePassword = async (
       return;
     }
 
-    if (user.authProvider === 'GOOGLE' && !user.passwordHash) {
-      res.status(400).json({
-        success: false,
-        error: {
-          message: 'Your account is authenticated exclusively through Google OAuth. Password changes are managed via Google.',
-          code: 'GOOGLE_AUTH_ACCOUNT',
-        },
-      });
-      return;
+    // If user already has a password set, currentPassword must match
+    if (user.passwordHash) {
+      if (!currentPassword) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Current password is required.',
+            code: 'CURRENT_PASSWORD_REQUIRED',
+            fieldErrors: { currentPassword: 'Enter your current password to proceed.' },
+          },
+        });
+        return;
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Current password does not match.',
+            code: 'INVALID_CURRENT_PASSWORD',
+            fieldErrors: { currentPassword: 'Incorrect current password.' },
+          },
+        });
+        return;
+      }
     }
 
-    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash || '');
-    if (!isMatch) {
-      res.status(400).json({
-        success: false,
-        error: {
-          message: 'Current password does not match.',
-          code: 'INVALID_CURRENT_PASSWORD',
-          fieldErrors: { currentPassword: 'Incorrect current password.' },
-        },
-      });
-      return;
+    // Throttling: 60-second cooldown
+    if (user.passwordChangeOtp?.lastSentAt) {
+      const elapsedMs = Date.now() - new Date(user.passwordChangeOtp.lastSentAt).getTime();
+      if (elapsedMs < 60000) {
+        const remainingSeconds = Math.ceil((60000 - elapsedMs) / 1000);
+        res.status(429).json({
+          success: false,
+          error: {
+            message: `Resend cooldown active. Please wait ${remainingSeconds}s.`,
+            code: 'RESEND_COOLDOWN',
+            remainingSeconds,
+          },
+        });
+        return;
+      }
     }
 
-    const salt = await bcrypt.genSalt(10);
-    user.passwordHash = await bcrypt.hash(newPassword, salt);
+    // Generate fresh 6-digit OTP
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    const hashedCode = crypto.createHash('sha256').update(otp).digest('hex');
+
+    user.passwordChangeOtp = {
+      codeHash: hashedCode,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 mins
+      attempts: 0,
+      lastSentAt: new Date(),
+    };
     await user.save();
+
+    // Dispatch verification OTP email
+    await emailService.sendPasswordChangeOtp(user.email, user.name, otp);
 
     res.status(200).json({
       success: true,
-      message: 'Master password updated successfully.',
+      message: 'Verification code sent to your registered email.',
+      data: {
+        expiresIn: '15m',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update/Set Password with OTP Verification
+ * PATCH /api/auth/update-password
+ */
+export const updatePassword = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const { currentPassword, newPassword, otp } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'User not found.', code: 'USER_NOT_FOUND' },
+      });
+      return;
+    }
+
+    // If user already has a password set, verify currentPassword
+    if (user.passwordHash) {
+      if (!currentPassword) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Current password is required.',
+            code: 'CURRENT_PASSWORD_REQUIRED',
+            fieldErrors: { currentPassword: 'Enter your current password.' },
+          },
+        });
+        return;
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        res.status(400).json({
+          success: false,
+          error: {
+            message: 'Current password does not match.',
+            code: 'INVALID_CURRENT_PASSWORD',
+            fieldErrors: { currentPassword: 'Incorrect current password.' },
+          },
+        });
+        return;
+      }
+    }
+
+    // Verify OTP
+    const cleanOtp = (otp || '').trim();
+    const otpRecord = user.passwordChangeOtp;
+    if (!otpRecord || !otpRecord.expiresAt || new Date() > new Date(otpRecord.expiresAt)) {
+      res.status(400).json({
+        success: false,
+        error: {
+          message: 'Verification code has expired. Please request a new code.',
+          code: 'OTP_EXPIRED',
+        },
+      });
+      return;
+    }
+
+    if ((otpRecord.attempts || 0) >= 5) {
+      res.status(429).json({
+        success: false,
+        error: {
+          message: 'Too many invalid attempts. Please request a new code.',
+          code: 'TOO_MANY_ATTEMPTS',
+        },
+      });
+      return;
+    }
+
+    const incomingHash = crypto.createHash('sha256').update(cleanOtp).digest('hex');
+    if (incomingHash !== otpRecord.codeHash) {
+      user.passwordChangeOtp.attempts = (user.passwordChangeOtp.attempts || 0) + 1;
+      await user.save();
+      const remaining = Math.max(0, 5 - user.passwordChangeOtp.attempts);
+      res.status(400).json({
+        success: false,
+        error: {
+          message: `Invalid verification code. Attempts remaining: ${remaining}.`,
+          code: 'INVALID_OTP',
+          remainingAttempts: remaining,
+        },
+      });
+      return;
+    }
+
+    // OTP Verified! Hash new password
+    const salt = await bcrypt.genSalt(10);
+    user.passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // Clear passwordChangeOtp
+    user.passwordChangeOtp = {
+      codeHash: null as any,
+      expiresAt: null as any,
+      attempts: 0,
+      lastSentAt: null as any,
+    };
+    await user.save();
+
+    // Dispatch confirmation email asynchronously
+    void emailService.sendPasswordChangedConfirmation(user.email, user.name);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated successfully. A confirmation email has been dispatched to your inbox.',
+      data: {
+        user: toSafeUser(user),
+      },
     });
   } catch (error) {
     next(error);
@@ -873,16 +1049,14 @@ export const restoreAccount = async (
       return;
     }
 
-    // Calculate dormant cycles
-    const skippedCycles = calculateDormantCycles(user.deactivatedAt || now, now);
-    const combinedCycles = new Set([...(user.dormantCycles || []), ...skippedCycles]);
-    user.dormantCycles = Array.from(combinedCycles);
+    // Reconcile dormant cycles, unfreeze account state, and clone active recurring overheads
+    const { skippedCycles } = await reconciliationService.reconcileDormantCycles(
+      user._id,
+      user.deactivatedAt || now,
+      now
+    );
 
-    // Reset deactivation state
-    user.isDeactivated = false;
-    user.deactivatedAt = null;
-    user.deletionScheduledAt = null;
-    await user.save();
+    const updatedUser = await User.findById(user._id);
 
     // Dispatch confirmation email
     void emailService.sendRestorationNotice(user.email, user.name);
@@ -899,8 +1073,9 @@ export const restoreAccount = async (
       message: 'Account restored successfully. Recurring ledger active.',
       token: sessionToken,
       data: {
-        user: toSafeUser(user),
+        user: toSafeUser(updatedUser || user),
         token: sessionToken,
+        reconciledCycles: skippedCycles,
       },
     });
   } catch (error) {

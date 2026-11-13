@@ -4,10 +4,13 @@ import { DailyTimelineFeed } from './components/DailyTimelineFeed'
 import { useDaily } from './hooks/useDaily'
 import { useBaseline } from '@/features/settings/hooks/useBaseline'
 import { useOverheadsStore } from '@/stores/overheadsStore'
+import { useAuthStore } from '@/stores/authStore'
 
 export const DailyPage: React.FC = () => {
   const { currentMonth } = useOverheadsStore()
+  const { user } = useAuthStore()
   const { baseline } = useBaseline()
+  const isDormant = Boolean(user?.dormantCycles?.includes(currentMonth))
   const {
     logs,
     summary,
@@ -19,6 +22,7 @@ export const DailyPage: React.FC = () => {
 
   const defaultDailyCap = baseline?.defaultDailyCap ?? 30
   const todayStr = new Date().toISOString().slice(0, 10)
+  const restorationMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   // Compute dynamic sparkline points from historical logs
   const computeSparklinePoints = (): number[] => {
@@ -66,26 +70,39 @@ export const DailyPage: React.FC = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[330px_1fr] xl:grid-cols-[380px_1fr] items-start gap-8 lg:gap-10 pb-16 pt-1">
-      {/* Left Column: Preview-only Cumulative Savings Card */}
-      <div className="w-full max-w-md lg:max-w-none">
-        <CumulativeSavingsCard
-          savings={summary.monthlySavedFromDaily}
-          points={computeSparklinePoints()}
-        />
-      </div>
+    <div className="flex flex-col gap-4 pb-16 pt-1">
+      {/* Surface Locking Banner for Dormant Cycles */}
+      {isDormant && (
+        <div className="p-4 rounded-xl bg-[#1A1D26] border border-white/5 text-slate-300 text-xs font-mono flex items-center gap-3 select-none">
+          <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+          <span>
+            This cycle was dormant due to account deactivation. Financial tracking resumed on {restorationMonth}.
+          </span>
+        </div>
+      )}
 
-      {/* Right Column: Timeline Spine & Interactive Check-Off Cards */}
-      <div className="w-full">
-        <DailyTimelineFeed
-          records={logs}
-          editingRecordId={editingRecordId}
-          defaultDailyCap={defaultDailyCap}
-          isSubmitting={isRecording}
-          onRecordToday={handleRecordToday}
-          onUpdateRecord={handleUpdateRecord}
-          onSetEditingId={setEditingRecordId}
-        />
+      <div className="grid grid-cols-1 lg:grid-cols-[330px_1fr] xl:grid-cols-[380px_1fr] items-start gap-8 lg:gap-10">
+        {/* Left Column: Preview-only Cumulative Savings Card */}
+        <div className="w-full max-w-md lg:max-w-none">
+          <CumulativeSavingsCard
+            savings={isDormant ? 0 : summary.monthlySavedFromDaily}
+            points={isDormant ? [0, 0, 0, 0] : computeSparklinePoints()}
+          />
+        </div>
+
+        {/* Right Column: Timeline Spine & Interactive Check-Off Cards */}
+        <div className="w-full">
+          <DailyTimelineFeed
+            records={logs}
+            editingRecordId={editingRecordId}
+            defaultDailyCap={defaultDailyCap}
+            isSubmitting={isRecording}
+            isDormant={isDormant}
+            onRecordToday={handleRecordToday}
+            onUpdateRecord={handleUpdateRecord}
+            onSetEditingId={setEditingRecordId}
+          />
+        </div>
       </div>
     </div>
   )

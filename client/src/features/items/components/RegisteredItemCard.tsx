@@ -7,6 +7,7 @@ import { useSavingsStore } from '@/stores/savingsStore'
 import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
+import { LazyImage } from '@/components/shared/LazyImage'
 
 export interface RegisteredItemCardProps {
   item: RegistryItem | RegisteredItem
@@ -189,16 +190,13 @@ export const RegisteredItemCard: React.FC<RegisteredItemCardProps> = ({
             {displayName}
           </h3>
 
-          {/* Photo */}
-          <img
+          {/* Photo with In-View Lazy Loading & Shimmer */}
+          <LazyImage
             src={item.imageUrl}
             alt={displayName}
-            loading="lazy"
+            containerClassName="w-full h-full"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            onError={(e) => {
-              // Fallback to stylized abstract gradient if network fails
-              e.currentTarget.style.display = 'none'
-            }}
+            fallbackText={displayName}
           />
         </div>
 

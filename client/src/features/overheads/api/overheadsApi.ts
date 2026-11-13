@@ -33,8 +33,9 @@ export const normalizeBill = (raw: any): OverheadBill => {
   const title = raw.title || item.title || 'Untitled Bill'
   const amount = Number(raw.amount ?? record.billedAmount ?? item.defaultAmount ?? 0)
   const dueDay = Number(raw.dueDay ?? item.dueDate ?? 1)
+  const isDormant = Boolean(raw.isDormant || raw.status === 'dormant')
   const isPaid = raw.status === 'paid' || Boolean(record.isPaid)
-  const status: OverheadStatus = isPaid ? 'paid' : 'unpaid'
+  const status: OverheadStatus = isDormant ? 'dormant' : (isPaid ? 'paid' : 'unpaid')
   const iconKey = inferIconKey(title, raw.iconKey || item.iconKey)
   const isRecurring = raw.isRecurring !== undefined ? raw.isRecurring : !item.isArchived
   const isActive = raw.isActive !== undefined ? Boolean(raw.isActive) : (item.isActive !== undefined ? Boolean(item.isActive) : true)
@@ -53,6 +54,7 @@ export const normalizeBill = (raw: any): OverheadBill => {
     iconKey,
     isRecurring,
     isActive,
+    isDormant,
     archivedAtMonthKey,
     notes: raw.notes || item.notes,
     paidAt,
@@ -61,7 +63,22 @@ export const normalizeBill = (raw: any): OverheadBill => {
   }
 }
 
-export const computeSummary = (bills: OverheadBill[], isFuture = false): OverheadSummary => {
+export const computeSummary = (
+  bills: OverheadBill[],
+  isFuture = false,
+  isDormant = false
+): OverheadSummary => {
+  if (isDormant) {
+    return {
+      totalUnpaid: 0,
+      totalPaid: 0,
+      totalMonthly: 0,
+      billsCount: bills.length,
+      unpaidCount: 0,
+      percentagePaid: 0,
+      isDormant: true,
+    }
+  }
   // Deactivated bills are excluded from Total Overhead and Unpaid calculations for active/future cycles
   const activeBills = bills.filter((b) => b.isActive !== false)
 

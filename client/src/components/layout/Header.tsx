@@ -50,8 +50,9 @@ export const Header: React.FC = () => {
 
   const rawName = user?.name || (user?.email ? user.email.split('@')[0] : 'Anna')
   const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1)
-  const isOverheads = location.pathname === '/overheads'
+  const isMonthAware = ['/overheads', '/overhead', '/daily', '/save-plans'].includes(location.pathname)
   const isSettings = location.pathname === '/settings'
+  const isCurrentDormant = Boolean(user?.dormantCycles?.includes(currentMonth))
   const title =
     location.pathname === '/' ? `Hello, ${displayName}!` : (ROUTE_TITLES[location.pathname] ?? 'Overview')
 
@@ -95,16 +96,23 @@ export const Header: React.FC = () => {
           <button
             type="button"
             onClick={jumpToCurrentMonth}
-            title={isDifferentFromNow ? 'Click to jump to current month' : 'Active Cycle'}
+            title={isDifferentFromNow ? 'Click to jump to current month' : (isCurrentDormant ? 'Dormant Cycle' : 'Active Cycle')}
             className={cn(
               'flex items-center gap-[0.5rem] h-[2.2rem] px-[1rem] rounded-full text-[0.78rem] font-medium shadow-[0_2px_12px_rgba(0,0,0,0.5)] transition-all',
-              isDifferentFromNow
+              isCurrentDormant
+                ? 'bg-[#1E2028] text-slate-400 border border-white/5 cursor-pointer active:scale-95'
+                : isDifferentFromNow
                 ? 'bg-[#252833] hover:bg-[#2e3240] text-amber-300 border border-amber-500/30 cursor-pointer active:scale-95'
                 : 'bg-[#212121] text-white cursor-default'
             )}
           >
             <Calendar className="w-[0.9rem] h-[0.9rem] text-[#cfcfcf]" />
             <span>{cycleLabel}</span>
+            {isCurrentDormant && (
+              <span className="text-slate-400 font-mono text-[9px] bg-white/5 px-1 py-0.2 rounded border border-white/5 uppercase">
+                DORMANT
+              </span>
+            )}
           </button>
 
           {/* + Save Baseline Button on Settings route */}
@@ -123,7 +131,7 @@ export const Header: React.FC = () => {
 
       {/* Screen Title: in natural document flow, scrolls with screen to top */}
       <div className="flex items-center h-14 lg:h-[4.75rem] px-4 lg:px-0 pr-[14rem] lg:pr-[22rem]">
-        {isOverheads ? (
+        {isMonthAware ? (
           <MonthNavigator
             currentMonth={currentMonth}
             onPrev={() => prevMonth(userCreatedAtMonth)}

@@ -5,6 +5,7 @@ import { useSavingsStore } from '@/stores/savingsStore'
 import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
+import { LazyImage } from '@/components/shared/LazyImage'
 
 export type TierKey = 'all' | 'essentials' | 'future' | 'wants'
 
@@ -86,14 +87,12 @@ export const RegistryItemCard: React.FC<RegistryItemCardProps> = ({
             </span>
           )}
 
-          <img
+          <LazyImage
             src={item.imageUrl}
             alt={item.name}
-            loading="lazy"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
+            containerClassName="w-full h-full"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            fallbackText={item.name}
           />
         </div>
 

@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { SplashScreen } from '@/components/shared/SplashScreen'
 import { cn } from '@/lib/utils'
+import { LazyImage } from '@/components/shared/LazyImage'
 import { NAV_ITEMS } from './navItems'
 
 export const Sidebar: React.FC = () => {
@@ -101,10 +102,12 @@ export const Sidebar: React.FC = () => {
         >
           <div className="flex items-center gap-[0.65rem] min-w-0">
             {user?.avatar ? (
-              <img
+              <LazyImage
                 src={user.avatar}
                 alt={displayName}
-                className="w-[2.2rem] h-[2.2rem] rounded-full object-cover flex-shrink-0 border border-white/10"
+                containerClassName="w-[2.2rem] h-[2.2rem] rounded-full flex-shrink-0 border border-white/10"
+                className="w-full h-full rounded-full object-cover"
+                fallbackIcon={<UserIcon className="w-[1.05rem] h-[1.05rem] text-[#8e909a]" />}
               />
             ) : (
               <div

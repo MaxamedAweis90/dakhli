@@ -64,6 +64,7 @@ export const OverheadsPage: React.FC = () => {
     isCurrentCycle,
     isFutureCycle,
     isPastCycle,
+    isDormant,
     createOverhead,
     updateOverhead,
     toggleActive,
@@ -77,7 +78,7 @@ export const OverheadsPage: React.FC = () => {
   } = useOverheads(currentMonth)
 
   const handleTogglePaid = (id: string, currentStatus: OverheadStatus) => {
-    if (isPastCycle) return
+    if (isPastCycle || isDormant) return
     updateStatus({
       id,
       status: currentStatus === 'paid' ? 'unpaid' : 'paid',
@@ -98,6 +99,7 @@ export const OverheadsPage: React.FC = () => {
         totalUnpaid={summary.totalUnpaid}
         isFutureCycle={isFutureCycle}
         isPastCycle={isPastCycle}
+        isDormant={isDormant}
       />
 
       {/* Section 2: Dedicated Monthly Billing Ribbon Card & Add Bill Action */}
@@ -105,6 +107,7 @@ export const OverheadsPage: React.FC = () => {
         percentage={summary.percentagePaid}
         onAddBill={() => setIsAddModalOpen(true)}
         isPastCycle={isPastCycle}
+        isDormant={isDormant}
       />
 
       {/* Section 3: Bills Ledger Table Card with 3-dot vertical dropdown */}
@@ -117,6 +120,7 @@ export const OverheadsPage: React.FC = () => {
         isCurrentCycle={isCurrentCycle}
         isFutureCycle={isFutureCycle}
         isPastCycle={isPastCycle}
+        isDormant={isDormant}
         isUpdating={
           isUpdatingStatus ||
           isUpdatingOverhead ||

@@ -1,40 +1,40 @@
 import { Router } from 'express';
-import multer from 'multer';
 import {
   createUploadSession,
   getUploadSession,
   uploadDirect,
   uploadToSession,
+  uploadAvatar,
+  uploadItem,
+  streamMedia,
+  initializeStorageFolders,
 } from '../controllers/uploadController';
 import { authenticate } from '../middleware/auth';
-
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
-  },
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'));
-    }
-  },
-});
+import {
+  uploadItemImage,
+  uploadAvatarImage,
+} from '../middleware/uploadValidation';
 
 const router = Router();
 
-// Create session (auth required on desktop)
+// Public media streaming proxy for Vercel Blob storage (with immutable caching)
+router.get('/media/{*path}', streamMedia);
+
+// Initialize / verify folders in Vercel Blob store ('dakhli-item-assets')
+router.post('/init', initializeStorageFolders);
+
+// Dedicated endpoint for user profile avatars (Max 2MB, destination 'avatars/')
+router.post('/avatar', authenticate, uploadAvatarImage, uploadAvatar);
+
+// Dedicated endpoint for items photos (Max 5MB, destination 'items/')
+router.post('/item', authenticate, uploadItemImage, uploadItem);
+
+// Direct upload fallback endpoint with optional ?folder=items|avatars query parameter
+router.post('/direct', authenticate, uploadItemImage, uploadDirect);
+
+// Cross-device QR code upload session management
 router.post('/session', authenticate, createUploadSession);
-
-// Check session status (polling from desktop)
 router.get('/session/:sessionId', getUploadSession);
-
-// Upload to session (from phone via QR scan)
-router.post('/session/:sessionId', upload.single('file'), uploadToSession);
-
-// Direct upload from desktop or mobile file input
-router.post('/direct', authenticate, upload.single('file'), uploadDirect);
+router.post('/session/:sessionId', uploadItemImage, uploadToSession);
 
 export default router;
-
