@@ -223,7 +223,7 @@ export const ItemRegistryCard: React.FC<ItemRegistryCardProps> = ({ className })
   return (
     <div
       className={cn(
-        'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] px-[1.1rem] pt-[1.1rem] pb-[1.25rem] flex flex-col select-none h-auto min-h-fit',
+        'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] px-[1.1rem] pt-[1.1rem] pb-[1.25rem] flex flex-col select-none h-auto min-h-fit min-w-0 overflow-hidden',
         className
       )}
     >

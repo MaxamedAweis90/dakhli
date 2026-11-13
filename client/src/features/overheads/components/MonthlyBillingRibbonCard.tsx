@@ -27,7 +27,7 @@ export const MonthlyBillingRibbonCard: React.FC<MonthlyBillingRibbonCardProps> =
   return (
     <div
       className={cn(
-        'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] px-6 py-5 lg:px-8 lg:py-5.5 select-none flex items-center justify-between gap-6 lg:gap-8',
+        'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-5.5 select-none flex items-center justify-between gap-4 sm:gap-6 lg:gap-8',
         isDormant && 'opacity-60',
         className
       )}

@@ -1,0 +1,326 @@
+/* Scoped landing page design system tokens, editorial rhythm & micro-interactions.
+ * Isolated via :has(.landing-main) so the authenticated dark dashboard app
+ * (which relies on --u root rem scaling in src/index.css) remains untouched.
+ */
+
+html:has(.landing-main) {
+  font-size: 16px;
+  scroll-padding-top: 72px;
+  color-scheme: light;
+}
+
+body:has(.landing-main) {
+  background-color: #fafaf9;
+  color: #1c1917;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: clip;
+}
+
+/* Equal left/right container edges */
+.wrap {
+  position: relative;
+  width: min(100% - 2 * 20px, 1280px);
+  margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  .wrap {
+    width: min(100% - 2 * 64px, 1280px);
+  }
+}
+
+@media (min-width: 1280px) {
+  .wrap {
+    width: min(100% - 2 * 80px, 1280px);
+  }
+}
+
+/* Fixed opaque top bar */
+.nav.landing-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  height: 72px;
+  background-color: #fafaf9;
+  border-bottom: 1px solid #e7e5e4;
+}
+
+/* Skip link: stays strictly inside .wrap horizontal bounds (no -9999px overflow) */
+.skip-link {
+  position: absolute;
+  left: 0;
+  top: 14px;
+  z-index: 100;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  background: #1c1917;
+  color: #fafaf9;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  clip-path: inset(50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, background-color 120ms ease;
+}
+
+.skip-link:hover {
+  background: #292524;
+}
+
+.skip-link:focus-visible {
+  clip-path: none;
+  opacity: 1;
+  pointer-events: auto;
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+/* Natural editorial vertical rhythm */
+.hero-section {
+  padding-top: 104px;
+  padding-bottom: 64px;
+  overflow-x: clip;
+}
+
+.landing-section {
+  padding-top: 80px;
+  padding-bottom: 80px;
+  border-top: 1px solid #e7e5e4;
+  overflow-x: clip;
+}
+
+.closing.landing-footer {
+  border-top: 1px solid #e7e5e4;
+  overflow-x: clip;
+}
+
+@media (max-width: 639px) {
+  .hero-section {
+    padding-top: 92px;
+    padding-bottom: 48px;
+  }
+
+  .landing-section {
+    padding-top: 64px;
+    padding-bottom: 64px;
+  }
+}
+
+/* Unified focus-visible ring across light & dark surfaces */
+.nav a:focus-visible,
+.nav button:focus-visible,
+.landing-main a:focus-visible,
+.landing-main button:focus-visible,
+.landing-main input:focus-visible,
+.closing a:focus-visible {
+  outline: 2px solid #1c1917;
+  outline-offset: 2px;
+}
+
+.showcase-dark a:focus-visible,
+.showcase-dark button:focus-visible {
+  outline: 2px solid #fafaf9;
+  outline-offset: 2px;
+}
+
+/* Unified Button Pair (One Primary, One Secondary, 44px height, 8px radius) */
+.landing-btn-primary,
+.landing-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 150ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 150ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.landing-btn-primary {
+  background-color: #1c1917;
+  color: #fafaf9;
+  border: 1px solid #1c1917;
+}
+
+.landing-btn-primary:hover {
+  background-color: #292524;
+  transform: translateY(-1px);
+}
+
+.landing-btn-primary:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+.landing-btn-primary .btn-arrow {
+  transition: transform 150ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.landing-btn-primary:hover .btn-arrow {
+  transform: translateX(3px);
+}
+
+.landing-btn-secondary {
+  background-color: #ffffff;
+  color: #1c1917;
+  border: 1px solid #d6d3d1;
+}
+
+.landing-btn-secondary:hover {
+  background-color: #f5f5f4;
+  border-color: #78716c;
+  transform: translateY(-1px);
+}
+
+.landing-btn-secondary:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+@media (max-width: 420px) {
+  .nav .landing-btn-primary {
+    padding: 0 12px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 639px) {
+  .landing-main .landing-btn-primary,
+  .landing-main .landing-btn-secondary {
+    width: 100%;
+  }
+}
+
+/* Editorial nav link with clean underline draw & scroll-spy indicator */
+.landing-nav-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #57534e;
+  transition: color 140ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.landing-nav-link::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 8px;
+  height: 1.5px;
+  background-color: #1c1917;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.landing-nav-link:hover,
+.landing-nav-link[data-active='true'] {
+  color: #1c1917;
+}
+
+.landing-nav-link:hover::after,
+.landing-nav-link[data-active='true']::after {
+  transform: scaleX(1);
+}
+
+/* Range slider touch target >= 44px tall while keeping a crisp 6px track */
+.landing-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  cursor: pointer;
+  margin: -10px 0;
+}
+
+.landing-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: #e7e5e4;
+}
+
+.landing-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 9999px;
+  background: var(--range-color, #1c1917);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  transition: transform 120ms ease;
+}
+
+.landing-range:hover::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+.landing-range::-moz-range-track {
+  height: 6px;
+  border-radius: 9999px;
+  background: #e7e5e4;
+}
+
+.landing-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--range-color, #1c1917);
+  border: 2px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+/* Single once-on-load hero entrance */
+@keyframes landingHeroEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-enter {
+  animation: landingHeroEnter 550ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-enter-delay {
+  animation: landingHeroEnter 650ms cubic-bezier(0.22, 1, 0.36, 1) 90ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-enter,
+  .hero-enter-delay {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .landing-btn-primary,
+  .landing-btn-secondary,
+  .landing-nav-link,
+  .landing-nav-link::after {
+    transition: none !important;
+  }
+}

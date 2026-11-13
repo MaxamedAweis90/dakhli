@@ -84,7 +84,7 @@ export const SavePlansPage: React.FC = () => {
       />
 
       {/* 2. Subheader for Targeted Savings Goals */}
-      <div className="flex items-center justify-between pt-2 pb-1 select-none">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2 pb-1 select-none">
         <div>
           <h2 className="text-xs font-mono uppercase tracking-widest text-[#8E92A0] font-semibold">
             TARGETED SAVINGS BUCKETS

@@ -199,7 +199,7 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
     <div className="w-full select-none">
       {/* Iridescent Gradient Outer Border Container matching /daily screen */}
       <div className="relative p-[1.5px] rounded-[1.25rem] bg-gradient-to-br from-[#FCD34D]/40 via-[#6EE7B7]/50 to-[#2DD4BF]/60 shadow-[0_0_24px_rgba(94,234,212,0.12)]">
-        <div className="rounded-[calc(1.25rem-1.5px)] bg-[#17181D] px-6 sm:px-7 pt-5 pb-4 overflow-hidden">
+        <div className="rounded-[calc(1.25rem-1.5px)] bg-[#17181D] px-4 sm:px-6 lg:px-7 pt-5 pb-4 overflow-hidden">
           {/* Header Row: Title, Subtitle, and Controls */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-white/[0.04]">
             <div>
@@ -234,7 +234,7 @@ export const CumulativeReserveHeroCard: React.FC<CumulativeReserveHeroCardProps>
             </div>
 
             {/* Micro Controls: Pause/Resume Toggle & Adjust Cut */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => onToggleStatus(plan.id)}

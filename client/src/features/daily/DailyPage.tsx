@@ -81,9 +81,9 @@ export const DailyPage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[330px_1fr] xl:grid-cols-[380px_1fr] items-start gap-8 lg:gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-[330px_1fr] xl:grid-cols-[380px_1fr] items-start gap-6 sm:gap-8 lg:gap-10">
         {/* Left Column: Preview-only Cumulative Savings Card */}
-        <div className="w-full max-w-md lg:max-w-none">
+        <div className="w-full">
           <CumulativeSavingsCard
             savings={isDormant ? 0 : summary.monthlySavedFromDaily}
             points={isDormant ? [0, 0, 0, 0] : computeSparklinePoints()}

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Lock, EyeOff, ShieldCheck, Calculator } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
+import './landing.css'
 import LandingNav from './components/LandingNav'
 import DashboardShowcase from './components/DashboardShowcase'
 import RealityCheckSimulator from './components/RealityCheckSimulator'
@@ -11,101 +12,103 @@ import LandingFooter from './components/LandingFooter'
 import ScrollToTop from '@/components/shared/ScrollToTop'
 import { useGoogleOneTap } from '@/features/auth/hooks/useGoogleOneTap'
 
+const HERO_METRICS = [
+  {
+    value: '0% Bank Logins',
+    detail: 'Manual deterministic entry',
+  },
+  {
+    value: 'Payday-Anchored',
+    detail: 'Cycles start when income lands',
+  },
+  {
+    value: 'USD · EUR · SOS',
+    detail: 'Multi-currency ledger',
+  },
+  {
+    value: '$0 / Month',
+    detail: 'Zero ads or loan referrals',
+  },
+] as const
+
 export const LandingPage: React.FC = () => {
-  // Prompt unauthenticated visitors with Google One-Tap on the landing page
   useGoogleOneTap()
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9] text-stone-900 selection:bg-stone-900 selection:text-stone-50 font-sans">
-      {/* Top Sticky Header */}
+    <>
       <LandingNav />
 
-      {/* Notion-Style Hero: Compact Text + CTA + Live Animated Dashboard Above the Fold */}
-      <section className="relative pt-7 pb-16 sm:pt-10 sm:pb-24">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10">
-          {/* Compact Hero Copy & CTA */}
-          <div className="max-w-2xl mx-auto text-center">
-            <h1 className="font-serif text-3xl sm:text-5xl lg:text-[3.5rem] font-normal tracking-tight text-stone-900 text-balance leading-[1.08]">
-              Your bank balance is an illusion.
-              <br />
-              <span className="italic text-stone-600">Dakhli reveals the truth.</span>
-            </h1>
+      <main
+        id="main-content"
+        className="landing-main bg-[#FAFAF9] text-stone-900 selection:bg-stone-900 selection:text-stone-50 font-sans"
+      >
+        {/* Hero Section: Top 2-Column Editorial Header + Full-Width Workspace Preview + 4-Pillar Strip */}
+        <section id="top" data-enter className="hero hero-section">
+          <div className="wrap">
+            {/* 1. Editorial Header Split */}
+            <div className="hero-enter grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-end mb-8 sm:mb-10">
+              <div className="lg:col-span-7">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-stone-200/70 text-stone-800 font-mono text-xs mb-4">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-700" aria-hidden="true" />
+                  <span>PERSONAL CASH FLOW ENGINE · ZERO BANK APIS</span>
+                </div>
+                <h1 className="font-serif text-[36px] sm:text-[46px] lg:text-[52px] font-normal tracking-tight text-stone-900 leading-[1.06]">
+                  Personal finance software for daily cash control
+                </h1>
+              </div>
 
-            <p className="font-sans text-sm sm:text-base text-stone-600 mt-3.5 leading-relaxed max-w-xl mx-auto text-pretty">
-              Isolate emergency reserves and upcoming overhead bills to see what you can actually
-              spend today—100% manual, zero bank credentials, zero surveillance.
-            </p>
+              <div className="lg:col-span-5 flex flex-col items-start gap-5">
+                <p className="font-sans text-base sm:text-[17px] text-stone-700 leading-relaxed">
+                  Separate fixed bills and locked savings reserves from your gross balance—track real spendable cash across USD, EUR, and SOS from $0/month.
+                </p>
 
-            {/* Primary Action Buttons */}
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                to="/register"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-stone-900 hover:bg-stone-800 text-stone-50 transition-all shadow-sm active:scale-[0.98]"
-              >
-                <span>Start With Clean Numbers</span>
-                <ArrowRight className="w-4 h-4 text-stone-400" />
-              </Link>
-
-              <a
-                href="#simulator"
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-mono text-stone-700 hover:text-stone-900 bg-white hover:bg-stone-100 border border-stone-200 transition-all active:scale-[0.98]"
-              >
-                <span>Interactive Calculator</span>
-                <span className="text-xs text-stone-400">↓</span>
-              </a>
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                  <Link to="/register" className="landing-btn-primary">
+                    <span>Start free account</span>
+                    <ArrowRight className="w-4 h-4 btn-arrow shrink-0" aria-hidden="true" />
+                  </Link>
+                  <a href="#simulator" className="landing-btn-secondary">
+                    Try live calculator
+                  </a>
+                </div>
+              </div>
             </div>
+
+            {/* 2. Full-Width Interactive Workspace Frame */}
+            <div className="hero-enter-delay">
+              <DashboardShowcase />
+            </div>
+
+            {/* 3. Bottom 4-Pillar Architectural Metrics Strip */}
+            <dl className="mt-6 pt-5 border-t border-stone-200/90 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {HERO_METRICS.map((item) => (
+                <div key={item.value}>
+                  <dt className="font-mono text-sm font-semibold text-stone-900">{item.value}</dt>
+                  <dd className="font-sans text-sm text-stone-600 mt-0.5">{item.detail}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
+        </section>
 
-          {/* Live Animated Dashboard Directly in Hero Viewport (Zero Fake Chrome) */}
-          <div className="mt-7 sm:mt-8 max-w-5xl mx-auto">
-            <DashboardShowcase />
-          </div>
+        {/* Interactive Net Spendable Calculator */}
+        <RealityCheckSimulator />
 
-          {/* Quiet Trust Receipts Below Dashboard */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-[11px] font-mono text-stone-500 uppercase tracking-wider">
-            <span className="flex items-center gap-1.5">
-              <Lock className="w-3.5 h-3.5 text-stone-700" />
-              No Bank Logins
-            </span>
-            <span className="text-stone-300 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5">
-              <EyeOff className="w-3.5 h-3.5 text-stone-700" />
-              100% Private Cash Flow
-            </span>
-            <span className="text-stone-300 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-stone-700" />
-              Zero Data Scraping
-            </span>
-            <span className="text-stone-300 hidden sm:inline">•</span>
-            <span className="flex items-center gap-1.5">
-              <Calculator className="w-3.5 h-3.5 text-stone-700" />
-              Deterministic Daily Caps
-            </span>
-          </div>
+        {/* Core Mechanics */}
+        <PillarsSection />
 
-          {/* Interactive Reality Check Simulator */}
-          <div className="mt-14 sm:mt-18 max-w-4xl mx-auto">
-            <RealityCheckSimulator />
-          </div>
-        </div>
-      </section>
+        {/* Comparison Matrix */}
+        <ComparisonMatrix />
 
-      {/* The 4 Deterministic Laws */}
-      <PillarsSection />
+        {/* Dedicated Closing Setup Section */}
+        <ManifestoSection />
+      </main>
 
-      {/* The Anti-Surveillance Audit Matrix */}
-      <ComparisonMatrix />
-
-      {/* The Closing Discipline Manifesto */}
-      <ManifestoSection />
-
-      {/* Understated Light Footer */}
+      {/* Structured Multi-Column Footer */}
       <LandingFooter />
 
-      {/* Scroll-to-Top Detector & Button */}
       <ScrollToTop />
-    </div>
+    </>
   )
 }
 

@@ -1,178 +1,212 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 interface Pillar {
-  sectionIndex: string
+  id: string
+  index: string
   title: string
-  law: string
-  summary: string
-  detail: string
+  description: string
   formula: string
+  summaryMetric: string
+  summaryValue: string
+  visual: React.ReactNode
 }
 
 const PILLARS: Pillar[] = [
   {
-    sectionIndex: '§ 01 / LIQUIDITY',
-    title: 'Liquidity Isolation',
-    law: 'Net Spendable ≠ Gross Account Balance',
-    summary: 'Never let your bank balance trick your brain into feeling richer than you are.',
-    detail:
-      'Banking apps show a single total that mixes your rent, emergency buffer, and daily pocket money. Dakhli locks committed reserves out of your sight so you only see what is truly unencumbered today.',
-    formula: 'Net Spendable = Gross Balance - Σ(Active Reserve Plans) - Due Overheads',
+    id: 'vault',
+    index: '01 / LIQUIDITY',
+    title: 'Liquidity reserve vault',
+    description:
+      'Lock rent, tax reserves, and recurring obligations out of daily view so only uncommitted cash stays visible.',
+    formula: 'Net Spendable = Gross Balance - Active Reserves - Due Bills',
+    summaryMetric: 'Protected from daily spend',
+    summaryValue: '78% Locked · 22% Free',
+    visual: (
+      <svg viewBox="0 0 420 120" className="w-full h-28" role="img" aria-label="Committed reserves separated from net spendable liquidity">
+        <rect x="0" y="16" width="150" height="44" rx="8" fill="#b91c1c" />
+        <rect x="160" y="16" width="128" height="44" rx="8" fill="#047857" />
+        <rect x="298" y="16" width="122" height="44" rx="8" fill="#fafaf9" />
+        <text x="14" y="43" fill="#ffffff" fontSize="13" fontFamily="monospace">Overheads</text>
+        <text x="174" y="43" fill="#ffffff" fontSize="13" fontFamily="monospace">Reserves</text>
+        <text x="312" y="43" fill="#1c1917" fontSize="13" fontFamily="monospace">Spendable</text>
+        <rect x="0" y="84" width="420" height="10" rx="5" fill="#27272a" />
+        <rect x="0" y="84" width="278" height="10" rx="5" fill="#047857" />
+      </svg>
+    ),
   },
   {
-    sectionIndex: '§ 02 / CADENCE',
-    title: 'Payday-Anchored Cycles',
-    law: 'Budget Months Align With Cash Inflows',
-    summary: 'Your financial month begins when your employer pays you, not on the 1st.',
-    detail:
-      'Standard budgets break because paychecks land on the 25th or 28th. Dakhli structures spending cycles around your actual payday anchors, preventing in-flight budgets from mutating across calendar edges.',
-    formula: 'Cycle: Payday Inflow -> Days Remaining -> Zero-Drift Next Cycle Allocation',
+    id: 'cycles',
+    index: '02 / CADENCE',
+    title: 'Payday ledger cycles',
+    description:
+      'Start every budget window on your actual payday date instead of splitting paychecks across calendar months.',
+    formula: 'Cycle = Payday Anchor -> Days Remaining -> Next Allocation',
+    summaryMetric: 'Zero calendar-edge drift',
+    summaryValue: '25 Oct -> 24 Nov Anchor',
+    visual: (
+      <svg viewBox="0 0 420 120" className="w-full h-28" role="img" aria-label="Payday-to-payday cycle timeline">
+        <line x1="20" y1="54" x2="400" y2="54" stroke="#3f3f46" strokeWidth="4" strokeLinecap="round" />
+        <line x1="20" y1="54" x2="265" y2="54" stroke="#4ade80" strokeWidth="4" strokeLinecap="round" />
+        <circle cx="20" cy="54" r="9" fill="#4ade80" />
+        <circle cx="265" cy="54" r="9" fill="#fafaf9" />
+        <circle cx="400" cy="54" r="9" fill="#52525b" />
+        <text x="20" y="28" fill="#a1a1aa" fontSize="12" fontFamily="monospace">Payday Start</text>
+        <text x="225" y="28" fill="#ffffff" fontSize="12" fontFamily="monospace">Today · Day 15</text>
+        <text x="336" y="88" fill="#a1a1aa" fontSize="12" fontFamily="monospace">Next Cycle</text>
+      </svg>
+    ),
   },
   {
-    sectionIndex: '§ 03 / BOUNDARIES',
-    title: 'Daily Spending Caps',
-    law: 'Deterministic Daily Boundaries with EOD Reconciliation',
-    summary: 'Replace vague, abstract monthly limits with a concrete daily cash allowance.',
-    detail:
-      'Assign distinct daily caps for weekdays versus weekends. At the end of each day, spend under your cap and the surplus rolls forward or logs to daily savings. Spend over, and you face the exact delta.',
-    formula: 'Weekday Cap: $35/day | Weekend Cap: $60/day | EOD Under-Cap: Surplus Compounded',
+    id: 'caps',
+    index: '03 / BOUNDARIES',
+    title: 'Daily spending cap engine',
+    description:
+      'Assign separate weekday and weekend limits and automatically carry unspent end-of-day surplus into savings.',
+    formula: 'Weekday Cap 35/day · Weekend Cap 60/day · EOD Surplus Rolled',
+    summaryMetric: 'Deterministic daily bounds',
+    summaryValue: 'Mon–Fri 35 · Sat–Sun 60',
+    visual: (
+      <svg viewBox="0 0 420 120" className="w-full h-28" role="img" aria-label="Weekday and weekend daily spending cap bars">
+        {[58, 72, 50, 64, 46, 94, 86].map((h, idx) => (
+          <g key={idx}>
+            <rect
+              x={idx * 58 + 12}
+              y={100 - h}
+              width="38"
+              height={h}
+              rx="6"
+              fill={idx >= 5 ? '#4ade80' : '#fafaf9'}
+            />
+            <text
+              x={idx * 58 + 24}
+              y="116"
+              fill="#a1a1aa"
+              fontSize="11"
+              fontFamily="monospace"
+            >
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'][idx]}
+            </text>
+          </g>
+        ))}
+      </svg>
+    ),
   },
   {
-    sectionIndex: '§ 04 / DISCIPLINE',
-    title: '3-Tier Synchronized Registry',
-    law: 'Essentials • Future Needs • Wants',
-    summary: 'Eliminate impulse purchasing by requiring items to be saved for before they exist.',
-    detail:
-      'Catalog purchases into three deliberate tiers. Items remain zero-impact until actively loaded into a Save Plan. When fully funded, they unlock with zero sudden shock to your daily liquidity.',
-    formula: 'Item Status: [In Save Plan] -> Funded: 100% -> Purchased With Zero Net Impact',
+    id: 'registry',
+    index: '04 / REGISTRY',
+    title: 'Three-tier item registry',
+    description:
+      'Stage upcoming purchases inside Essentials, Planned, and Wants goals so big gear never shocks daily cash.',
+    formula: 'Tiered Goal -> Funded 100% -> Purchased Without Liquidity Shock',
+    summaryMetric: 'Priority-funded purchases',
+    summaryValue: '9 / 12 Ticks Funded (75%)',
+    visual: (
+      <svg viewBox="0 0 420 120" className="w-full h-28" role="img" aria-label="Segmented saving progress ticks for staged registry items">
+        {Array.from({ length: 12 }).map((_, idx) => (
+          <rect
+            key={idx}
+            x={idx * 34 + 6}
+            y="24"
+            width="24"
+            height="62"
+            rx="5"
+            fill={idx < 9 ? '#4ade80' : '#27272a'}
+          />
+        ))}
+        <text x="6" y="108" fill="#d4d4d8" fontSize="12" fontFamily="monospace">
+          Work Monitor · 210 / 280 funded before purchase
+        </text>
+      </svg>
+    ),
   },
 ]
 
 export const PillarsSection: React.FC = () => {
+  const [selectedId, setSelectedId] = useState<string>(PILLARS[0].id)
+  const active = PILLARS.find((p) => p.id === selectedId) ?? PILLARS[0]
+
   return (
-    <section id="pillars" className="py-20 border-t border-stone-200 bg-[#FAFAF9]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        {/* Section Header */}
-        <div className="max-w-2xl mb-12">
-          <div className="font-mono text-xs uppercase tracking-wider text-stone-500 mb-2">
-            Architecture § 02 — The Four Laws
-          </div>
-          <h2 className="font-serif text-3xl sm:text-4xl font-normal tracking-tight text-stone-900 text-balance">
-            Deterministic cash principles.
-            <br />
-            Zero black-box algorithms.
+    <section id="pillars" className="landing-section bg-[#FAFAF9]">
+      <div className="wrap">
+        <div className="max-w-2xl mb-6 sm:mb-8">
+          <span className="block font-mono text-[13px] font-medium text-stone-600 mb-2">
+            Core Mechanics
+          </span>
+          <h2 className="font-serif text-3xl sm:text-[40px] leading-[1.12] font-normal tracking-tight text-stone-900">
+            Dakhli cash flow mechanics
           </h2>
-          <p className="font-sans text-sm text-stone-600 mt-3 text-pretty leading-relaxed max-w-[60ch]">
-            Most budgeting tools give you retroactive pie charts of money you already wasted.
-            Dakhli enforces proactive, day-by-day cash discipline before the money leaves your possession.
+          <p className="font-sans text-base text-stone-700 mt-2.5 leading-relaxed">
+            Four deterministic modules separate fixed bills from daily pocket cash.
           </p>
         </div>
 
-        {/* Swiss Continuous Grid */}
-        <div className="rounded-2xl border border-stone-200 bg-white grid grid-cols-1 md:grid-cols-2 shadow-xs divide-y md:divide-y-0 md:divide-x divide-stone-200 overflow-hidden">
-          {/* Top Row: Law 1 & Law 2 */}
-          <div className="flex flex-col justify-between p-6 sm:p-8 border-b md:border-b border-stone-200">
-            <div>
-              <div className="font-mono text-xs font-semibold text-stone-400 uppercase tracking-widest">
-                {PILLARS[0].sectionIndex}
-              </div>
-              <h3 className="font-serif text-2xl font-normal text-stone-900 tracking-tight mt-2">
-                {PILLARS[0].title}
-              </h3>
-              <p className="font-mono text-xs text-stone-500 mt-0.5">
-                {PILLARS[0].law}
-              </p>
-              <p className="font-sans text-sm font-medium text-stone-800 mt-4 leading-snug">
-                {PILLARS[0].summary}
-              </p>
-              <p className="font-sans text-xs text-stone-600 mt-2 leading-relaxed">
-                {PILLARS[0].detail}
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-stone-100">
-              <div className="bg-stone-50 border border-stone-200 rounded-lg px-3.5 py-2 font-mono text-[11px] text-stone-700 truncate">
-                <span className="text-stone-400 mr-2">fn:</span>
-                {PILLARS[0].formula}
-              </div>
-            </div>
+        {/* Interactive k=5 Split (5 cols module tabs / 7 cols live mechanic preview) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          <div
+            role="tablist"
+            aria-label="Dakhli core mechanics"
+            className="lg:col-span-5 flex flex-col justify-between gap-2.5"
+          >
+            {PILLARS.map((pillar) => {
+              const isSelected = pillar.id === active.id
+              return (
+                <button
+                  key={pillar.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isSelected}
+                  onClick={() => setSelectedId(pillar.id)}
+                  className={`text-left rounded-xl p-4 transition-colors cursor-pointer min-h-[68px] ${
+                    isSelected
+                      ? 'bg-stone-900 text-stone-50'
+                      : 'bg-white text-stone-900 border border-stone-200 hover:bg-stone-100'
+                  }`}
+                >
+                  <span
+                    className={`block font-mono text-[11px] uppercase tracking-wider ${
+                      isSelected ? 'text-stone-300' : 'text-stone-600'
+                    }`}
+                  >
+                    {pillar.index}
+                  </span>
+                  <span className="block font-sans text-base font-semibold mt-0.5">
+                    {pillar.title}
+                  </span>
+                </button>
+              )
+            })}
           </div>
 
-          <div className="flex flex-col justify-between p-6 sm:p-8 border-b md:border-b border-stone-200">
-            <div>
-              <div className="font-mono text-xs font-semibold text-stone-400 uppercase tracking-widest">
-                {PILLARS[1].sectionIndex}
+          <div
+            role="tabpanel"
+            data-ui="mechanic-preview"
+            className="lg:col-span-7 rounded-2xl bg-[#111215] text-white p-6 sm:p-7 flex flex-col justify-between gap-5 showcase-dark"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div>
+                <span className="block font-mono text-xs uppercase tracking-wider text-zinc-400">
+                  {active.index}
+                </span>
+                <h3 className="font-serif text-2xl sm:text-3xl font-normal text-white mt-1">
+                  {active.title}
+                </h3>
               </div>
-              <h3 className="font-serif text-2xl font-normal text-stone-900 tracking-tight mt-2">
-                {PILLARS[1].title}
-              </h3>
-              <p className="font-mono text-xs text-stone-500 mt-0.5">
-                {PILLARS[1].law}
-              </p>
-              <p className="font-sans text-sm font-medium text-stone-800 mt-4 leading-snug">
-                {PILLARS[1].summary}
-              </p>
-              <p className="font-sans text-xs text-stone-600 mt-2 leading-relaxed">
-                {PILLARS[1].detail}
-              </p>
+              <span className="font-mono text-xs text-[#86efac]">
+                {active.summaryValue}
+              </span>
             </div>
-            <div className="mt-6 pt-4 border-t border-stone-100">
-              <div className="bg-stone-50 border border-stone-200 rounded-lg px-3.5 py-2 font-mono text-[11px] text-stone-700 truncate">
-                <span className="text-stone-400 mr-2">fn:</span>
-                {PILLARS[1].formula}
-              </div>
-            </div>
-          </div>
 
-          {/* Bottom Row: Law 3 & Law 4 */}
-          <div className="flex flex-col justify-between p-6 sm:p-8">
-            <div>
-              <div className="font-mono text-xs font-semibold text-stone-400 uppercase tracking-widest">
-                {PILLARS[2].sectionIndex}
-              </div>
-              <h3 className="font-serif text-2xl font-normal text-stone-900 tracking-tight mt-2">
-                {PILLARS[2].title}
-              </h3>
-              <p className="font-mono text-xs text-stone-500 mt-0.5">
-                {PILLARS[2].law}
-              </p>
-              <p className="font-sans text-sm font-medium text-stone-800 mt-4 leading-snug">
-                {PILLARS[2].summary}
-              </p>
-              <p className="font-sans text-xs text-stone-600 mt-2 leading-relaxed">
-                {PILLARS[2].detail}
-              </p>
+            <div className="rounded-xl bg-[#17181D] p-4 border border-white/[0.06]">
+              {active.visual}
             </div>
-            <div className="mt-6 pt-4 border-t border-stone-100">
-              <div className="bg-stone-50 border border-stone-200 rounded-lg px-3.5 py-2 font-mono text-[11px] text-stone-700 truncate">
-                <span className="text-stone-400 mr-2">fn:</span>
-                {PILLARS[2].formula}
-              </div>
-            </div>
-          </div>
 
-          <div className="flex flex-col justify-between p-6 sm:p-8">
-            <div>
-              <div className="font-mono text-xs font-semibold text-stone-400 uppercase tracking-widest">
-                {PILLARS[3].sectionIndex}
-              </div>
-              <h3 className="font-serif text-2xl font-normal text-stone-900 tracking-tight mt-2">
-                {PILLARS[3].title}
-              </h3>
-              <p className="font-mono text-xs text-stone-500 mt-0.5">
-                {PILLARS[3].law}
+            <div className="space-y-2.5">
+              <p className="font-sans text-base text-zinc-200 leading-relaxed">
+                {active.description}
               </p>
-              <p className="font-sans text-sm font-medium text-stone-800 mt-4 leading-snug">
-                {PILLARS[3].summary}
-              </p>
-              <p className="font-sans text-xs text-stone-600 mt-2 leading-relaxed">
-                {PILLARS[3].detail}
-              </p>
-            </div>
-            <div className="mt-6 pt-4 border-t border-stone-100">
-              <div className="bg-stone-50 border border-stone-200 rounded-lg px-3.5 py-2 font-mono text-[11px] text-stone-700 truncate">
-                <span className="text-stone-400 mr-2">fn:</span>
-                {PILLARS[3].formula}
-              </div>
+              <span className="block font-mono text-[13px] text-[#E5A855] whitespace-normal break-words">
+                {active.formula}
+              </span>
             </div>
           </div>
         </div>

@@ -1,74 +1,123 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { ArrowRight, LayoutDashboard } from 'lucide-react'
 
+const SECTION_IDS = ['top', 'simulator', 'pillars', 'comparison', 'manifesto'] as const
+type SectionId = (typeof SECTION_IDS)[number]
+
 export const LandingNav: React.FC = () => {
   const { isAuthenticated } = useAuthStore()
+  const [activeSection, setActiveSection] = useState<SectionId>('top')
+
+  useEffect(() => {
+    const updateActive = () => {
+      if (window.scrollY < 240) {
+        setActiveSection('top')
+        return
+      }
+      const midpoint = window.scrollY + window.innerHeight * 0.45
+      let current: SectionId = 'top'
+      for (const id of SECTION_IDS) {
+        const el = document.getElementById(id)
+        if (el && el.offsetTop <= midpoint) {
+          current = id
+        }
+      }
+      setActiveSection(current)
+    }
+
+    updateActive()
+    window.addEventListener('scroll', updateActive, { passive: true })
+    return () => window.removeEventListener('scroll', updateActive)
+  }, [])
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-stone-200 bg-[#FAFAF9]/95 backdrop-blur-sm">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-        {/* Brand Lockup */}
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded-lg bg-stone-900 flex items-center justify-center font-serif text-stone-50 text-sm font-semibold shadow-sm group-hover:bg-stone-800 transition-colors">
-            د
-          </div>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm tracking-tight text-stone-900 font-sans">
-                DAKHLI
-              </span>
-              <span className="text-xs font-serif text-stone-500 hidden sm:inline">
-                دخلي
-              </span>
-            </div>
-            <span className="text-[10px] font-mono text-stone-400 uppercase tracking-wider -mt-0.5 hidden sm:inline">
-              Cash Flow Engine
-            </span>
-          </div>
-        </Link>
+    <header className="nav landing-nav">
+      <div className="wrap h-full grid grid-cols-[1fr_auto] lg:grid-cols-[1fr_auto_1fr] items-center gap-4">
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
 
-        {/* Quiet Editorial Anchors */}
-        <nav className="hidden md:flex items-center gap-7 text-xs font-mono uppercase tracking-wider text-stone-500">
-          <a href="#simulator" className="hover:text-stone-900 transition-colors">
-            01 / Simulator
+        {/* Left Cell: Vertically Centered Brand Lockup */}
+        <div className="justify-self-start flex items-center">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2.5 min-h-[44px] whitespace-nowrap shrink-0 group"
+          >
+            <span
+              aria-hidden="true"
+              className="w-8 h-8 rounded-lg bg-stone-900 text-stone-50 font-serif text-base font-semibold flex items-center justify-center group-hover:bg-stone-800 transition-colors"
+            >
+              د
+            </span>
+            <span className="font-sans text-[17px] font-semibold tracking-tight text-stone-900">
+              Dakhli
+            </span>
+            <span className="hidden sm:inline-flex items-center gap-2">
+              <span className="h-3.5 w-px bg-stone-300" aria-hidden="true" />
+              <span className="font-serif text-sm text-stone-600">دخلي</span>
+            </span>
+          </Link>
+        </div>
+
+        {/* Center Cell: Optically Centered Navigation Links */}
+        <nav aria-label="Primary" className="hidden lg:flex items-center justify-center gap-7 font-sans">
+          <a
+            href="#top"
+            data-active={activeSection === 'top'}
+            className="landing-nav-link whitespace-nowrap"
+          >
+            Overview
           </a>
-          <a href="#pillars" className="hover:text-stone-900 transition-colors">
-            02 / Mechanics
+          <a
+            href="#simulator"
+            data-active={activeSection === 'simulator'}
+            className="landing-nav-link whitespace-nowrap"
+          >
+            Calculator
           </a>
-          <a href="#comparison" className="hover:text-stone-900 transition-colors">
-            03 / Audit
+          <a
+            href="#pillars"
+            data-active={activeSection === 'pillars'}
+            className="landing-nav-link whitespace-nowrap"
+          >
+            Mechanics
           </a>
-          <a href="#manifesto" className="hover:text-stone-900 transition-colors">
-            04 / Manifesto
+          <a
+            href="#comparison"
+            data-active={activeSection === 'comparison'}
+            className="landing-nav-link whitespace-nowrap"
+          >
+            Comparison
+          </a>
+          <a
+            href="#manifesto"
+            data-active={activeSection === 'manifesto'}
+            className="landing-nav-link whitespace-nowrap"
+          >
+            Get Started
           </a>
         </nav>
 
-        {/* Solid Tactile Actions */}
-        <div className="flex items-center gap-3">
+        {/* Right Cell: Right-Aligned Account Actions */}
+        <div className="justify-self-end flex items-center gap-3 shrink-0">
           {isAuthenticated ? (
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-stone-900 hover:bg-stone-800 text-stone-50 transition-all shadow-sm active:scale-[0.98]"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
+            <Link to="/" className="landing-btn-primary">
+              <LayoutDashboard className="w-4 h-4" aria-hidden="true" />
               <span>Go to Dashboard</span>
             </Link>
           ) : (
             <>
               <Link
                 to="/login"
-                className="px-3 py-1.5 text-xs font-mono text-stone-600 hover:text-stone-900 transition-colors"
+                className="landing-nav-link hidden sm:inline-flex px-2 whitespace-nowrap"
               >
-                Sign In
+                Sign in
               </Link>
-              <Link
-                to="/register"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-stone-900 hover:bg-stone-800 text-stone-50 transition-all shadow-sm active:scale-[0.98]"
-              >
-                <span>Launch Dakhli</span>
-                <ArrowRight className="w-3 h-3 text-stone-400" />
+              <Link to="/register" className="landing-btn-primary">
+                <span>Start free account</span>
+                <ArrowRight className="w-4 h-4 btn-arrow hidden sm:inline shrink-0" aria-hidden="true" />
               </Link>
             </>
           )}

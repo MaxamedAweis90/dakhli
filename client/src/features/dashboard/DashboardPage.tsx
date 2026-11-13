@@ -14,24 +14,24 @@ import { ItemRegistryCard } from './components/ItemRegistryCard'
  */
 export const DashboardPage: React.FC = () => {
   return (
-    <div className="grid gap-[0.8125rem] px-0 lg:grid-cols-[477fr_236fr] items-start pb-8">
+    <div className="grid grid-cols-1 gap-[0.8125rem] px-0 lg:grid-cols-[477fr_236fr] items-start pb-8">
       {/* ================= LEFT AREA (cols 1 + 2) ================= */}
-      <div className="flex flex-col gap-[0.8125rem]">
+      <div className="flex flex-col gap-[0.8125rem] min-w-0">
         {/* Top row: Liquidity + Overhead Bills */}
-        <div className="grid gap-[0.8125rem] md:grid-cols-[251fr_214fr] items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[251fr_214fr] gap-[0.8125rem] items-stretch min-w-0">
           <LiquidityBanner className="h-full" />
           <OverheadBillsCard className="h-full" />
         </div>
 
         {/* Bottom row: Saving plan + Cash Flow */}
-        <div className="grid gap-[0.8125rem] md:grid-cols-[197fr_267fr] items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[197fr_267fr] gap-[0.8125rem] items-stretch min-w-0">
           <SavingPlanCard className="h-full" />
           <CashFlowCard className="h-full" />
         </div>
       </div>
 
       {/* ================= RIGHT COLUMN ================= */}
-      <div className="flex flex-col gap-[0.8125rem]">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:flex lg:flex-col gap-[0.8125rem] items-stretch min-w-0">
         <UpcomingOverheadCard className="h-auto" />
         <ItemRegistryCard className="h-auto" />
       </div>

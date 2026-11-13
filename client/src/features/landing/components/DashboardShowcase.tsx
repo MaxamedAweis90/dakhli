@@ -6,7 +6,6 @@ import {
   PiggyBank,
   ClipboardList,
   Search,
-  Calendar,
   Wifi,
   Dumbbell,
   Check,
@@ -29,8 +28,6 @@ const CURRENCY_MAP: Record<
   SOS: { code: 'SOS', symbol: 'Sh.So. ', rate: 26000, decimals: 0 },
 }
 
-const CURRENCY_ORDER: DemoCurrency[] = ['USD', 'EUR', 'SOS']
-
 interface DemoBill {
   id: string
   name: string
@@ -43,8 +40,8 @@ interface DemoBill {
 const INITIAL_BILLS: DemoBill[] = [
   { id: 'rent', name: 'Apartment Rent', date: '17 Nov', amount: 550, icon: 'home', paid: false },
   { id: 'wifi', name: 'Fiber Internet', date: '12 Nov', amount: 65, icon: 'wifi', paid: false },
-  { id: 'gym', name: 'Gym Membership', date: '5 Nov', amount: 40, icon: 'dumbbell', paid: false },
-  { id: 'elec', name: 'Electricity & Water', date: '28 Oct', amount: 95, icon: 'zap', paid: true },
+  { id: 'gym', name: 'Gym Pass', date: '5 Nov', amount: 40, icon: 'dumbbell', paid: false },
+  { id: 'elec', name: 'Utilities', date: '28 Oct', amount: 95, icon: 'zap', paid: true },
 ]
 
 type DemoTier = 'essentials' | 'future' | 'wants'
@@ -68,21 +65,21 @@ const DEMO_REGISTRY: Record<DemoTier, DemoRegistryItem[]> = {
     },
     {
       id: 'flask',
-      name: 'Thermo Flask',
+      name: 'Flask',
       price: 35,
       saved: 35,
       image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=240&auto=format&fit=crop&q=80',
     },
     {
       id: 'brewer',
-      name: 'Pour-Over Set',
+      name: 'Brewer',
       price: 55,
       saved: 40,
       image: 'https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=240&auto=format&fit=crop&q=80',
     },
     {
       id: 'pillow',
-      name: 'Ergo Pillow',
+      name: 'Pillow',
       price: 70,
       image: 'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=240&auto=format&fit=crop&q=80',
     },
@@ -90,21 +87,21 @@ const DEMO_REGISTRY: Record<DemoTier, DemoRegistryItem[]> = {
   future: [
     {
       id: 'monitor',
-      name: 'Work Monitor',
+      name: 'Monitor',
       price: 280,
       saved: 210,
       image: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=240&auto=format&fit=crop&q=80',
     },
     {
       id: 'keyboard',
-      name: 'Mech Keyboard',
+      name: 'Keyboard',
       price: 140,
       saved: 70,
       image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=240&auto=format&fit=crop&q=80',
     },
     {
       id: 'backpack',
-      name: 'Commuter Pack',
+      name: 'Daypack',
       price: 110,
       image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=240&auto=format&fit=crop&q=80',
     },
@@ -119,7 +116,7 @@ const DEMO_REGISTRY: Record<DemoTier, DemoRegistryItem[]> = {
   wants: [
     {
       id: 'headphones',
-      name: 'Studio Cans',
+      name: 'Headset',
       price: 240,
       saved: 120,
       image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=240&auto=format&fit=crop&q=80',
@@ -133,13 +130,13 @@ const DEMO_REGISTRY: Record<DemoTier, DemoRegistryItem[]> = {
     },
     {
       id: 'shades',
-      name: 'Sunglasses',
+      name: 'Shades',
       price: 95,
       image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=240&auto=format&fit=crop&q=80',
     },
     {
       id: 'camera',
-      name: '35mm Film Cam',
+      name: 'Camera',
       price: 190,
       image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=240&auto=format&fit=crop&q=80',
     },
@@ -153,7 +150,7 @@ const SparklineSvg: React.FC<{
 }> = ({ path, color, dot }) => {
   const id = useId().replace(/:/g, '')
   return (
-    <svg viewBox="0 0 100 50" className="w-[5.2rem] h-[2.6rem] overflow-visible" fill="none" aria-hidden="true">
+    <svg viewBox="0 0 100 50" className="w-[4rem] h-[2rem] overflow-visible shrink-0" fill="none" aria-hidden="true">
       <defs>
         <linearGradient id={`fade-${id}`} x1="0" x2="1" y1="0" y2="0">
           <stop offset="0" stopColor={color} stopOpacity="0" />
@@ -163,9 +160,9 @@ const SparklineSvg: React.FC<{
         </linearGradient>
       </defs>
       <path d={path} stroke={`url(#fade-${id})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={dot[0]} cy={dot[1]} r="5.5" fill={color} opacity="0.3" />
-      <circle cx={dot[0]} cy={dot[1]} r="2.6" fill={color} />
-      <circle cx={dot[0]} cy={dot[1]} r="1.1" fill="#ffffff" />
+      <circle cx={dot[0]} cy={dot[1]} r="5" fill={color} opacity="0.28" />
+      <circle cx={dot[0]} cy={dot[1]} r="2.4" fill={color} />
+      <circle cx={dot[0]} cy={dot[1]} r="1" fill="#ffffff" />
     </svg>
   )
 }
@@ -175,54 +172,33 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
   const [bills, setBills] = useState<DemoBill[]>(INITIAL_BILLS)
   const [tier, setTier] = useState<DemoTier>('future')
   const [mounted, setMounted] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
 
-  // Animate values from 0 -> target on mount
   useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 120)
+    const timer = setTimeout(() => setMounted(true), 80)
     return () => clearTimeout(timer)
   }, [])
 
-  // Gentle live demo pulse when not hovered: toggles the $40 Gym bill every 4.5s so visitors see live numbers & bars animate
-  useEffect(() => {
-    if (isHovered) return
-    const interval = setInterval(() => {
-      setBills((prev) =>
-        prev.map((b) => (b.id === 'gym' ? { ...b, paid: !b.paid } : b))
-      )
-    }, 4500)
-    return () => clearInterval(interval)
-  }, [isHovered])
-
   const cur = CURRENCY_MAP[currency]
-
-  const cycleCurrency = () => {
-    const idx = CURRENCY_ORDER.indexOf(currency)
-    setCurrency(CURRENCY_ORDER[(idx + 1) % CURRENCY_ORDER.length])
-  }
 
   const toggleBill = (id: string) => {
     setBills((prev) => prev.map((b) => (b.id === id ? { ...b, paid: !b.paid } : b)))
   }
 
-  // Coherent, logical monthly math (in USD base)
   const baseMonthlyIncome = 3200
-  const baseOtherPaidBills = 90 // Mobile $35 + Cloud/Tools $55 already paid
+  const baseOtherPaidBills = 90
   const baseDailySpentSoFar = 650
 
   const unpaidTotal = bills.filter((b) => !b.paid).reduce((s, b) => s + b.amount, 0)
   const paidBillsTotal = bills.filter((b) => b.paid).reduce((s, b) => s + b.amount, 0) + baseOtherPaidBills
 
-  // Gross balance adjusts when a bill is marked paid
-  const baseGrossBalance = 3200 - paidBillsTotal - baseDailySpentSoFar // $2,465 when Elec($95)+Other($90) paid
-  const baseTotalSaved = 750 // Emergency Buffer ($450) + Work Monitor ($210) + Winter Travel ($90)
-  const baseNetSpendable = baseGrossBalance - baseTotalSaved // $1,715
+  const baseGrossBalance = 3200 - paidBillsTotal - baseDailySpentSoFar
+  const baseTotalSaved = 750
+  const baseNetSpendable = baseGrossBalance - baseTotalSaved
 
-  const baseTotalExpenses = paidBillsTotal + unpaidTotal + baseDailySpentSoFar // $1,490
+  const baseTotalExpenses = paidBillsTotal + unpaidTotal + baseDailySpentSoFar
   const baseMonthlyLimit = 2450
   const usedLimitPct = mounted ? Math.min(100, Math.round((baseTotalExpenses / baseMonthlyLimit) * 100)) : 0
 
-  // Converted values
   const grossVal = mounted ? baseGrossBalance * cur.rate : 0
   const savedVal = mounted ? baseTotalSaved * cur.rate : 0
   const netVal = mounted ? baseNetSpendable * cur.rate : 0
@@ -257,34 +233,32 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
 
   return (
     <div
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      data-ui="app-frame"
+      role="region"
+      aria-label="Interactive Dakhli application workspace"
       className={cn(
-        'w-full rounded-[1.5rem] bg-[#111215] text-white border border-stone-300/90 shadow-[0_28px_70px_-15px_rgba(28,25,23,0.32)] overflow-hidden flex select-none font-sans',
+        'showcase-dark w-full rounded-2xl bg-[#111215] text-white border border-stone-300 shadow-[0_24px_56px_-14px_rgba(28,25,23,0.28)] overflow-hidden flex select-none font-sans',
         className
       )}
     >
-      {/* ================= LEFT SIDEBAR (Matches Real App) ================= */}
-      <aside className="hidden lg:flex w-[12.5rem] shrink-0 flex-col justify-between pl-4 pr-3.5 pt-5 pb-4 border-r border-white/[0.04]">
+      {/* Left Sidebar (Desktop lg+) */}
+      <aside className="hidden lg:flex w-[11.5rem] shrink-0 flex-col justify-between px-3.5 py-4 border-r border-white/[0.06]">
         <div>
-          {/* Brand */}
-          <div className="flex items-center gap-2.5 h-7 pl-1">
+          <div className="flex items-center gap-2 h-7 pl-1">
             <div className="w-6 h-6 rounded-md bg-white/10 border border-white/15 flex items-center justify-center font-serif text-xs font-semibold text-white">
               د
             </div>
-            <span className="text-[1.05rem] leading-none font-semibold tracking-tight text-white">
+            <span className="text-[15px] leading-none font-semibold tracking-tight text-white">
               Dakhli
             </span>
           </div>
 
-          {/* Search */}
-          <div className="mt-5 relative flex items-center h-8 rounded-[0.65rem] bg-[#1b1b1b] px-2.5 gap-2">
-            <Search className="w-3.5 h-3.5 text-[#6f6f6f]" />
-            <span className="text-[0.75rem] text-[#777]">Search</span>
+          <div className="mt-4 flex items-center h-8 rounded-lg bg-[#1b1c22] px-2.5 gap-2 border border-white/[0.05]">
+            <Search className="w-3.5 h-3.5 text-zinc-400" aria-hidden="true" />
+            <span className="text-xs text-zinc-400">Search</span>
           </div>
 
-          {/* Navigation */}
-          <nav className="mt-5 flex flex-col gap-1">
+          <div className="mt-4 flex flex-col gap-1">
             {[
               { name: 'Dashboard', icon: Home, active: true },
               { name: 'Overheads', icon: Layers, active: false },
@@ -297,238 +271,234 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
                 <div
                   key={nav.name}
                   className={cn(
-                    'flex items-center gap-2.5 h-8 px-2.5 rounded-[0.55rem] text-[0.76rem] transition-colors',
+                    'flex items-center gap-2.5 h-8 px-2.5 rounded-lg text-xs',
                     nav.active
-                      ? 'bg-[#1f1f1f] text-white font-medium shadow-xs'
-                      : 'text-[#a8a8a8]'
+                      ? 'bg-[#22242c] text-white font-medium'
+                      : 'text-zinc-400'
                   )}
                 >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  <span className="truncate">{nav.name}</span>
+                  <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                  <span>{nav.name}</span>
                 </div>
               )
             })}
-          </nav>
+          </div>
         </div>
 
-        {/* Bottom User Profile */}
-        <div className="flex items-center gap-2.5 p-1.5 rounded-xl bg-[#16171C] border border-white/[0.05]">
-          <div className="w-7 h-7 rounded-full bg-[#22242D] flex items-center justify-center text-[#9ca3af] shrink-0">
-            <UserIcon className="w-3.5 h-3.5" />
+        {/* Bottom User Meta */}
+        <div className="flex items-center gap-2.5 p-2 rounded-xl bg-[#18191f] border border-white/[0.06]">
+          <div className="w-7 h-7 rounded-full bg-[#242630] flex items-center justify-center text-zinc-300 shrink-0">
+            <UserIcon className="w-3.5 h-3.5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <p className="text-[0.74rem] font-medium text-white leading-tight truncate">
-              Omar K.
-            </p>
-            <p className="text-[0.64rem] text-[#70727a] leading-tight truncate">
-              Payday: 25th
-            </p>
+            <span className="block text-xs font-medium text-white leading-tight">Omar K.</span>
+            <span className="block text-[11px] text-zinc-400 leading-tight mt-0.5">Payday: 25th</span>
           </div>
         </div>
       </aside>
 
-      {/* ================= MAIN DASHBOARD WORKSPACE ================= */}
-      <div className="flex-1 min-w-0 p-4 sm:p-5 flex flex-col gap-3.5">
-        {/* Top Header Row */}
-        <div className="flex items-center justify-between gap-2">
+      {/* Main Workspace Canvas */}
+      <div className="flex-1 min-w-0 p-3.5 sm:p-5 flex flex-col gap-3.5">
+        {/* Top Workspace Header */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
           <div>
-            <h2 className="text-base sm:text-lg font-semibold tracking-tight text-white leading-none">
-              Hello, Omar!
-            </h2>
-            <p className="text-[0.68rem] text-[#8d8d8d] mt-1 font-mono">
-              Cycle: 25 Oct – 24 Nov • 16 days remaining
-            </p>
+            <span className="block text-sm sm:text-base font-semibold tracking-tight text-white leading-tight">
+              Hello, Omar
+            </span>
+            <span className="block text-[11px] text-zinc-400 mt-0.5 font-mono">
+              Payday Cycle: 25 Oct – 24 Nov · 16 days remaining
+            </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={cycleCurrency}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#1E2028] hover:bg-[#272A35] border border-white/10 text-[0.72rem] font-mono text-white transition-all active:scale-95 cursor-pointer"
-              title="Click to switch currency"
-            >
-              <span className="text-[#E5A855] font-semibold">{cur.code}</span>
-              <span className="text-white/50">↻</span>
-            </button>
-
-            <div className="hidden sm:flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#212121] text-[0.72rem] font-medium text-white">
-              <Calendar className="w-3.5 h-3.5 text-[#cfcfcf]" />
-              <span>November 2026</span>
-            </div>
+          <div
+            role="tablist"
+            aria-label="Workspace currency"
+            className="inline-flex items-center rounded-lg bg-[#1A1C22] p-0.5 border border-white/10"
+          >
+            {(['USD', 'EUR', 'SOS'] as const).map((code) => (
+              <button
+                key={code}
+                type="button"
+                role="tab"
+                aria-selected={currency === code}
+                onClick={() => setCurrency(code)}
+                className={cn(
+                  'min-h-[44px] sm:min-h-[30px] px-2.5 rounded-md text-[11px] font-mono transition-colors cursor-pointer',
+                  currency === code
+                    ? 'bg-[#2c303c] text-[#E5A855] font-semibold'
+                    : 'text-zinc-400 hover:text-white'
+                )}
+              >
+                {code}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Dashboard 2-Column Grid */}
-        <div className="grid gap-3 lg:grid-cols-[477fr_236fr] items-stretch">
+        {/* Main 2-Column Dashboard Grid */}
+        <div className="grid gap-3.5 lg:grid-cols-[1.52fr_1fr] items-stretch">
           {/* LEFT AREA */}
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3.5">
             {/* TOP ROW: Liquidity Summary + Overhead Bills */}
-            <div className="grid gap-3 sm:grid-cols-[251fr_214fr] items-stretch">
-              {/* 1. Liquidity Summary Card */}
-              <div className="rounded-[1.15rem] bg-[#17181D] p-4 flex flex-col justify-between gap-3.5 border border-white/[0.04]">
+            <div className="grid gap-3.5 sm:grid-cols-[1.12fr_1fr] items-stretch">
+              {/* 1. Liquidity Summary */}
+              <div className="rounded-xl bg-[#17181D] p-4 flex flex-col justify-between gap-3 border border-white/[0.06]">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[0.74rem] text-white/90">Liquidity Summary</span>
-                    <button
-                      type="button"
-                      onClick={cycleCurrency}
-                      className="px-2 py-0.5 rounded-md bg-[#22242D] hover:bg-[#2B2E3A] border border-white/[0.08] text-[0.65rem] font-mono text-[#E5A855] font-semibold cursor-pointer transition-colors"
-                    >
+                    <span className="text-xs font-medium text-zinc-200">Liquidity Summary</span>
+                    <span className="text-[11px] font-mono text-[#E5A855] font-medium">
                       {cur.code}
-                    </button>
+                    </span>
                   </div>
 
-                  <div className="mt-2.5 flex items-baseline gap-1 font-mono tabular-nums">
-                    <span className="text-xs text-[#8d8d8d]">{cur.symbol}</span>
-                    <span className="text-2xl sm:text-[1.75rem] font-semibold tracking-tight text-white">
+                  <div className="mt-2 flex items-baseline gap-1 font-mono tabular-nums">
+                    <span className="text-xs text-zinc-400">{cur.symbol}</span>
+                    <span className="text-2xl font-semibold tracking-tight text-white">
                       <AnimatedNumber value={grossVal} formatOptions={numFormat} />
                     </span>
                   </div>
-                  <p className="mt-0.5 text-[0.68rem] text-[#979797]">
-                    Gross Balance (After Paid Bills)
-                  </p>
+                  <span className="block mt-0.5 text-[11px] text-zinc-400">
+                    Gross balance after paid bills
+                  </span>
                 </div>
 
-                {/* Total Saved & Net Spendable */}
-                <div className="grid grid-cols-2 gap-3 pt-1 border-t border-white/[0.05]">
+                <div className="grid grid-cols-2 gap-3 pt-2.5 border-t border-white/[0.06]">
                   <div>
-                    <div className="text-[0.88rem] font-mono font-medium text-white tabular-nums flex items-center gap-0.5">
+                    <div className="text-sm font-mono font-medium text-white tabular-nums flex items-center gap-0.5">
                       <span>{cur.symbol}</span>
                       <AnimatedNumber value={savedVal} formatOptions={numFormat} />
                     </div>
-                    <p className="text-[0.66rem] text-[#979797]">Total Saved</p>
+                    <span className="block text-[11px] text-zinc-400">Locked Saved</span>
                   </div>
                   <div>
-                    <div className="text-[0.88rem] font-mono font-semibold text-[#aee69a] tabular-nums flex items-center gap-0.5">
+                    <div className="text-sm font-mono font-semibold text-[#86efac] tabular-nums flex items-center gap-0.5">
                       <span>{cur.symbol}</span>
                       <AnimatedNumber value={netVal} formatOptions={numFormat} />
                     </div>
-                    <p className="text-[0.66rem] text-[#979797]">Net Spendable</p>
+                    <span className="block text-[11px] text-zinc-400">Net Spendable</span>
                   </div>
                 </div>
 
-                {/* Active Daily Cap Pill */}
-                <div className="border-gradient-highlight rounded-[0.8rem] px-3 py-2 flex items-center justify-between">
-                  <div className="min-w-0">
-                    <span className="block text-[0.72rem] font-medium text-[#aee69a] leading-tight">
-                      Active • Daily Cap On Track
+                <div className="rounded-lg bg-[#1c231e] border border-emerald-500/25 px-3 py-2 flex items-center justify-between">
+                  <div>
+                    <span className="block text-xs font-medium text-[#86efac] leading-tight">
+                      Daily cap on track
                     </span>
-                    <p className="text-[0.63rem] text-[#b0b0b0] font-mono truncate mt-0.5">
-                      Today: {cur.symbol}
+                    <span className="block text-[11px] text-zinc-300 font-mono mt-0.5">
+                      {cur.symbol}
                       {Math.round(18.5 * cur.rate).toLocaleString()} / {cur.symbol}
-                      {Math.round(45 * cur.rate).toLocaleString()} cap
-                    </p>
+                      {Math.round(45 * cur.rate).toLocaleString()} today
+                    </span>
                   </div>
-                  <span className="w-2 h-2 rounded-full bg-[#4ADE80] animate-pulse shrink-0" />
+                  <span className="w-2 h-2 rounded-full bg-[#4ADE80] shrink-0" aria-hidden="true" />
                 </div>
               </div>
 
-              {/* 2. Overhead Bills Card */}
-              <div className="rounded-[1.15rem] bg-overhead-warm p-4 flex flex-col justify-between gap-3">
+              {/* 2. Overhead Bills */}
+              <div className="hidden sm:flex rounded-xl bg-overhead-warm p-4 flex-col justify-between gap-2.5 text-stone-900">
                 <div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[0.74rem] text-white/95 font-medium">Overhead Bills</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-white/70" />
+                    <span className="text-xs font-semibold text-stone-950">Overhead Bills</span>
+                    <ChevronRight className="w-3.5 h-3.5 text-stone-900" aria-hidden="true" />
                   </div>
-                  <p className="mt-2 text-[0.74rem] text-white/90">This Cycle</p>
 
-                  <div className="mt-1.5 flex items-start gap-5 font-mono tabular-nums">
+                  <div className="mt-2 flex items-start gap-5 font-mono tabular-nums">
                     <div>
-                      <div className="text-[1.15rem] leading-tight font-semibold text-white">
+                      <div className="text-lg leading-tight font-bold text-stone-950">
                         <AnimatedNumber value={unpaidVal} prefix={cur.symbol} formatOptions={numFormat} />
                       </div>
-                      <p className="text-[0.65rem] text-white/75 font-sans">Unpaid</p>
+                      <span className="block text-[11px] font-sans font-medium text-stone-800">Unpaid</span>
                     </div>
                     <div>
-                      <div className="text-[1.15rem] leading-tight font-semibold text-white">
+                      <div className="text-lg leading-tight font-bold text-stone-950">
                         <AnimatedNumber value={paidVal} prefix={cur.symbol} formatOptions={numFormat} />
                       </div>
-                      <p className="text-[0.65rem] text-white/75 font-sans">Paid</p>
+                      <span className="block text-[11px] font-sans font-medium text-stone-800">Paid</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Frosted Quick Items */}
-                <div className="bg-quick-items-frosted rounded-[0.8rem] px-3 py-2.5">
-                  <h4 className="text-[0.72rem] font-medium text-[#1c1c1c]">Fixed Monthly</h4>
-                  <ul className="mt-1.5 flex flex-col gap-1">
-                    <li className="flex items-center justify-between text-[0.7rem] text-[#1c1c1c]">
-                      <span className="flex items-center gap-1.5">
-                        <Home className="w-3 h-3" strokeWidth={1.8} />
-                        Apartment Rent
+                <div className="border-t border-stone-950/15 pt-2.5">
+                  <ul className="flex flex-col gap-1.5">
+                    <li className="flex items-center justify-between text-xs text-stone-900">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <Home className="w-3 h-3" strokeWidth={2} aria-hidden="true" />
+                        Rent
                       </span>
-                      <span className="font-mono font-medium">{cur.symbol}{Math.round(550 * cur.rate).toLocaleString()}</span>
+                      <span className="font-mono font-semibold">
+                        {cur.symbol}
+                        {Math.round(550 * cur.rate).toLocaleString()}
+                      </span>
                     </li>
-                    <li className="flex items-center justify-between text-[0.7rem] text-[#1c1c1c]">
-                      <span className="flex items-center gap-1.5">
-                        <Wifi className="w-3 h-3" strokeWidth={1.8} />
-                        Fiber Internet
+                    <li className="flex items-center justify-between text-xs text-stone-900">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <Wifi className="w-3 h-3" strokeWidth={2} aria-hidden="true" />
+                        Fiber
                       </span>
-                      <span className="font-mono font-medium">{cur.symbol}{Math.round(65 * cur.rate).toLocaleString()}</span>
+                      <span className="font-mono font-semibold">
+                        {cur.symbol}
+                        {Math.round(65 * cur.rate).toLocaleString()}
+                      </span>
                     </li>
-                    <li className="flex items-center justify-between text-[0.7rem] text-[#1c1c1c]">
-                      <span className="flex items-center gap-1.5">
-                        <Dumbbell className="w-3 h-3" strokeWidth={1.8} />
-                        Gym Membership
+                    <li className="flex items-center justify-between text-xs text-stone-900">
+                      <span className="flex items-center gap-1.5 font-medium">
+                        <Dumbbell className="w-3 h-3" strokeWidth={2} aria-hidden="true" />
+                        Gym
                       </span>
-                      <span className="font-mono font-medium">{cur.symbol}{Math.round(40 * cur.rate).toLocaleString()}</span>
+                      <span className="font-mono font-semibold">
+                        {cur.symbol}
+                        {Math.round(40 * cur.rate).toLocaleString()}
+                      </span>
                     </li>
                   </ul>
                 </div>
               </div>
             </div>
 
-            {/* BOTTOM ROW: Saving Plan + Cash Flow */}
-            <div className="grid gap-3 sm:grid-cols-[197fr_267fr] items-stretch">
-              {/* 3. Saving Plan Card */}
-              <div className="rounded-[1.15rem] bg-[#17181D] p-4 flex flex-col justify-between gap-3 border border-white/[0.04]">
+            {/* BOTTOM ROW: Saving Plans + Cash Flow */}
+            <div className="hidden md:grid gap-3.5 sm:grid-cols-[0.88fr_1.12fr] items-stretch">
+              {/* 3. Saving Plans */}
+              <div className="rounded-xl bg-[#17181D] p-4 flex flex-col justify-between gap-2.5 border border-white/[0.06]">
                 <div className="flex items-center justify-between">
-                  <span className="text-[0.76rem] text-white font-medium">Saving Plans</span>
-                  <span className="text-[0.65rem] font-mono text-[#8d8d8d]">
-                    {cur.symbol}{Math.round(750 * cur.rate).toLocaleString()} locked
+                  <span className="text-xs text-white font-medium">Saving Plans</span>
+                  <span className="text-[11px] font-mono text-zinc-300">
+                    {cur.symbol}
+                    {Math.round(750 * cur.rate).toLocaleString()} locked
                   </span>
                 </div>
 
                 <div className="flex-1 flex flex-col justify-between gap-2.5">
-                  {savePlans.map((plan, idx) => (
-                    <React.Fragment key={plan.id}>
-                      {idx > 0 && <div className="h-px bg-white/[0.05]" />}
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[0.75rem] font-medium text-white truncate">
-                            {plan.name}
-                          </span>
-                          <span className="text-[0.66rem] font-mono text-[#8d8d8d]">
-                            {plan.pct}%
-                          </span>
-                        </div>
-                        <div className="mt-1.5">
-                          <SegmentedTicks percentage={plan.pct} tickHeight="1.9rem" />
-                        </div>
+                  {savePlans.map((plan) => (
+                    <div key={plan.id}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-medium text-zinc-100">{plan.name}</span>
+                        <span className="text-[11px] font-mono text-zinc-300">{plan.pct}%</span>
                       </div>
-                    </React.Fragment>
+                      <div className="mt-1">
+                        <SegmentedTicks percentage={plan.pct} tickHeight="1.15rem" />
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
 
-              {/* 4. Cash Flow Card */}
-              <div className="rounded-[1.15rem] bg-[#17181D] p-4 flex flex-col justify-between gap-3 border border-white/[0.04]">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[0.88rem] font-medium text-white">Cash Flow</h3>
-                  <div className="flex items-center gap-1 h-1.5">
-                    <span className="block w-5 h-full rounded-full bg-gradient-to-r from-[#A7F3D0] to-[#67E8F9]" />
-                    <span className="block w-4 h-full rounded-full bg-[#2C2E38]" />
-                  </div>
+              {/* 4. Cash Flow */}
+              <div className="rounded-xl bg-[#17181D] p-4 flex flex-col justify-between gap-2.5 border border-white/[0.06]">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-white">Cash Flow</span>
+                  <span className="px-2 py-0.5 rounded-md bg-white text-stone-950 text-[11px] font-mono font-bold tabular-nums">
+                    +{cur.symbol}
+                    <AnimatedNumber value={cashFlowNetVal} formatOptions={intFormat} /> net
+                  </span>
                 </div>
 
-                {/* Income & Expenses with Net Pill */}
-                <div className="relative flex flex-col gap-1.5">
-                  <div className="h-[3.6rem] rounded-xl bg-[#1E2028] px-3.5 py-2 flex items-center justify-between">
+                <div className="flex flex-col gap-1.5">
+                  <div className="rounded-lg bg-[#1E2028] px-3 py-2 flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-[0.68rem] text-[#8E92A0]">Monthly Income</p>
-                      <p className="mt-0.5 text-[1.1rem] font-mono font-semibold text-white tabular-nums">
+                      <span className="block text-[11px] text-zinc-300">Monthly Income</span>
+                      <span className="block text-sm font-mono font-semibold text-white tabular-nums">
                         <AnimatedNumber value={incomeVal} prefix={cur.symbol} formatOptions={intFormat} />
-                      </p>
+                      </span>
                     </div>
                     <SparklineSvg
                       path="M 0,38 C 12,38 18,44 26,42 C 34,40 38,12 48,8 C 55,5 57,20 63,20 C 69,20 73,15 80,18 C 88,22 93,36 100,40"
@@ -537,12 +507,12 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
                     />
                   </div>
 
-                  <div className="h-[3.6rem] rounded-xl bg-[#1E2028] px-3.5 py-2 flex items-center justify-between">
+                  <div className="rounded-lg bg-[#1E2028] px-3 py-2 flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-[0.68rem] text-[#8E92A0]">Committed + Spent</p>
-                      <p className="mt-0.5 text-[1.1rem] font-mono font-semibold text-white tabular-nums">
+                      <span className="block text-[11px] text-zinc-300">Committed + Spent</span>
+                      <span className="block text-sm font-mono font-semibold text-white tabular-nums">
                         <AnimatedNumber value={expensesVal} prefix={cur.symbol} formatOptions={intFormat} />
-                      </p>
+                      </span>
                     </div>
                     <SparklineSvg
                       path="M 0,30 C 8,30 14,22 24,20 C 34,18 38,36 48,38 C 58,40 64,18 74,18 C 84,18 88,38 100,32"
@@ -550,26 +520,19 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
                       dot={[74, 18]}
                     />
                   </div>
-
-                  {/* Floating Net Pill */}
-                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 h-6 px-2.5 rounded-full bg-white text-[#15161A] text-[0.68rem] font-mono font-bold flex items-center justify-center shadow-md tabular-nums">
-                    +{cur.symbol}
-                    <AnimatedNumber value={cashFlowNetVal} formatOptions={intFormat} />
-                  </div>
                 </div>
 
-                {/* Expenses Limit Bar */}
                 <div>
                   <div className="flex items-baseline justify-between">
-                    <span className="text-[0.72rem] text-[#8E92A0]">Cycle Spend Limit</span>
-                    <span className="text-[1rem] font-mono font-semibold text-white tabular-nums">
+                    <span className="text-[11px] text-zinc-300">Cycle Spend Limit</span>
+                    <span className="text-xs font-mono font-semibold text-white tabular-nums">
                       <AnimatedNumber value={limitVal} prefix={cur.symbol} formatOptions={intFormat} />
                     </span>
                   </div>
-                  <div className="relative mt-1.5 w-full h-7">
-                    <div className="absolute inset-0 rounded-xl overflow-hidden bg-limit-hatch" />
+                  <div className="relative mt-1.5 w-full h-4">
+                    <div className="absolute inset-0 rounded-md overflow-hidden bg-limit-hatch" />
                     <div
-                      className="relative h-full rounded-xl bg-expenses-neon transition-all duration-700 ease-out"
+                      className="relative h-full rounded-md bg-expenses-neon transition-all duration-700 ease-out"
                       style={{ width: `${usedLimitPct}%` }}
                     />
                   </div>
@@ -578,45 +541,48 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Upcoming Overhead + Item Registry */}
-          <div className="flex flex-col gap-3">
-            {/* 5. Upcoming Overhead (Interactive Click-to-Pay) */}
-            <div className="rounded-[1.15rem] bg-[#17181D] p-4 flex flex-col justify-between gap-2.5 border border-white/[0.04]">
+          {/* RIGHT COLUMN (Interactive Bills + Item Registry shown at >= 1024px) */}
+          <div className="hidden lg:flex flex-col gap-3.5">
+            {/* 5. Interactive Bills */}
+            <div className="rounded-xl bg-[#17181D] p-4 flex flex-col justify-between gap-2 border border-white/[0.06]">
               <div className="flex items-center justify-between">
-                <span className="text-[0.78rem] text-white font-medium">Upcoming Overhead</span>
-                <span className="text-[0.62rem] font-mono text-[#E5A855]">Click bill to toggle</span>
+                <span className="text-xs text-white font-medium">Upcoming Overhead</span>
+                <span className="text-[11px] font-mono text-[#E5A855]">Click to toggle</span>
               </div>
 
-              <ul className="mt-1 flex flex-col gap-2.5">
+              <ul className="mt-1 flex flex-col gap-1">
                 {bills.map((bill) => {
                   const Icon = BILL_ICONS[bill.icon]
                   return (
-                    <li
-                      key={bill.id}
-                      onClick={() => toggleBill(bill.id)}
-                      className="flex items-center gap-2.5 p-1.5 -mx-1.5 rounded-lg hover:bg-white/[0.04] transition-colors cursor-pointer"
-                    >
-                      <span className="w-7 h-7 shrink-0 rounded-lg bg-[#222530] flex items-center justify-center text-[#c9c9c9]">
-                        <Icon className="w-3.5 h-3.5" strokeWidth={1.7} />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[0.76rem] font-medium text-white truncate leading-tight">
-                          {bill.name}
-                        </p>
-                        <p className="text-[0.62rem] text-[#8d8d8d] leading-tight mt-0.5">
-                          Due {bill.date}
-                        </p>
-                      </div>
-                      {bill.paid ? (
-                        <span className="w-5 h-5 rounded-full bg-[#4ADE80]/20 text-[#4ADE80] border border-[#4ADE80]/40 flex items-center justify-center">
-                          <Check className="w-3 h-3" strokeWidth={2.8} />
+                    <li key={bill.id}>
+                      <button
+                        type="button"
+                        onClick={() => toggleBill(bill.id)}
+                        aria-pressed={bill.paid}
+                        className="w-full flex items-center gap-2.5 min-h-[38px] px-2 rounded-lg hover:bg-white/[0.06] transition-colors cursor-pointer text-left"
+                      >
+                        <span className="w-6 h-6 shrink-0 rounded-md bg-[#232632] flex items-center justify-center text-zinc-200">
+                          <Icon className="w-3.5 h-3.5" strokeWidth={1.7} aria-hidden="true" />
                         </span>
-                      ) : (
-                        <span className="text-[0.8rem] font-mono font-semibold text-white tabular-nums">
-                          {cur.symbol}
-                          {Math.round(bill.amount * cur.rate).toLocaleString()}
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-xs font-medium text-white leading-tight">
+                            {bill.name}
+                          </span>
+                          <span className="block text-[11px] text-zinc-400 leading-tight mt-0.5">
+                            Due {bill.date}
+                          </span>
                         </span>
-                      )}
+                        {bill.paid ? (
+                          <span className="w-5 h-5 rounded-full bg-[#4ADE80]/20 text-[#86efac] border border-[#4ADE80]/40 flex items-center justify-center shrink-0">
+                            <Check className="w-3 h-3" strokeWidth={2.6} aria-hidden="true" />
+                          </span>
+                        ) : (
+                          <span className="text-xs font-mono font-semibold text-white tabular-nums shrink-0">
+                            {cur.symbol}
+                            {Math.round(bill.amount * cur.rate).toLocaleString()}
+                          </span>
+                        )}
+                      </button>
                     </li>
                   )
                 })}
@@ -624,30 +590,31 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
             </div>
 
             {/* 6. 3-Tier Item Registry */}
-            <div className="rounded-[1.15rem] bg-[#17181D] p-4 flex flex-col justify-between gap-2.5 flex-1 border border-white/[0.04]">
+            <div className="rounded-xl bg-[#17181D] p-4 flex flex-col justify-between gap-2.5 flex-1 border border-white/[0.06]">
               <div className="flex items-center justify-between">
-                <span className="text-[0.78rem] text-white font-medium">Item Registry</span>
-                <ChevronRight className="w-3.5 h-3.5 text-white/40" />
+                <span className="text-xs text-white font-medium">Item Registry</span>
+                <span className="text-[11px] font-mono text-zinc-400">3 tiers</span>
               </div>
 
-              {/* Tier Tabs */}
-              <div className="flex items-center gap-1.5">
+              <div role="tablist" aria-label="Registry priority tiers" className="grid grid-cols-3 gap-1.5">
                 {(
                   [
                     { key: 'essentials', label: 'Essentials' },
-                    { key: 'future', label: 'Future Needs' },
+                    { key: 'future', label: 'Future' },
                     { key: 'wants', label: 'Wants' },
                   ] as const
                 ).map((t) => (
                   <button
                     key={t.key}
                     type="button"
+                    role="tab"
+                    aria-selected={tier === t.key}
                     onClick={() => setTier(t.key)}
                     className={cn(
-                      'px-2.5 py-1 rounded-full text-[0.66rem] font-medium transition-colors cursor-pointer',
+                      'min-h-[32px] px-2 rounded-md text-[11px] font-medium transition-colors cursor-pointer',
                       tier === t.key
-                        ? 'bg-[#303030] text-white'
-                        : 'text-[#a0a0a0] border border-white/10 hover:text-white'
+                        ? 'bg-[#2c2f3b] text-white border border-white/20'
+                        : 'bg-[#1a1c24] text-zinc-300 border border-white/10 hover:text-white'
                     )}
                   >
                     {t.label}
@@ -655,32 +622,31 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
                 ))}
               </div>
 
-              {/* 4 Registry Item Tiles */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="grid grid-cols-2 gap-2">
                 {DEMO_REGISTRY[tier].map((item) => {
                   const pct = item.saved ? Math.round((item.saved / item.price) * 100) : 0
                   return (
                     <div
                       key={item.id}
-                      className="rounded-xl bg-[#1E2028] p-2 flex items-center gap-2 border border-white/[0.04]"
+                      className="rounded-lg bg-[#1A1C23] p-2 flex items-center gap-2 border border-white/[0.06]"
                     >
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-8 h-8 rounded-lg object-cover shrink-0 bg-[#252830]"
+                        className="w-8 h-8 rounded-md object-cover shrink-0 bg-[#252830]"
                         loading="lazy"
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[0.68rem] font-medium text-white truncate leading-tight">
+                        <span className="block text-[11px] font-medium text-white leading-tight">
                           {item.name}
-                        </p>
-                        <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[0.62rem] font-mono text-[#9ca3af]">
+                        </span>
+                        <div className="flex items-center justify-between gap-1 mt-0.5">
+                          <span className="text-[11px] font-mono text-zinc-300">
                             {cur.symbol}
                             {Math.round(item.price * cur.rate).toLocaleString()}
                           </span>
                           {pct > 0 && (
-                            <span className="text-[0.58rem] font-mono text-[#aee69a]">
+                            <span className="text-[10px] font-mono text-[#86efac]">
                               {pct}%
                             </span>
                           )}

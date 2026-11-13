@@ -29,19 +29,19 @@ const STATUS_STYLES: Record<DailyStatus, { bg: string; text: string; border: str
     bg: 'bg-[#132E27]',
     text: 'text-[#4ADE80]',
     border: 'border-[#4ADE80]/20',
-    label: 'under_budget',
+    label: 'Recorded',
   },
   over_budget: {
     bg: 'bg-[#2E1818]',
     text: 'text-[#FA8C68]',
     border: 'border-[#FA8C68]/20',
-    label: 'over_budget',
+    label: 'Recorded',
   },
   on_budget: {
     bg: 'bg-[#182622]',
     text: 'text-[#6EE7B7]',
     border: 'border-[#6EE7B7]/20',
-    label: 'on_budget',
+    label: 'Recorded',
   },
 }
 
@@ -54,6 +54,7 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
   className,
 }) => {
   const store = useLiquidityStore()
+  const isMasked = usePrivacyStore((state) => state.isMasked)
   const currentCode = (store.currency in CURRENCY_CONFIGS ? store.currency : 'USD') as CurrencyCode
   const config = CURRENCY_CONFIGS[currentCode]
   const rate = config.rate ?? 1
@@ -86,8 +87,6 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
   const convertedCap = cap * rate
   const convertedSpend = spent * rate
   const convertedDelta = savedDelta * rate
-
-  const isMasked = usePrivacyStore((state) => state.isMasked)
 
   const formatMoney = (n: number) => {
     if (isMasked) {
@@ -125,16 +124,16 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
         }
       }}
       className={cn(
-        'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] border border-white/[0.03] hover:border-white/[0.12] transition-all px-6 py-5 select-none cursor-pointer flex flex-col gap-3',
+        'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] border border-white/[0.03] hover:border-white/[0.12] transition-all px-4 py-4 sm:px-6 sm:py-5 select-none cursor-pointer flex flex-col gap-3',
         className
       )}
     >
       {/* Top Row: Status badge, Planned, Actual, Net Variance */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-2 sm:gap-4">
         {/* Status Pill Badge */}
         <div
           className={cn(
-            'inline-flex items-center px-3 py-1 rounded-full text-[0.78rem] font-medium border tracking-tight shrink-0',
+            'inline-flex items-center px-2.5 sm:px-3 py-1 rounded-full text-[0.72rem] sm:text-[0.78rem] font-medium border tracking-tight shrink-0',
             style.bg,
             style.text,
             style.border
@@ -144,19 +143,19 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
         </div>
 
         {/* Figures Group */}
-        <div className="flex items-center gap-6 sm:gap-10">
+        <div className="flex items-center gap-3 sm:gap-6 lg:gap-10">
           {/* Planned Cap */}
-          <span className="text-[1.25rem] font-semibold text-white tracking-tight">
+          <span className="text-[1.05rem] sm:text-[1.25rem] font-semibold text-white tracking-tight">
             {config.symbol}{formatMoney(convertedCap)}
           </span>
 
           {/* Actual Spend */}
-          <span className="text-[1.25rem] font-semibold text-white tracking-tight">
+          <span className="text-[1.05rem] sm:text-[1.25rem] font-semibold text-white tracking-tight">
             {config.symbol}{formatMoney(convertedSpend)}
           </span>
 
           {/* Net Variance */}
-          <span className={cn('text-[1.25rem] font-semibold tracking-tight', varianceColor)}>
+          <span className={cn('text-[1.05rem] sm:text-[1.25rem] font-semibold tracking-tight', varianceColor)}>
             {varianceFormatted}
           </span>
 

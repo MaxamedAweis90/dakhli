@@ -55,7 +55,7 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
     >
       <form
         onSubmit={handleSubmit}
-        className="rounded-[calc(1.25rem-1.5px)] bg-[#17181D] px-6 py-5 select-none flex flex-col gap-4"
+        className="rounded-[calc(1.25rem-1.5px)] bg-[#17181D] px-4 py-4 sm:px-6 sm:py-5 select-none flex flex-col gap-4"
       >
         {/* Header Row */}
         <div className="flex items-center justify-between">

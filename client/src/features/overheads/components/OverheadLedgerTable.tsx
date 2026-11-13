@@ -267,7 +267,7 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
   return (
     <div
       className={cn(
-        'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-6 lg:p-7 select-none',
+        'rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] p-4 sm:p-6 lg:p-7 select-none',
         isDormant && 'opacity-60',
         className
       )}
@@ -296,13 +296,13 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
 
       {/* 2. Bills Table */}
       <div className="w-full overflow-x-auto no-scrollbar">
-        <table className="w-full text-left border-collapse">
+        <table className={cn('w-full text-left border-collapse', filteredBills.length > 0 && 'min-w-[580px] sm:min-w-0')}>
           <thead>
-            <tr className="border-b border-white/[0.05] text-[0.8rem] font-normal text-[#8E92A0]">
-              <th className="pb-3.5 pl-1 font-normal">Bill</th>
-              <th className="pb-3.5 font-normal">Due Date</th>
-              <th className="pb-3.5 font-normal">Billed Amount</th>
-              <th className="pb-3.5 font-normal">Status</th>
+            <tr className="border-b border-white/[0.05] text-[0.8rem] font-normal text-[#8E92A0] whitespace-nowrap">
+              <th className="pb-3.5 pl-1 pr-3 font-normal">Bill</th>
+              <th className="pb-3.5 pr-3 font-normal">Due Date</th>
+              <th className="pb-3.5 pr-3 font-normal">Billed Amount</th>
+              <th className="pb-3.5 pr-3 font-normal">Status</th>
               <th className="pb-3.5 pr-2 font-normal text-right">Actions</th>
             </tr>
           </thead>
@@ -385,7 +385,7 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                     {/* Due Date */}
                     <td
                       className={cn(
-                        'py-4 text-[0.88rem] font-normal',
+                        'py-4 pr-3 text-[0.88rem] font-normal whitespace-nowrap',
                         isInactive ? 'text-[#70727a] line-through' : 'text-white/90'
                       )}
                     >
@@ -396,7 +396,7 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                     {/* Billed Amount */}
                     <td
                       className={cn(
-                        'py-4 text-[0.95rem] font-mono tabular-nums font-medium',
+                        'py-4 pr-3 text-[0.95rem] font-mono tabular-nums font-medium whitespace-nowrap',
                         isInactive ? 'text-[#70727a] line-through' : 'text-white'
                       )}
                     >

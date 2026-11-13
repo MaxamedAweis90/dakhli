@@ -10,6 +10,7 @@ export interface MonthNavigatorProps {
   isPrevDisabled?: boolean
   isNextDisabled?: boolean
   isDormant?: boolean
+  hideControls?: boolean
   className?: string
 }
 
@@ -20,6 +21,7 @@ export const MonthNavigator: React.FC<MonthNavigatorProps> = ({
   isPrevDisabled = false,
   isNextDisabled = false,
   isDormant,
+  hideControls = false,
   className,
 }) => {
   const { user } = useAuthStore()
@@ -31,18 +33,27 @@ export const MonthNavigator: React.FC<MonthNavigatorProps> = ({
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <div className="flex items-center gap-2">
-        <h1 className="text-[1.35rem] lg:text-[1.5rem] font-semibold leading-none tracking-[-0.015em] text-white">
+      <div className="flex items-center gap-2 min-w-0">
+        <h1 className="text-[1.15rem] sm:text-[1.35rem] lg:text-[1.5rem] font-semibold leading-none tracking-[-0.015em] text-white whitespace-nowrap">
           {monthName}
         </h1>
         {effectiveIsDormant && (
-          <span className="text-slate-400 bg-white/5 border border-white/5 font-mono text-[10px] px-2 py-0.5 rounded tracking-wider uppercase select-none">
+          <span className="text-slate-400 bg-white/5 border border-white/5 font-mono text-[10px] px-2 py-0.5 rounded tracking-wider uppercase select-none shrink-0">
             DORMANT
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div
+        data-testid="month-navigator-controls"
+        aria-hidden={hideControls}
+        className={cn(
+          'flex items-center gap-1.5 transition-all duration-300 ease-out origin-left shrink-0',
+          hideControls
+            ? 'max-w-0 opacity-0 scale-90 -ml-2 pointer-events-none overflow-hidden'
+            : 'max-w-[5rem] opacity-100 scale-100'
+        )}
+      >
         {/* Previous Month Chevron (clamped to user account registration month) */}
         <button
           type="button"
