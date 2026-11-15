@@ -266,6 +266,7 @@ export const sendPasswordResetOtp = async (
   const safeName = name?.trim() || 'User';
   const subject = `[Dakhli] Password reset request — ${otp}`;
   const previewText = `Password reset authorization code: ${otp}`;
+  const resetUrl = `${ENV.CLIENT_URL}/auth`;
   const timestamp = new Date().toISOString();
 
   const contentHtml = `
@@ -274,7 +275,7 @@ export const sendPasswordResetOtp = async (
     </h1>
     <p style="margin: 0 0 24px 0; color: #94A3B8; font-size: 14px; line-height: 22px;">
       Hello ${safeName},<br>
-      A password reset was initiated for your Dakhli account. Use the authorization code below to complete the reset process.
+      A password reset was initiated for your Dakhli account. Enter the authorization code below on <a href="${resetUrl}" style="color: #EDEDED; text-decoration: underline;">${resetUrl}</a> to complete the reset process.
     </p>
 
     <!-- Hero OTP Tile -->
@@ -300,7 +301,7 @@ export const sendPasswordResetOtp = async (
 Reset your password
 
 Hello ${safeName},
-A password reset was initiated for your Dakhli account. Use the authorization code below to complete the reset process.
+A password reset was initiated for your Dakhli account. Enter the authorization code below at ${resetUrl} to complete the reset process.
 
 RESET AUTHORIZATION CODE: ${otp}
 (Expires in 15 minutes)
@@ -386,8 +387,8 @@ export const sendDeactivationNotice = async (
 ): Promise<boolean> => {
   const safeName = name?.trim() || 'User';
   const deletionFormatted = formatUtcDate(deletionScheduledAt);
-  const subject = `[Dakhli Notice] Your account has been deactivated (30-day recovery active)`;
-  const previewText = `Your account has been deactivated. 30-day recovery active until ${deletionFormatted}.`;
+  const subject = `[Dakhli Notice] Your account has been deactivated (60-day recovery active)`;
+  const previewText = `Your account has been deactivated. 60-day recovery active until ${deletionFormatted}.`;
   const timestamp = new Date().toISOString();
 
   const contentHtml = `
@@ -396,7 +397,7 @@ export const sendDeactivationNotice = async (
     </h1>
     <p style="margin: 0 0 24px 0; color: #94A3B8; font-size: 14px; line-height: 22px;">
       Hello ${safeName},<br>
-      Your Dakhli account has entered the 30-day deactivation grace period as requested.
+      Your Dakhli account has entered the 60-day deactivation grace period as requested.
     </p>
 
     <!-- Key Parameters Block -->
@@ -418,7 +419,7 @@ export const sendDeactivationNotice = async (
 Account deactivated
 
 Hello ${safeName},
-Your Dakhli account has entered the 30-day deactivation grace period as requested.
+Your Dakhli account has entered the 60-day deactivation grace period as requested.
 
 KEY PARAMETERS:
 - Status: DEACTIVATED

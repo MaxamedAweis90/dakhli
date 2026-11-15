@@ -9,6 +9,12 @@ export interface User {
   isDeactivated?: boolean
   isOnboarded?: boolean
   dormantCycles?: string[]
+  preferences?: {
+    currency?: 'USD' | 'SOS' | 'EUR'
+    maskBalancesOnStartup?: boolean
+    compactLedgerDensity?: boolean
+    carryOverDailySurplus?: boolean
+  }
   createdAt?: string
 }
 

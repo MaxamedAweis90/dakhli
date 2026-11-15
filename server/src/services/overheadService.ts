@@ -1,5 +1,6 @@
 import { ClientSession, Types } from "mongoose";
 import {
+  Balance,
   IOverheadItem,
   IOverheadMonthlyRecord,
   OverheadItem,
@@ -35,6 +36,16 @@ export const getMonthOverheads = async (
   existingRecords.forEach((record) => {
     recordMap.set(record.overheadItemId.toString(), record);
   });
+
+  // Check user's overheadAutoGenerate baseline preference
+  const balance = await Balance.findOne({
+    userId: new Types.ObjectId(userId),
+  }).lean();
+  const autoGenerate = balance?.overheadAutoGenerate !== false;
+
+  if (!autoGenerate && existingRecords.length === 0) {
+    return [];
+  }
 
   // 2. Fetch all overhead items for this user
   const allUserItems = await OverheadItem.find({
@@ -75,7 +86,7 @@ export const getMonthOverheads = async (
     (item) => !recordMap.has(item._id.toString()),
   );
 
-  if (missingItems.length > 0) {
+  if (autoGenerate && missingItems.length > 0) {
     const toInsert = missingItems.map((item) => ({
       overheadItemId: item._id,
       userId: item.userId,
@@ -92,7 +103,11 @@ export const getMonthOverheads = async (
   }
 
   // 5. Combine and sort: Active items first, then newest created bills first (createdAt: -1)
-  const entries: MonthOverheadEntry[] = validItems.map((item) => ({
+  const itemsToReturn = autoGenerate
+    ? validItems
+    : validItems.filter((item) => recordMap.has(item._id.toString()));
+
+  const entries: MonthOverheadEntry[] = itemsToReturn.map((item) => ({
     item,
     record: recordMap.get(item._id.toString())!,
   }));

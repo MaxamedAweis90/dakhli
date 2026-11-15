@@ -13,10 +13,6 @@ export const dailyCheckoffSchema = z
     notes: z.string().trim().max(500, 'Notes cannot exceed 500 characters.').optional(),
     note: z.string().trim().max(500, 'Notes cannot exceed 500 characters.').optional(),
   })
-  .refine((data) => data.plannedCap !== undefined || data.cap !== undefined, {
-    message: 'Planned daily cap is required.',
-    path: ['cap'],
-  })
   .refine((data) => data.actualSpend !== undefined || data.spent !== undefined, {
     message: 'Actual daily spend is required.',
     path: ['spent'],

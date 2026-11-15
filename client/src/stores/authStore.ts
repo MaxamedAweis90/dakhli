@@ -3,6 +3,8 @@ import { TOKEN_STORAGE_KEY, AUTH_UNAUTHORIZED_EVENT } from '@/lib/api'
 import type { AuthState, AuthUser } from '@/types/store'
 import { authApi } from '@/features/auth/api/authApi'
 import { useOverheadsStore } from '@/stores/overheadsStore'
+import { usePrivacyStore } from '@/stores/privacyStore'
+import { saveStoredPreferences } from '@/features/settings/api/settingsApi'
 
 const USER_STORAGE_KEY = 'dakhli_user'
 
@@ -19,6 +21,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
     } catch {
       // Ignore storage write errors in restricted sandbox environments
+    }
+    if (user.preferences) {
+      saveStoredPreferences(user.preferences)
+      if (user.preferences.maskBalancesOnStartup) {
+        usePrivacyStore.getState().setMasked(true)
+      }
     }
     // Always reset overhead cycle to real current month upon session start
     useOverheadsStore.getState().jumpToCurrentMonth()
@@ -95,6 +103,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
         } catch {
           // ignore
+        }
+        if (user.preferences) {
+          saveStoredPreferences(user.preferences)
+          if (user.preferences.maskBalancesOnStartup) {
+            usePrivacyStore.getState().setMasked(true)
+          }
         }
         set({
           token,

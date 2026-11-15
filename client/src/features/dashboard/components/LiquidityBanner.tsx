@@ -1,8 +1,9 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { useLiquidityStore } from '@/stores/liquidityStore'
 import { useBaseline } from '@/features/settings/hooks/useBaseline'
-import { saveStoredPreferences } from '@/features/settings/api/settingsApi'
+import { saveStoredPreferences, settingsApi } from '@/features/settings/api/settingsApi'
 import { useSavePlans } from '@/features/save-plans/hooks/useSavePlans'
 import { useDaily } from '@/features/daily/hooks/useDaily'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
@@ -31,6 +32,7 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
   className,
 }) => {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { baseline } = useBaseline()
   const { pinnedPlans, totalSaved: liveSavedFromPlans } = useSavePlans()
   const { summary: dailySummary } = useDaily()
@@ -41,12 +43,23 @@ export const LiquidityBanner: React.FC<LiquidityBannerProps> = ({
     : 'USD') as 'USD' | 'SOS' | 'EUR'
   const currentConfig = CURRENCY_INFO[currentCode]
 
-  const handleToggleCurrency = () => {
+  const handleToggleCurrency = async () => {
     const currentIndex = CURRENCY_ORDER.indexOf(currentCode)
     const nextIndex = (currentIndex + 1) % CURRENCY_ORDER.length
     const nextCode = CURRENCY_ORDER[nextIndex]
     store.setCurrency(nextCode)
     saveStoredPreferences({ currency: nextCode })
+    try {
+      await Promise.all([
+        settingsApi.updatePreferences({ currency: nextCode }),
+        settingsApi.updateBaseline({ currency: nextCode }),
+      ])
+      queryClient.invalidateQueries({ queryKey: ['user-preferences'] })
+      queryClient.invalidateQueries({ queryKey: ['baseline'] })
+      queryClient.invalidateQueries({ queryKey: ['auth-me'] })
+    } catch {
+      // Keep optimistic currency state if persistence request fails
+    }
   }
 
   const baseGross = propGross ?? store.grossBalance

@@ -8,6 +8,7 @@ export interface CycleBurnRateOptions {
   cumulativeSpend?: number
   discretionaryBaseline?: number
   referenceDate?: Date
+  warningThreshold?: number
 }
 
 export interface CycleBurnRateResult {
@@ -65,12 +66,20 @@ export function calculateCycleBurnRate(options?: CycleBurnRateOptions): CycleBur
   const varianceDelta = budgetConsumedRatio - timeProgressRatio
   const variancePercent = varianceDelta * 100
 
-  // 7. Pacing Classification
+  // 7. Pacing Classification (uses persisted warningThreshold percentage, defaulting to 35%)
+  const rawThreshold = options?.warningThreshold
+  const thresholdRatio =
+    typeof rawThreshold === 'number' && !Number.isNaN(rawThreshold) && rawThreshold > 0
+      ? rawThreshold > 1
+        ? rawThreshold / 100
+        : rawThreshold
+      : 0.35
+
   let status: PacingStatus = 'nominal'
   let pacingLabel = 'PACING: NOMINAL'
   let pacingClassName = 'text-slate-400 font-mono text-xs'
 
-  if (varianceDelta > 0.1) {
+  if (varianceDelta > thresholdRatio) {
     status = 'critical'
     pacingLabel = `BURN HIGH: +${variancePercent.toFixed(1)}%`
     pacingClassName = 'text-rose-400 font-mono text-xs'
@@ -129,6 +138,7 @@ export function useCycleBurnRate(options?: CycleBurnRateOptions): CycleBurnRateR
       cumulativeSpend,
       discretionaryBaseline,
       referenceDate: options?.referenceDate,
+      warningThreshold: options?.warningThreshold ?? baseline?.warningThreshold ?? 35,
     })
   }, [
     dailyLogs,
@@ -136,6 +146,7 @@ export function useCycleBurnRate(options?: CycleBurnRateOptions): CycleBurnRateR
     options?.cumulativeSpend,
     options?.discretionaryBaseline,
     options?.referenceDate,
+    options?.warningThreshold,
   ])
 }
 

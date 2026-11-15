@@ -6,6 +6,9 @@ export interface IBalance extends Document {
   baseMonthlyIncome: number;
   paydayAnchor: number;
   currency: string;
+  overheadAutoGenerate: boolean;
+  defaultDailyCap: number;
+  warningThreshold: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +43,21 @@ const balanceSchema = new Schema<IBalance>(
       required: true,
       default: 'USD',
       trim: true,
+    },
+    overheadAutoGenerate: {
+      type: Boolean,
+      default: true,
+    },
+    defaultDailyCap: {
+      type: Number,
+      default: 30,
+      min: [0, 'Default daily cap cannot be negative'],
+    },
+    warningThreshold: {
+      type: Number,
+      default: 80,
+      min: [1, 'Warning threshold must be between 1 and 100'],
+      max: [100, 'Warning threshold must be between 1 and 100'],
     },
   },
   {

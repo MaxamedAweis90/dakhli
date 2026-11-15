@@ -35,8 +35,19 @@ export const updateItemSchema = z.object({
   notes: z.string().trim().max(500).optional(),
   tag: z.string().trim().optional(),
   targetProgress: z.coerce.number().min(0).max(100).optional(),
-  status: z.enum(['planned', 'bought', 'cancelled', 'unbought']).optional(),
+  status: z.enum(['planned', 'bought', 'cancelled', 'unbought', 'removed']).optional(),
+});
+
+export const itemIdParamSchema = z.object({
+  id: z.string().trim().regex(/^[0-9a-fA-F]{24}$/, 'Invalid item ID format.'),
+});
+
+export const reorderItemsSchema = z.object({
+  orderedIds: z
+    .array(z.string().trim().regex(/^[0-9a-fA-F]{24}$/, 'Invalid item ID in orderedIds.'))
+    .min(1, 'orderedIds must contain at least one item ID.'),
 });
 
 export type CreateItemInput = z.infer<typeof createItemSchema>;
 export type UpdateItemInput = z.infer<typeof updateItemSchema>;
+export type ReorderItemsInput = z.infer<typeof reorderItemsSchema>;

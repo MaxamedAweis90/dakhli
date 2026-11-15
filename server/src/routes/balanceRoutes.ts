@@ -11,6 +11,7 @@ router.use(authenticate);
 router.get('/', getOverview);
 router.get('/overview', getOverview);
 router.put('/', validateRequest({ body: updateBaselineSchema }), updateBaseline);
+router.patch('/', validateRequest({ body: updateBaselineSchema }), updateBaseline);
 router.put('/baseline', validateRequest({ body: updateBaselineSchema }), updateBaseline);
 router.patch('/baseline', validateRequest({ body: updateBaselineSchema }), updateBaseline);
 

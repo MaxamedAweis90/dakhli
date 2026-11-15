@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router } from "express";
 import {
   checkEmail,
   getMe,
@@ -10,11 +10,13 @@ import {
   updateProfile,
   requestPasswordOtp,
   updatePassword,
+  forgotPassword,
+  resetPassword,
   deactivateAccount,
   restoreAccount,
-} from '../controllers/authController';
-import { authenticate } from '../middleware/auth';
-import { validateRequest } from '../middleware/validate';
+} from "../controllers/authController";
+import { authenticate, authenticateRestoration } from "../middleware/auth";
+import { validateRequest } from "../middleware/validate";
 import {
   checkEmailSchema,
   googleAuthSchema,
@@ -25,22 +27,66 @@ import {
   updateProfileSchema,
   requestPasswordOtpSchema,
   updatePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
   restoreAccountSchema,
-} from '../schemas/authSchemas';
+} from "../schemas/authSchemas";
 
 const router = Router();
 
-router.post('/register', validateRequest({ body: registerSchema }), register);
-router.post('/login', validateRequest({ body: loginSchema }), login);
-router.post('/check-email', validateRequest({ body: checkEmailSchema }), checkEmail);
-router.post('/google', validateRequest({ body: googleAuthSchema }), googleAuth);
-router.post('/verify-otp', validateRequest({ body: verifyOtpSchema }), verifyOtp);
-router.post('/resend-otp', validateRequest({ body: resendOtpSchema }), resendOtp);
-router.post('/restore', restoreAccount);
-router.get('/me', authenticate, getMe);
-router.patch('/profile', authenticate, validateRequest({ body: updateProfileSchema }), updateProfile);
-router.post('/request-password-otp', authenticate, validateRequest({ body: requestPasswordOtpSchema }), requestPasswordOtp);
-router.patch('/update-password', authenticate, validateRequest({ body: updatePasswordSchema }), updatePassword);
-router.post('/deactivate', authenticate, deactivateAccount);
+router.post("/register", validateRequest({ body: registerSchema }), register);
+router.post("/login", validateRequest({ body: loginSchema }), login);
+router.post(
+  "/check-email",
+  validateRequest({ body: checkEmailSchema }),
+  checkEmail,
+);
+router.post("/google", validateRequest({ body: googleAuthSchema }), googleAuth);
+router.post(
+  "/verify-otp",
+  validateRequest({ body: verifyOtpSchema }),
+  verifyOtp,
+);
+router.post(
+  "/resend-otp",
+  validateRequest({ body: resendOtpSchema }),
+  resendOtp,
+);
+router.post(
+  "/forgot-password",
+  validateRequest({ body: forgotPasswordSchema }),
+  forgotPassword,
+);
+router.post(
+  "/reset-password",
+  validateRequest({ body: resetPasswordSchema }),
+  resetPassword,
+);
+router.post(
+  "/restore",
+  validateRequest({ body: restoreAccountSchema }),
+  authenticateRestoration,
+  restoreAccount,
+);
+router.get("/me", authenticate, getMe);
+router.patch(
+  "/profile",
+  authenticate,
+  validateRequest({ body: updateProfileSchema }),
+  updateProfile,
+);
+router.post(
+  "/request-password-otp",
+  authenticate,
+  validateRequest({ body: requestPasswordOtpSchema }),
+  requestPasswordOtp,
+);
+router.patch(
+  "/update-password",
+  authenticate,
+  validateRequest({ body: updatePasswordSchema }),
+  updatePassword,
+);
+router.post("/deactivate", authenticate, deactivateAccount);
 
 export default router;

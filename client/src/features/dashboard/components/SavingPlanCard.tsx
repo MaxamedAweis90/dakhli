@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "@/components/shared/icons";
-import { useSavingsStore, type SavePlanItem } from "@/stores/savingsStore";
+import { type SavePlanItem } from "@/stores/savingsStore";
 import { useSavePlans } from "@/features/save-plans/hooks/useSavePlans";
 import { useLiquidityStore } from "@/stores/liquidityStore";
 import { CURRENCY_CONFIGS, type CurrencyCode } from "@/features/settings/types/settings.types";
@@ -12,12 +12,6 @@ export interface SavingPlanCardProps {
   plans?: SavePlanItem[];
   className?: string;
 }
-
-const FALLBACK_DISPLAY_PLANS: Array<{ id: string; name: string; percentage: number }> = [
-  { id: "fallback-1", name: "General Savings", percentage: 0 },
-  { id: "fallback-2", name: "Emergency Fund", percentage: 0 },
-  { id: "fallback-3", name: "Target Goal", percentage: 0 },
-];
 
 // Hairline tally ticks, as in the reference
 const TOTAL_TICKS = 44;
@@ -94,7 +88,6 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
   className,
 }) => {
   const { pinnedPlans, totalSaved: liveTotalSaved } = useSavePlans();
-  const store = useSavingsStore();
   const liquidityStore = useLiquidityStore();
 
   const currentCode = (liquidityStore.currency in CURRENCY_CONFIGS
@@ -103,23 +96,15 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
   const config = CURRENCY_CONFIGS[currentCode];
   const rate = config.rate ?? 1;
 
-  const totalAccumulatedSavings = (liveTotalSaved > 0 ? liveTotalSaved : store.getTotalSaved()) * rate;
+  const totalAccumulatedSavings = (liveTotalSaved ?? 0) * rate;
 
   const livePlans =
     propPlans ??
-    (pinnedPlans.length > 0
-      ? pinnedPlans.map((p) => ({
-          id: p.id,
-          name: p.title || p.name,
-          percentage: p.percentage,
-        }))
-      : store.getPinnedPlans().length > 0
-      ? store.getPinnedPlans().map((p) => ({
-          id: p.id,
-          name: p.title || p.name,
-          percentage: p.percentage,
-        }))
-      : FALLBACK_DISPLAY_PLANS);
+    pinnedPlans.map((p) => ({
+      id: p.id,
+      name: p.title || p.name,
+      percentage: p.percentage,
+    }));
 
   return (
     <div
@@ -150,32 +135,44 @@ export const SavingPlanCard: React.FC<SavingPlanCardProps> = ({
         </div>
       </div>
 
-      {/* Rows are spread evenly; hairline dividers sit between them */}
-      <div className="flex-1 flex flex-col justify-between gap-[0.75rem]">
-        {livePlans.map((plan, idx) => (
-          <React.Fragment key={plan.id}>
-            {idx > 0 && <div className="h-px bg-white/[0.05]" />}
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[0.9rem] leading-5 font-medium tracking-[-0.01em] text-white">
-                  {plan.name}
-                </span>
-                <span className="text-[0.69rem] leading-4 text-[#8d8d8d] font-mono tabular-nums">
-                  <AnimatedNumber
-                    value={plan.percentage}
-                    suffix="%"
-                    decimals={0}
-                    className="font-mono tabular-nums"
-                  />
-                </span>
+      {/* Rows or quiet empty state */}
+      {livePlans.length === 0 ? (
+        <div className="flex-1 rounded-xl bg-[#13151B] border border-white/[0.05] px-4 py-6 flex flex-col items-center justify-center text-center gap-2">
+          <p className="text-xs font-mono text-slate-500">No active save plans</p>
+          <Link
+            to="/save-plans"
+            className="text-xs font-mono text-[#E5A855] hover:underline transition-colors"
+          >
+            + Add Plan
+          </Link>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col justify-between gap-[0.75rem]">
+          {livePlans.map((plan, idx) => (
+            <React.Fragment key={plan.id}>
+              {idx > 0 && <div className="h-px bg-white/[0.05]" />}
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[0.9rem] leading-5 font-medium tracking-[-0.01em] text-white">
+                    {plan.name}
+                  </span>
+                  <span className="text-[0.69rem] leading-4 text-[#8d8d8d] font-mono tabular-nums">
+                    <AnimatedNumber
+                      value={plan.percentage}
+                      suffix="%"
+                      decimals={0}
+                      className="font-mono tabular-nums"
+                    />
+                  </span>
+                </div>
+                <div className="mt-[0.55rem]">
+                  <SegmentedTicks percentage={plan.percentage} />
+                </div>
               </div>
-              <div className="mt-[0.55rem]">
-                <SegmentedTicks percentage={plan.percentage} />
-              </div>
-            </div>
-          </React.Fragment>
-        ))}
-      </div>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

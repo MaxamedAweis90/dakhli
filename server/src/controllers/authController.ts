@@ -3,7 +3,15 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env';
-import { Balance, User } from '../models';
+import {
+  Balance,
+  DailyLog,
+  Item,
+  OverheadItem,
+  OverheadMonthlyRecord,
+  SavePlan,
+  User,
+} from '../models';
 import { withTransaction } from '../services/transactionHelper';
 import { AuthRequest } from '../middleware/auth';
 import { authenticateGoogleUser, verifyGoogleToken } from '../services/googleAuthService';
@@ -23,6 +31,12 @@ export const toSafeUser = (user: any) => ({
   isDeactivated: Boolean(user.isDeactivated),
   isOnboarded: Boolean(user.isOnboarded),
   dormantCycles: user.dormantCycles || [],
+  preferences: {
+    currency: user.preferences?.currency || 'USD',
+    maskBalancesOnStartup: Boolean(user.preferences?.maskBalancesOnStartup),
+    compactLedgerDensity: Boolean(user.preferences?.compactLedgerDensity),
+    carryOverDailySurplus: Boolean(user.preferences?.carryOverDailySurplus),
+  },
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });
@@ -180,9 +194,9 @@ export const login = async (
       const now = new Date();
       const deletionDate = user.deletionScheduledAt
         ? new Date(user.deletionScheduledAt)
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
 
-      // Expired past 30-day grace period: treat as permanently purged
+      // Expired past 60-day grace period: treat as permanently purged
       if (now > deletionDate) {
         res.status(404).json({
           success: false,
@@ -321,9 +335,9 @@ export const googleAuth = async (
         const now = new Date();
         const deletionDate = user.deletionScheduledAt
           ? new Date(user.deletionScheduledAt)
-          : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+          : new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
 
-        // Expired past 30-day grace period: treat as permanently purged
+        // Expired past 60-day grace period: treat as permanently purged
         if (now > deletionDate) {
           res.status(404).json({
             success: false,
@@ -399,6 +413,10 @@ export const googleAuth = async (
       });
 
       user = result.user;
+
+      void emailService.sendWelcomeEmail(user.email, user.name).catch((err) => {
+        console.error('[GoogleAuth] Failed to dispatch welcome email:', err);
+      });
     }
 
     // 3. Issue session JWT
@@ -416,11 +434,16 @@ export const googleAuth = async (
       },
     });
   } catch (error: any) {
-    res.status(401).json({
+    const statusCode = error?.statusCode === 500 ? 500 : 401;
+    const errorCode =
+      error?.code || (statusCode === 500 ? 'GOOGLE_OAUTH_NOT_CONFIGURED' : 'GOOGLE_AUTH_FAILED');
+    res.status(statusCode).json({
       success: false,
+      code: errorCode,
+      message: error.message || 'Google authentication failed.',
       error: {
         message: error.message || 'Google authentication failed.',
-        code: 'GOOGLE_AUTH_FAILED',
+        code: errorCode,
       },
     });
   }
@@ -893,8 +916,154 @@ export const updatePassword = async (
   }
 };
 
+const hashOtp = (otp: string): string =>
+  crypto.createHash('sha256').update(otp).digest('hex');
+
 /**
- * 30-Day Soft Account Deactivation
+ * Unauthenticated Password Reset OTP Request (Anti-Enumeration)
+ * POST /api/auth/forgot-password
+ */
+export const forgotPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const normalizedEmail = String(req.body.email || '').trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (user && user.authProvider === 'LOCAL' && !user.isDeactivated) {
+      if (user.passwordResetOtp?.lastSentAt) {
+        const elapsedMs = Date.now() - new Date(user.passwordResetOtp.lastSentAt).getTime();
+        if (elapsedMs < 60000) {
+          const remainingSeconds = Math.ceil((60000 - elapsedMs) / 1000);
+          res.status(429).json({
+            success: false,
+            error: {
+              message: `Please wait ${remainingSeconds}s before requesting another code.`,
+              code: 'RESEND_COOLDOWN',
+              remainingSeconds,
+            },
+          });
+          return;
+        }
+      }
+
+      const otp = crypto.randomInt(100000, 1000000).toString();
+      const otpHash = hashOtp(otp);
+
+      user.passwordResetOtp = {
+        codeHash: otpHash,
+        expiresAt: new Date(Date.now() + 15 * 60 * 1000),
+        attempts: 0,
+        lastSentAt: new Date(),
+      };
+      await user.save();
+
+      await emailService.sendPasswordResetOtp(user.email, user.name, otp);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'If an account exists for that email, a reset code has been sent.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Unauthenticated Password Reset with 6-Digit OTP Verification
+ * POST /api/auth/reset-password
+ */
+export const resetPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const normalizedEmail = String(req.body.email || '').trim().toLowerCase();
+    const cleanOtp = String(req.body.otp || '').trim();
+    const { newPassword } = req.body;
+
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (
+      !user ||
+      user.isDeactivated ||
+      user.authProvider !== 'LOCAL' ||
+      !user.passwordResetOtp?.codeHash ||
+      !user.passwordResetOtp?.expiresAt
+    ) {
+      res.status(400).json({
+        success: false,
+        error: {
+          message: 'Invalid or expired reset code. Please request a new code.',
+          code: 'INVALID_OTP',
+        },
+      });
+      return;
+    }
+
+    if ((user.passwordResetOtp.attempts || 0) >= 5) {
+      res.status(429).json({
+        success: false,
+        error: {
+          message: 'Maximum verification attempts exceeded. Please request a new reset code.',
+          code: 'TOO_MANY_ATTEMPTS',
+        },
+      });
+      return;
+    }
+
+    if (new Date() > new Date(user.passwordResetOtp.expiresAt)) {
+      res.status(400).json({
+        success: false,
+        error: {
+          message: 'Reset code has expired. Please request a new one.',
+          code: 'OTP_EXPIRED',
+        },
+      });
+      return;
+    }
+
+    const incomingHash = hashOtp(cleanOtp);
+    if (incomingHash !== user.passwordResetOtp.codeHash) {
+      user.passwordResetOtp.attempts = (user.passwordResetOtp.attempts || 0) + 1;
+      await user.save();
+
+      res.status(400).json({
+        success: false,
+        error: {
+          message: 'Invalid verification code.',
+          code: 'INVALID_OTP',
+        },
+      });
+      return;
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.passwordResetOtp = {
+      codeHash: null as any,
+      expiresAt: null as any,
+      attempts: 0,
+      lastSentAt: null as any,
+    };
+    await user.save();
+
+    void emailService.sendPasswordChangedConfirmation(user.email, user.name);
+
+    res.status(200).json({
+      success: true,
+      message: 'Password updated. Sign in with your new credentials.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * 60-Day Soft Account Deactivation
  * POST /api/auth/deactivate
  */
 export const deactivateAccount = async (
@@ -924,7 +1093,7 @@ export const deactivateAccount = async (
 
     user.isDeactivated = true;
     user.deactivatedAt = new Date();
-    user.deletionScheduledAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    user.deletionScheduledAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000);
     await user.save();
 
     // Trigger deactivation notice email asynchronously
@@ -936,7 +1105,7 @@ export const deactivateAccount = async (
 
     res.status(200).json({
       success: true,
-      message: 'Your account has been deactivated. 30-day recovery window is active.',
+      message: 'Your account has been deactivated. 60-day recovery window is active.',
       data: {
         deletionScheduledAt: user.deletionScheduledAt,
       },
@@ -944,28 +1113,6 @@ export const deactivateAccount = async (
   } catch (error) {
     next(error);
   }
-};
-
-/**
- * Helper to calculate skipped month cycles (YYYY-MM) between deactivation and restoration dates,
- * excluding the current restoration month.
- */
-export const calculateDormantCycles = (deactivatedAt: Date, restoredAt: Date): string[] => {
-  const cycles: string[] = [];
-  const start = new Date(deactivatedAt);
-  const end = new Date(restoredAt);
-
-  let current = new Date(start.getFullYear(), start.getMonth(), 1);
-  const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
-
-  while (current < endMonth) {
-    const yyyy = current.getFullYear();
-    const mm = String(current.getMonth() + 1).padStart(2, '0');
-    cycles.push(`${yyyy}-${mm}`);
-    current.setMonth(current.getMonth() + 1);
-  }
-
-  return cycles;
 };
 
 /**
@@ -978,31 +1125,45 @@ export const restoreAccount = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    let token: string | undefined = req.body?.restorationToken;
-    const authHeader = req.headers.authorization;
-
-    if (!token && authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
-    }
-
     let userId: string | undefined = (req as AuthRequest).userId;
 
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, ENV.JWT_SECRET) as {
-          userId: string;
-          scope?: string;
-        };
-        userId = decoded.userId;
-      } catch (err: any) {
-        res.status(401).json({
-          success: false,
-          error: {
-            message: 'Invalid or expired restoration token.',
-            code: 'INVALID_TOKEN',
-          },
-        });
-        return;
+    if (!userId) {
+      let token: string | undefined = req.body?.restorationToken;
+      const authHeader = req.headers.authorization;
+
+      if (!token && authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, ENV.JWT_SECRET) as {
+            userId: string;
+            scope?: string;
+          };
+          if (decoded.scope !== 'ACCOUNT_RESTORATION') {
+            res.status(403).json({
+              success: false,
+              code: 'FORBIDDEN_SCOPE',
+              message: 'Invalid token scope for account restoration.',
+              error: {
+                message: 'Invalid token scope for account restoration.',
+                code: 'FORBIDDEN_SCOPE',
+              },
+            });
+            return;
+          }
+          userId = decoded.userId;
+        } catch (err: any) {
+          res.status(401).json({
+            success: false,
+            error: {
+              message: 'Invalid or expired restoration token.',
+              code: 'INVALID_TOKEN',
+            },
+          });
+          return;
+        }
       }
     }
 
@@ -1076,6 +1237,185 @@ export const restoreAccount = async (
         user: toSafeUser(updatedUser || user),
         token: sessionToken,
         reconciledCycles: skippedCycles,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Fetch User System Preferences
+ * GET /api/users/preferences
+ */
+export const getPreferences = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const [user, balance] = await Promise.all([
+      User.findById(userId).select('preferences'),
+      Balance.findOne({ userId }).select('currency'),
+    ]);
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'User not found.', code: 'USER_NOT_FOUND' },
+      });
+      return;
+    }
+
+    const currency =
+      user.preferences?.currency ||
+      (['USD', 'SOS', 'EUR'].includes(balance?.currency || '') ? (balance?.currency as 'USD' | 'SOS' | 'EUR') : 'USD');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        currency,
+        maskBalancesOnStartup: Boolean(user.preferences?.maskBalancesOnStartup),
+        compactLedgerDensity: Boolean(user.preferences?.compactLedgerDensity),
+        carryOverDailySurplus: Boolean(user.preferences?.carryOverDailySurplus),
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update User System Preferences
+ * PATCH /api/users/preferences
+ */
+export const updatePreferences = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const {
+      currency,
+      maskBalancesOnStartup,
+      compactLedgerDensity,
+      carryOverDailySurplus,
+    } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'User not found.', code: 'USER_NOT_FOUND' },
+      });
+      return;
+    }
+
+    const currentPrefs = user.preferences || {
+      currency: 'USD',
+      maskBalancesOnStartup: false,
+      compactLedgerDensity: false,
+      carryOverDailySurplus: false,
+    };
+
+    const nextPrefs = {
+      currency: currency ?? currentPrefs.currency ?? 'USD',
+      maskBalancesOnStartup:
+        maskBalancesOnStartup !== undefined
+          ? Boolean(maskBalancesOnStartup)
+          : Boolean(currentPrefs.maskBalancesOnStartup),
+      compactLedgerDensity:
+        compactLedgerDensity !== undefined
+          ? Boolean(compactLedgerDensity)
+          : Boolean(currentPrefs.compactLedgerDensity),
+      carryOverDailySurplus:
+        carryOverDailySurplus !== undefined
+          ? Boolean(carryOverDailySurplus)
+          : Boolean(currentPrefs.carryOverDailySurplus),
+    };
+
+    user.preferences = nextPrefs;
+    await user.save();
+
+    if (currency) {
+      await Balance.findOneAndUpdate(
+        { userId },
+        { $set: { currency } },
+        { runValidators: true }
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Preferences saved.',
+      data: nextPrefs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Export Complete Financial Archive JSON Snapshot
+ * GET /api/users/export
+ */
+export const exportFinancialArchive = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.userId!;
+    const [
+      user,
+      balance,
+      overheadBills,
+      overheadMonthlyRecords,
+      dailyLogs,
+      savePlans,
+      registeredItems,
+    ] = await Promise.all([
+      User.findById(userId).select('email name preferences dormantCycles createdAt'),
+      Balance.findOne({ userId }).lean(),
+      OverheadItem.find({ userId }).sort({ createdAt: -1 }).lean(),
+      OverheadMonthlyRecord.find({ userId }).sort({ monthKey: -1 }).lean(),
+      DailyLog.find({ userId }).sort({ dateKey: -1 }).lean(),
+      SavePlan.find({ userId }).sort({ createdAt: -1 }).lean(),
+      Item.find({ userId }).sort({ order: 1, createdAt: -1 }).lean(),
+    ]);
+
+    if (!user) {
+      res.status(404).json({
+        success: false,
+        error: { message: 'User not found.', code: 'USER_NOT_FOUND' },
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        exportedAt: new Date().toISOString(),
+        account: {
+          email: user.email,
+          name: user.name,
+          dormantCycles: user.dormantCycles || [],
+          createdAt: user.createdAt,
+        },
+        baseline: balance || null,
+        preferences: user.preferences || {
+          currency: 'USD',
+          maskBalancesOnStartup: false,
+          compactLedgerDensity: false,
+          carryOverDailySurplus: false,
+        },
+        overheadBills,
+        overheadMonthlyRecords,
+        dailyLogs,
+        savePlans,
+        registeredItems,
       },
     });
   } catch (error) {

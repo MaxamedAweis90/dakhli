@@ -1,7 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
-import { DailyLog, User } from '../models';
+import { Balance, DailyLog, User } from '../models';
 import {
   getDailySavingsTracker,
   recordDailyCheckoff,
@@ -25,14 +25,14 @@ export const checkoff = async (
     } = req.body;
 
     const finalDate = date || new Date().toISOString().slice(0, 10);
-    const finalCap = plannedCap !== undefined ? plannedCap : cap;
+    const rawCap = plannedCap !== undefined ? plannedCap : cap;
     const finalSpend = actualSpend !== undefined ? actualSpend : spent;
     const finalNotes = notes !== undefined ? notes : (note !== undefined ? note : '');
 
-    if (finalCap === undefined || finalSpend === undefined) {
+    if (finalSpend === undefined) {
       res.status(400).json({
         success: false,
-        error: { message: 'cap (or plannedCap) and spent (or actualSpend) are required fields.' },
+        error: { message: 'spent (or actualSpend) is a required field.' },
       });
       return;
     }
@@ -48,6 +48,30 @@ export const checkoff = async (
         },
       });
       return;
+    }
+
+    let finalCap: number;
+    if (rawCap !== undefined) {
+      finalCap = Number(rawCap);
+    } else {
+      const balance = await Balance.findOne({ userId: new Types.ObjectId(userId) }).lean();
+      const baseDailyCap = balance?.defaultDailyCap ?? 30;
+
+      if (user?.preferences?.carryOverDailySurplus) {
+        const priorLogs = await DailyLog.find({
+          userId: new Types.ObjectId(userId),
+          monthKey: cycleMonth,
+          date: { $lt: finalDate },
+        }).lean();
+        const priorCycleVariance = Number(
+          priorLogs
+            .reduce((sum, l) => sum + (l.variance ?? l.plannedCap - l.actualSpend), 0)
+            .toFixed(2)
+        );
+        finalCap = Math.max(0, Number((baseDailyCap + priorCycleVariance).toFixed(2)));
+      } else {
+        finalCap = baseDailyCap;
+      }
     }
 
     const log = await recordDailyCheckoff(
@@ -167,6 +191,13 @@ export const getSavingsPreview = async (
     }
 
     const preview = await getDailySavingsTracker(userId, monthKey);
+    const balance = await Balance.findOne({ userId: new Types.ObjectId(userId) }).lean();
+    const baseDailyCap = balance?.defaultDailyCap ?? 30;
+    const carryOverDailySurplus = Boolean(user?.preferences?.carryOverDailySurplus);
+    const priorCycleVariance = preview.priorCycleVariance ?? 0;
+    const effectiveDailyCap = carryOverDailySurplus
+      ? Math.max(0, Number((baseDailyCap + priorCycleVariance).toFixed(2)))
+      : baseDailyCap;
 
     const formattedLogs = preview.logs.map((log) => ({
       id: log._id.toString(),
@@ -206,6 +237,10 @@ export const getSavingsPreview = async (
       monthKey: preview.monthKey,
       totalVariance: preview.totalVariance,
       daysLogged: preview.daysLogged,
+      carryOverDailySurplus,
+      baseDailyCap,
+      priorCycleVariance,
+      effectiveDailyCap,
       logs: formattedLogs,
     };
 

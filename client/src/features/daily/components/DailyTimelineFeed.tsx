@@ -8,6 +8,9 @@ export interface DailyTimelineFeedProps {
   records: DailyRecord[]
   editingRecordId: string | null
   defaultDailyCap?: number
+  carryOverEnabled?: boolean
+  rolloverDelta?: number
+  isCompact?: boolean
   isSubmitting?: boolean
   isDormant?: boolean
   onRecordToday: (data: { cap: number; spent: number; note: string }) => void
@@ -43,6 +46,9 @@ export const DailyTimelineFeed: React.FC<DailyTimelineFeedProps> = ({
   records,
   editingRecordId,
   defaultDailyCap = 30,
+  carryOverEnabled = false,
+  rolloverDelta,
+  isCompact = false,
   isSubmitting = false,
   isDormant = false,
   onRecordToday,
@@ -145,12 +151,14 @@ export const DailyTimelineFeed: React.FC<DailyTimelineFeedProps> = ({
             </div>
 
             {/* Right Column: Card (Active Record Check-Off or Historical Card) */}
-            <div className="flex-1 min-w-0 pb-4 sm:pb-5">
+            <div className={cn('flex-1 min-w-0', isCompact ? 'pb-2' : 'pb-4 sm:pb-5')}>
               {isTodayUnrecorded && !isEditing ? (
                 <RecordCheckOffCard
                   initialPlannedCap={item.cap || defaultDailyCap}
                   initialActualSpend={item.spent || 0}
                   initialNotes={item.note || ''}
+                  carryOverEnabled={carryOverEnabled}
+                  rolloverDelta={rolloverDelta}
                   isSubmitting={isSubmitting}
                   onSave={onRecordToday}
                 />
@@ -163,6 +171,7 @@ export const DailyTimelineFeed: React.FC<DailyTimelineFeedProps> = ({
                     daySuffix,
                   }}
                   isEditing={isEditing}
+                  isCompact={isCompact}
                   onStartEdit={() => onSetEditingId(item.id)}
                   onCancelEdit={() => onSetEditingId(null)}
                   onSaveEdit={(updates) => onUpdateRecord(item.id, updates)}

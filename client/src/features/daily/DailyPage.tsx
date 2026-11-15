@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { CumulativeSavingsCard } from './components/CumulativeSavingsCard'
 import { DailyTimelineFeed } from './components/DailyTimelineFeed'
 import { useDaily } from './hooks/useDaily'
-import { useBaseline } from '@/features/settings/hooks/useBaseline'
+import { useBaseline, useUserPreferences } from '@/features/settings/hooks/useBaseline'
 import { useOverheadsStore } from '@/stores/overheadsStore'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -10,7 +10,14 @@ export const DailyPage: React.FC = () => {
   const { currentMonth } = useOverheadsStore()
   const { user } = useAuthStore()
   const { baseline } = useBaseline()
+  const { preferences } = useUserPreferences()
   const isDormant = Boolean(user?.dormantCycles?.includes(currentMonth))
+  const isCompact = Boolean(
+    preferences?.compactLedgerDensity ?? user?.preferences?.compactLedgerDensity ?? false
+  )
+  const carryOverEnabled = Boolean(
+    preferences?.carryOverDailySurplus ?? user?.preferences?.carryOverDailySurplus ?? false
+  )
   const {
     logs,
     summary,
@@ -22,6 +29,15 @@ export const DailyPage: React.FC = () => {
 
   const defaultDailyCap = baseline?.defaultDailyCap ?? 30
   const todayStr = new Date().toISOString().slice(0, 10)
+  const priorCycleVariance = Number(
+    logs
+      .filter((l) => l.date < todayStr)
+      .reduce((sum, l) => sum + (l.savedDelta ?? l.cap - l.spent), 0)
+      .toFixed(2)
+  )
+  const effectiveDailyCap = carryOverEnabled
+    ? Math.max(0, Number((defaultDailyCap + priorCycleVariance).toFixed(2)))
+    : defaultDailyCap
   const restorationMonth = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
   // Compute dynamic sparkline points from historical logs
@@ -95,7 +111,10 @@ export const DailyPage: React.FC = () => {
           <DailyTimelineFeed
             records={logs}
             editingRecordId={editingRecordId}
-            defaultDailyCap={defaultDailyCap}
+            defaultDailyCap={effectiveDailyCap}
+            carryOverEnabled={carryOverEnabled}
+            rolloverDelta={carryOverEnabled ? priorCycleVariance : undefined}
+            isCompact={isCompact}
             isSubmitting={isRecording}
             isDormant={isDormant}
             onRecordToday={handleRecordToday}

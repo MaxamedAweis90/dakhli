@@ -54,67 +54,20 @@ interface SavingsState {
   getTotalSaved: () => number
 }
 
-const DEFAULT_PLANS: SavePlanItem[] = [
-  {
-    id: 'plan-system-reserve',
-    name: 'Cumulative Baseline Reserve',
-    title: 'Cumulative Baseline Reserve',
-    type: 'general_life',
-    category: 'general',
-    status: 'ACTIVE',
-    isSystemDefault: true,
-    isRemovable: false,
-    monthlyDeduction: 300,
-    sourceBalance: 'BASELINE_INCOME',
-    targetCycleWindow: 'PERPETUAL',
-    cumulativeTotal: 14500,
-    currentSaved: 14500,
-    targetAmount: 25000,
-    monthlyContribution: 300,
-    percentage: 58,
-    isPinned: true,
-  },
-  {
-    id: 'plan-rent-runway',
-    name: '6-Month Rent Runway',
-    type: 'targeted',
-    category: 'emergency',
-    status: 'active',
-    currentSaved: 2400,
-    targetAmount: 6000,
-    percentage: 40,
-    isPinned: true,
-  },
-  {
-    id: 'plan-macbook-pro',
-    name: 'MacBook Pro',
-    type: 'targeted',
-    category: 'item_funding',
-    status: 'active',
-    currentSaved: 600,
-    targetAmount: 2000,
-    percentage: 30,
-    linkedItemId: 'item-pc-setup',
-    linkedItemName: 'MacBook Pro 16"',
-    isPinned: true,
-  },
-  {
-    id: 'plan-emergency-fund',
-    name: 'Emergency Fund',
-    type: 'targeted',
-    category: 'emergency',
-    status: 'active',
-    currentSaved: 1000,
-    targetAmount: 1000,
-    percentage: 100,
-    isPinned: true,
-  },
-]
+const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/
+
+if (typeof window !== 'undefined') {
+  try {
+    window.localStorage.removeItem('dakhli_savings_store_v4')
+  } catch {
+    // ignore storage access errors
+  }
+}
 
 export const useSavingsStore = create<SavingsState>()(
   persist(
     (set, get) => ({
-      plans: DEFAULT_PLANS,
+      plans: [],
 
       toggleActive: (id: string) => {
         set((state) => ({
@@ -214,7 +167,7 @@ export const useSavingsStore = create<SavingsState>()(
       },
 
       resetToDefaults: () => {
-        set({ plans: DEFAULT_PLANS })
+        set({ plans: [] })
       },
 
       getPinnedPlans: () => {
@@ -250,7 +203,12 @@ export const useSavingsStore = create<SavingsState>()(
       },
     }),
     {
-      name: 'dakhli_savings_store_v4',
+      name: 'dakhli_savings_store_v5',
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.plans)) {
+          state.plans = state.plans.filter((plan) => OBJECT_ID_REGEX.test(plan.id))
+        }
+      },
     }
   )
 )

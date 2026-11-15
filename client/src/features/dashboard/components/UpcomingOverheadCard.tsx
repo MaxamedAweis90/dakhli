@@ -21,13 +21,6 @@ export interface UpcomingOverheadCardProps {
   className?: string
 }
 
-const DEFAULT_ITEMS: UpcomingOverheadItem[] = [
-  { id: 'gym', name: 'Gym', date: '1 Dec', amount: 20, icon: 'dumbbell' },
-  { id: 'rent', name: 'Rent', date: '17 Dec', amount: 200, icon: 'home' },
-  { id: 'other', name: 'Other dues', date: '22 Dec', icon: 'check', done: true },
-  { id: 'apple', name: 'Apple Music', date: '22 Dec', icon: 'check', done: true },
-]
-
 const ICONS = { home: Home, dumbbell: Dumbbell, wifi: Wifi, check: Check } as const
 
 const getOrdinal = (n: number): string => {
@@ -51,7 +44,7 @@ export const UpcomingOverheadCard: React.FC<UpcomingOverheadCardProps> = ({
   const todayDay = new Date().getDate()
   const monthShort = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(new Date())
 
-  // Map live bills if available, sorted by proximity to current day of the month
+  // Map live bills sorted by proximity to current day of the month
   const displayItems: UpcomingOverheadItem[] = propItems ?? (
     bills.length > 0
       ? [...bills]
@@ -79,7 +72,7 @@ export const UpcomingOverheadCard: React.FC<UpcomingOverheadCardProps> = ({
               done: b.status === 'paid',
             }
           })
-      : DEFAULT_ITEMS
+      : []
   )
 
   const handleToggle = (id: string, currentlyDone?: boolean) => {
@@ -108,7 +101,18 @@ export const UpcomingOverheadCard: React.FC<UpcomingOverheadCardProps> = ({
         </Link>
       </div>
 
-      <ul className="mt-[0.85rem] flex-1 flex flex-col justify-between gap-[0.75rem]">
+      {displayItems.length === 0 ? (
+        <div className="mt-[0.85rem] flex-1 rounded-xl bg-[#13151B] border border-white/[0.05] px-4 py-6 flex flex-col items-center justify-center text-center gap-2">
+          <p className="text-xs font-mono text-slate-500">No recurring bills scheduled</p>
+          <Link
+            to="/overheads"
+            className="text-xs font-mono text-[#E5A855] hover:underline transition-colors"
+          >
+            + Add Bill
+          </Link>
+        </div>
+      ) : (
+        <ul className="mt-[0.85rem] flex-1 flex flex-col justify-between gap-[0.75rem]">
         {displayItems.map((item) => {
           const Icon = ICONS[item.icon ?? 'check'] ?? Check
           const isRealBill = bills.some((b) => b.id === item.id)
@@ -151,7 +155,8 @@ export const UpcomingOverheadCard: React.FC<UpcomingOverheadCardProps> = ({
             </li>
           )
         })}
-      </ul>
+        </ul>
+      )}
     </div>
   )
 }

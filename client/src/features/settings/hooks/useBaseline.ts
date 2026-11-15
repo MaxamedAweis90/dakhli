@@ -1,11 +1,18 @@
 import { useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { settingsApi } from '../api/settingsApi'
-import type { FinancialBaseline, UpdateBaselinePayload } from '../types/settings.types'
+import type {
+  FinancialBaseline,
+  UpdateBaselinePayload,
+  UserPreferences,
+  UpdatePreferencesPayload,
+} from '../types/settings.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
+import { usePrivacyStore } from '@/stores/privacyStore'
 import { queryClient } from '@/lib/query-client'
 
 export const BASELINE_QUERY_KEY = ['baseline']
+export const USER_PREFERENCES_QUERY_KEY = ['user-preferences']
 
 export const useBaseline = () => {
   const { setLiquidity, setCurrency } = useLiquidityStore()
@@ -44,9 +51,11 @@ export const useBaseline = () => {
 
       // 2. Invalidate caches
       queryClient.setQueryData(BASELINE_QUERY_KEY, updatedData)
+      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: USER_PREFERENCES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       queryClient.invalidateQueries({ queryKey: ['balance'] })
-      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
     },
   })
 
@@ -57,6 +66,49 @@ export const useBaseline = () => {
     error: query.error,
     refetch: query.refetch,
     updateBaseline: updateMutation.mutateAsync,
+    isUpdating: updateMutation.isPending,
+  }
+}
+
+export const useUserPreferences = () => {
+  const { setCurrency } = useLiquidityStore()
+  const { setMasked } = usePrivacyStore()
+
+  const query = useQuery<UserPreferences>({
+    queryKey: USER_PREFERENCES_QUERY_KEY,
+    queryFn: settingsApi.getPreferences,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  useEffect(() => {
+    if (query.data?.currency) {
+      setCurrency(query.data.currency)
+    }
+  }, [query.data?.currency, setCurrency])
+
+  const updateMutation = useMutation({
+    mutationFn: (payload: UpdatePreferencesPayload) => settingsApi.updatePreferences(payload),
+    onSuccess: (updatedData, variables) => {
+      setCurrency(updatedData.currency)
+      if (variables.maskBalancesOnStartup !== undefined) {
+        setMasked(updatedData.maskBalancesOnStartup)
+      }
+
+      queryClient.setQueryData(USER_PREFERENCES_QUERY_KEY, updatedData)
+      queryClient.invalidateQueries({ queryKey: BASELINE_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: USER_PREFERENCES_QUERY_KEY })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      queryClient.invalidateQueries({ queryKey: ['balance'] })
+    },
+  })
+
+  return {
+    preferences: query.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+    updatePreferences: updateMutation.mutateAsync,
     isUpdating: updateMutation.isPending,
   }
 }

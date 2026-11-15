@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { Balance } from '../models';
+import { Balance, User } from '../models';
 import { getFinancialOverview } from '../services/balanceService';
 import { processSystemReserveMonthlyCut } from '../services/savePlanService';
 
@@ -37,6 +37,9 @@ export const updateBaseline = async (
       paydayAnchor,
       paydayAnchorDay,
       currency,
+      overheadAutoGenerate,
+      defaultDailyCap,
+      warningThreshold,
     } = req.body;
 
     const updates: Record<string, unknown> = {};
@@ -70,6 +73,15 @@ export const updateBaseline = async (
     if (typeof currency === 'string' && currency.trim()) {
       updates.currency = currency.trim();
     }
+    if (typeof overheadAutoGenerate === 'boolean') {
+      updates.overheadAutoGenerate = overheadAutoGenerate;
+    }
+    if (typeof defaultDailyCap === 'number' && defaultDailyCap >= 0) {
+      updates.defaultDailyCap = defaultDailyCap;
+    }
+    if (typeof warningThreshold === 'number' && warningThreshold >= 1 && warningThreshold <= 100) {
+      updates.warningThreshold = warningThreshold;
+    }
 
     const updatedBalance = await Balance.findOneAndUpdate(
       { userId },
@@ -83,6 +95,12 @@ export const updateBaseline = async (
         error: { message: 'Balance record not found.' },
       });
       return;
+    }
+
+    if (updates.currency) {
+      await User.findByIdAndUpdate(userId, {
+        $set: { 'preferences.currency': updates.currency },
+      });
     }
 
     res.status(200).json({

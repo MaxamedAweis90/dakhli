@@ -285,7 +285,7 @@ export const ProfilePage: React.FC = () => {
         replace: true,
         state: {
           deactivatedNotice:
-            'Your account has been deactivated. You can restore your data anytime within the 30-day grace period.',
+            'Your account has been deactivated. You can restore your data anytime within the 60-day grace period.',
         },
       })
     } catch (err: unknown) {
@@ -704,10 +704,10 @@ export const ProfilePage: React.FC = () => {
           <span>Danger Zone // Deactivate Account</span>
         </h2>
         <p className="text-xs text-slate-400 leading-relaxed max-w-2xl mb-4">
-          Deactivating your account puts your profile into a 30-day dormant state. All
+          Deactivating your account puts your profile into a 60-day dormant state. All
           recurring overhead bills and baseline savings deductions will be completely
           frozen during this period. You can restore your account with all financial
-          records intact by logging back in within 30 days.
+          records intact by logging back in within 60 days.
         </p>
 
         <button
@@ -747,7 +747,7 @@ export const ProfilePage: React.FC = () => {
             {/* Warning Message */}
             <p className="text-xs text-slate-300 leading-relaxed mb-4">
               This will immediately log you out and schedule your data for permanent
-              deletion in 30 days. To proceed, type{' '}
+              deletion in 60 days. To proceed, type{' '}
               <strong className="text-rose-400 font-mono">DEACTIVATE</strong> below.
             </p>
 

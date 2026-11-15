@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 import type { LiquidityPayload, LiquidityState } from '@/types/store'
 
+if (typeof window !== 'undefined') {
+  try {
+    window.localStorage.removeItem('dakhli_liquidity_store')
+    window.localStorage.removeItem('dakhli_liquidity_store_v2')
+  } catch {
+    // ignore storage access errors
+  }
+}
+
 const INITIAL_STATE = {
   grossBalance: 0,
   totalSaved: 0,

@@ -291,9 +291,9 @@ export const processSystemReserveMonthlyCut = async (
     const currentMonthKey = now.toISOString().slice(0, 7); // 'YYYY-MM'
     const todayDay = now.getDate();
 
-    // Check if current month is dormant
+    // Check if account is deactivated or current month is dormant
     const user = await User.findById(new Types.ObjectId(userId)).session(activeSession);
-    if (user?.dormantCycles?.includes(currentMonthKey)) {
+    if (user?.isDeactivated || user?.dormantCycles?.includes(currentMonthKey)) {
       return plan;
     }
 
@@ -326,10 +326,12 @@ export const processSystemReserveMonthlyCut = async (
       }
     }
 
+    // Always load Balance document inside active transaction session
+    const balance = await Balance.findOne({ userId: new Types.ObjectId(userId) }).session(activeSession);
+
     // Determine cutDay: from plan, or balance.paydayAnchor, or default 25
     let cutDay = plan.cutDay;
     if (!cutDay || cutDay < 1 || cutDay > 31) {
-      const balance = await Balance.findOne({ userId: new Types.ObjectId(userId) }).session(activeSession);
       cutDay = balance?.paydayAnchor ?? 25;
       plan.cutDay = cutDay;
     }
@@ -338,18 +340,33 @@ export const processSystemReserveMonthlyCut = async (
     if (todayDay >= cutDay && plan.lastCutMonth !== currentMonthKey) {
       const cutAmount = Number(plan.monthlyDeduction ?? plan.monthlyContribution ?? 0);
       if (cutAmount > 0) {
-        plan.cumulativeTotal = (plan.cumulativeTotal || 0) + cutAmount;
-        plan.currentSaved = plan.cumulativeTotal;
-        plan.lastCutMonth = currentMonthKey;
-        plan.lastCutDate = now;
-        plan.cutsCompleted = (plan.cutsCompleted || 0) + 1;
+        const sourceBalance = plan.sourceBalance || 'BASELINE_INCOME';
+        let effectiveCut = cutAmount;
 
-        if (typeof plan.targetCycleWindow === 'number' && plan.cutsCompleted >= plan.targetCycleWindow) {
-          plan.status = 'completed';
-          plan.completedAt = now;
+        if (sourceBalance === 'LIQUID_BALANCE') {
+          const availableGross = Math.max(0, balance?.grossBalance ?? 0);
+          effectiveCut = balance ? Math.min(cutAmount, availableGross) : cutAmount;
+
+          if (balance && effectiveCut > 0) {
+            balance.grossBalance = Math.max(0, (balance.grossBalance || 0) - effectiveCut);
+            await balance.save({ session: activeSession });
+          }
         }
 
-        await plan.save({ session: activeSession });
+        if (effectiveCut > 0) {
+          plan.cumulativeTotal = (plan.cumulativeTotal || 0) + effectiveCut;
+          plan.currentSaved = plan.cumulativeTotal;
+          plan.lastCutMonth = currentMonthKey;
+          plan.lastCutDate = now;
+          plan.cutsCompleted = (plan.cutsCompleted || 0) + 1;
+
+          if (typeof plan.targetCycleWindow === 'number' && plan.cutsCompleted >= plan.targetCycleWindow) {
+            plan.status = 'completed';
+            plan.completedAt = now;
+          }
+
+          await plan.save({ session: activeSession });
+        }
       }
     }
 

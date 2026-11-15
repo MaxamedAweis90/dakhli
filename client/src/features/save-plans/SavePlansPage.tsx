@@ -32,7 +32,7 @@ export const SavePlansPage: React.FC = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [editingPlan, setEditingPlan] = useState<SavePlan | null>(null)
 
-  // Fallback initial baseline reserve if query hasn't populated yet
+  // Zero-state placeholder while baseline reserve query resolves
   const defaultSystemReserve: SavePlan = {
     id: 'plan-system-reserve',
     userId: '',
@@ -40,18 +40,18 @@ export const SavePlansPage: React.FC = () => {
     name: 'Cumulative Baseline Reserve',
     category: 'general',
     type: 'system_baseline',
-    targetAmount: 25000,
-    currentAmount: 14500,
-    currentSaved: 14500,
-    percentage: 58,
+    targetAmount: 0,
+    currentAmount: 0,
+    currentSaved: 0,
+    percentage: 0,
     isPinned: true,
     status: 'ACTIVE',
     isSystemDefault: true,
     isRemovable: false,
-    monthlyDeduction: 300,
+    monthlyDeduction: 0,
     targetCycleWindow: 'PERPETUAL',
     sourceBalance: 'BASELINE_INCOME',
-    cumulativeTotal: 14500,
+    cumulativeTotal: 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }

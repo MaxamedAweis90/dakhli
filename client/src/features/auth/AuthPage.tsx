@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Mail,
@@ -8,6 +8,7 @@ import {
   EyeOff,
   AlertCircle,
   Loader2,
+  CheckCircle2,
 } from "@/components/shared/icons";
 import { useAuth } from "./hooks/useAuth";
 import { useGoogleAuth, type GoogleAuthPayload } from "./hooks/useGoogleAuth";
@@ -40,6 +41,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isSuccessSplash, setIsSuccessSplash] = useState(false);
   const [splashMessage, setSplashMessage] = useState("Loading Your Account...");
+
+  // Unauthenticated 2-step Forgot Password flow state
+  const [resetStep, setResetStep] = useState<"none" | "request" | "verify">("none");
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetOtpDigits, setResetOtpDigits] = useState<string[]>(["", "", "", "", "", ""]);
+  const otpInputRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
+  const [isResetSubmitting, setIsResetSubmitting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Real-time email availability status for register mode
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
@@ -291,6 +305,152 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
     googleAuthMutation.isPending ||
     isGoogleLoading;
 
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResetCooldown((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resetCooldown]);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => setToastMessage(null), 4500);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
+
+  const handleOpenForgotPassword = () => {
+    setResetEmail(values.email.trim());
+    setResetError(null);
+    setGeneralError(null);
+    setResetOtpDigits(["", "", "", "", "", ""]);
+    setResetNewPassword("");
+    setResetConfirmPassword("");
+    setShowResetPassword(false);
+    setResetStep("request");
+  };
+
+  const handleExitReset = () => {
+    setResetStep("none");
+    setResetError(null);
+    setResetOtpDigits(["", "", "", "", "", ""]);
+    setResetNewPassword("");
+    setResetConfirmPassword("");
+    setShowResetPassword(false);
+  };
+
+  const handleRequestResetCode = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const trimmedEmail = resetEmail.trim();
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setResetError("Please enter a valid email address.");
+      return;
+    }
+
+    try {
+      setIsResetSubmitting(true);
+      setResetError(null);
+      await authApi.forgotPassword(trimmedEmail);
+      setResetCooldown(60);
+      setResetOtpDigits(["", "", "", "", "", ""]);
+      setResetStep("verify");
+      setTimeout(() => otpInputRefs.current[0]?.focus(), 50);
+    } catch (err: unknown) {
+      const apiErr = err as ApiError;
+      const detailsErr = (apiErr?.details as { error?: { remainingSeconds?: number } })?.error;
+      if (apiErr?.code === "RESEND_COOLDOWN" && detailsErr?.remainingSeconds) {
+        setResetCooldown(detailsErr.remainingSeconds);
+      }
+      setResetError(
+        apiErr?.message || "Unable to send reset code right now. Please try again."
+      );
+    } finally {
+      setIsResetSubmitting(false);
+    }
+  };
+
+  const handleResetOtpChange = (index: number, rawValue: string) => {
+    const digit = rawValue.replace(/\D/g, "").slice(-1);
+    setResetError(null);
+    setResetOtpDigits((prev) => {
+      const next = [...prev];
+      next[index] = digit;
+      return next;
+    });
+    if (digit && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleResetOtpKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
+    if (e.key === "Backspace" && !resetOtpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleResetOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const next = ["", "", "", "", "", ""];
+    for (let i = 0; i < pasted.length; i += 1) {
+      next[i] = pasted[i];
+    }
+    setResetError(null);
+    setResetOtpDigits(next);
+    otpInputRefs.current[Math.min(pasted.length, 5)]?.focus();
+  };
+
+  const handleConfirmResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const otp = resetOtpDigits.join("");
+    if (otp.length !== 6 || !/^\d{6}$/.test(otp)) {
+      setResetError("Please enter the complete 6-digit reset code.");
+      return;
+    }
+    if (resetNewPassword.length < 8) {
+      setResetError("New password must be at least 8 characters long.");
+      return;
+    }
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setIsResetSubmitting(true);
+      setResetError(null);
+      await authApi.resetPassword({
+        email: resetEmail.trim(),
+        otp,
+        newPassword: resetNewPassword,
+      });
+      setMode("login");
+      reset({
+        name: "",
+        email: resetEmail.trim(),
+        password: "",
+      });
+      setResetStep("none");
+      setResetOtpDigits(["", "", "", "", "", ""]);
+      setResetNewPassword("");
+      setResetConfirmPassword("");
+      setShowResetPassword(false);
+      setGeneralError(null);
+      setToastMessage("Password updated. Sign in with your new credentials.");
+    } catch (err: unknown) {
+      const apiErr = err as ApiError;
+      setResetError(
+        apiErr?.message || "Invalid or expired reset code. Please check your entry."
+      );
+    } finally {
+      setIsResetSubmitting(false);
+    }
+  };
+
   if (isSuccessSplash) {
     return <SplashScreen message={splashMessage} />;
   }
@@ -328,260 +488,469 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
 
         {/* Center: Minimalist Form */}
         <div className="w-full max-w-[340px] sm:max-w-[350px] mx-auto my-auto flex flex-col justify-center">
-          {/* Heading */}
-          <div className="text-center">
-            <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-              {mode === "login" ? "Welcome back" : "Create an account"}
-            </h1>
-            <p className="text-[11.5px] text-slate-400 mt-1">
-              {mode === "login"
-                ? "Enter your credentials to access your financial system."
-                : "Start tracking liquidity, savings, and overheads in one hub."}
-            </p>
-          </div>
-
-          {/* Segmented Switcher: Login / Register */}
-          <div className="grid grid-cols-2 p-0.5 bg-[#1A1D26] border border-white/[0.08] rounded-xl w-full mt-3.5">
-            <button
-              type="button"
-              onClick={() => handleModeSwitch("login")}
-              className={cn(
-                "py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer",
-                mode === "login"
-                  ? "bg-[#242835] text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              )}
-            >
-              Login
-            </button>
-            <button
-              type="button"
-              onClick={() => handleModeSwitch("register")}
-              className={cn(
-                "py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer",
-                mode === "register"
-                  ? "bg-[#242835] text-white shadow-sm"
-                  : "text-slate-400 hover:text-white"
-              )}
-            >
-              Register
-            </button>
-          </div>
-
-          {/* General / Server Error Banner */}
-          {(googleError || googleAuthError || generalError) && (
-            <div className="mt-2.5 p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex flex-col gap-1.5 animate-in fade-in duration-200">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                <span>{googleError || googleAuthError || generalError}</span>
+          {resetStep === "none" ? (
+            <>
+              {/* Heading */}
+              <div className="text-center">
+                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                  {mode === "login" ? "Welcome back" : "Create an account"}
+                </h1>
+                <p className="text-[11.5px] text-slate-400 mt-1">
+                  {mode === "login"
+                    ? "Enter your credentials to access your financial system."
+                    : "Start tracking liquidity, savings, and overheads in one hub."}
+                </p>
               </div>
-              {isAccountNotFound && (
+
+              {/* Segmented Switcher: Login / Register */}
+              <div className="grid grid-cols-2 p-0.5 bg-[#1A1D26] border border-white/[0.08] rounded-xl w-full mt-3.5">
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("login")}
+                  className={cn(
+                    "py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer",
+                    mode === "login"
+                      ? "bg-[#242835] text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
+                  )}
+                >
+                  Login
+                </button>
                 <button
                   type="button"
                   onClick={() => handleModeSwitch("register")}
-                  className="text-left text-[11px] text-[#E5A855] hover:underline font-semibold pl-5 cursor-pointer font-mono"
-                >
-                  Need an account? Click here to register →
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Input Fields */}
-          <form onSubmit={handleSubmit} noValidate className="mt-3.5 space-y-2.5">
-            {/* Full Name (Register only) */}
-            {mode === "register" && (
-              <div className="space-y-1 animate-in fade-in duration-200">
-                <label className="text-[11px] font-medium text-slate-300">
-                  Full Name
-                </label>
-                <div
                   className={cn(
-                    "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
-                    errors.name && (touched.name || errors.name)
-                      ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
-                      : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
+                    "py-1.5 text-xs font-semibold rounded-lg transition-all text-center cursor-pointer",
+                    mode === "register"
+                      ? "bg-[#242835] text-white shadow-sm"
+                      : "text-slate-400 hover:text-white"
                   )}
                 >
-                  <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                  <input
-                    type="text"
-                    value={values.name}
-                    onChange={(e) => handleChange("name", e.target.value)}
-                    onBlur={() => handleBlur("name")}
-                    placeholder="Anna Watson"
-                    className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
-                  />
-                </div>
-                {errors.name && (touched.name || errors.name) && (
-                  <p className="text-[10.5px] text-red-400 font-medium pl-1">
-                    {errors.name}
-                  </p>
-                )}
+                  Register
+                </button>
               </div>
-            )}
 
-            {/* Email Address */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-medium text-slate-300">
-                  Email Address
-                </label>
-                {mode === "register" && isCheckingEmail && (
-                  <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" /> checking...
-                  </span>
-                )}
-                {mode === "register" && !isCheckingEmail && emailStatus?.available && !errors.email && (
-                  <span className="text-[10px] font-mono font-medium text-emerald-400 flex items-center gap-0.5">
-                    ✓ Available
-                  </span>
-                )}
-              </div>
-              <div
-                className={cn(
-                  "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
-                  errors.email && (touched.email || errors.email)
-                    ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
-                    : emailStatus?.available && !errors.email
-                    ? "border-emerald-500/40 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30"
-                    : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
-                )}
-              >
-                <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                <input
-                  type="email"
-                  value={values.email}
-                  onChange={(e) => handleChange("email", e.target.value)}
-                  onBlur={() => handleBlur("email")}
-                  placeholder="name@example.com"
-                  className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
-                />
-                {isCheckingEmail && (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500 flex-shrink-0" />
-                )}
-              </div>
-              {errors.email && (touched.email || errors.email) && (
-                <div className="flex items-center justify-between text-[10.5px] text-red-400 font-medium pl-1">
-                  <span>{errors.email}</span>
-                  {mode === "register" && emailStatus && !emailStatus.available && (
+              {/* General / Server Error Banner */}
+              {(googleError || googleAuthError || generalError) && (
+                <div className="mt-2.5 p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex flex-col gap-1.5 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{googleError || googleAuthError || generalError}</span>
+                  </div>
+                  {isAccountNotFound && (
                     <button
                       type="button"
-                      onClick={() => handleModeSwitch("login")}
-                      className="text-[#E5A855] hover:underline font-mono text-[10.5px] font-semibold ml-2 cursor-pointer flex-shrink-0"
+                      onClick={() => handleModeSwitch("register")}
+                      className="text-left text-[11px] text-[#E5A855] hover:underline font-semibold pl-5 cursor-pointer font-mono"
                     >
-                      Log in →
+                      Need an account? Click here to register →
                     </button>
                   )}
                 </div>
               )}
-            </div>
 
-            {/* Password */}
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-slate-300">
-                Password
-              </label>
-              <div
-                className={cn(
-                  "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
-                  errors.password && (touched.password || errors.password)
-                    ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
-                    : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
+              {/* Input Fields */}
+              <form onSubmit={handleSubmit} noValidate className="mt-3.5 space-y-2.5">
+                {/* Full Name (Register only) */}
+                {mode === "register" && (
+                  <div className="space-y-1 animate-in fade-in duration-200">
+                    <label className="text-[11px] font-medium text-slate-300">
+                      Full Name
+                    </label>
+                    <div
+                      className={cn(
+                        "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
+                        errors.name && (touched.name || errors.name)
+                          ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
+                          : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
+                      )}
+                    >
+                      <User className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                      <input
+                        type="text"
+                        value={values.name}
+                        onChange={(e) => handleChange("name", e.target.value)}
+                        onBlur={() => handleBlur("name")}
+                        placeholder="Anna Watson"
+                        className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
+                      />
+                    </div>
+                    {errors.name && (touched.name || errors.name) && (
+                      <p className="text-[10.5px] text-red-400 font-medium pl-1">
+                        {errors.name}
+                      </p>
+                    )}
+                  </div>
                 )}
-              >
-                <Lock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  value={values.password}
-                  onChange={(e) => handleChange("password", e.target.value)}
-                  onBlur={() => handleBlur("password")}
-                  placeholder={
-                    mode === "login" ? "••••••••" : "Minimum 8 characters"
-                  }
-                  className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
-                />
+
+                {/* Email Address */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-medium text-slate-300">
+                      Email Address
+                    </label>
+                    {mode === "register" && isCheckingEmail && (
+                      <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" /> checking...
+                      </span>
+                    )}
+                    {mode === "register" && !isCheckingEmail && emailStatus?.available && !errors.email && (
+                      <span className="text-[10px] font-mono font-medium text-emerald-400 flex items-center gap-0.5">
+                        ✓ Available
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className={cn(
+                      "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
+                      errors.email && (touched.email || errors.email)
+                        ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
+                        : emailStatus?.available && !errors.email
+                        ? "border-emerald-500/40 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500/30"
+                        : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
+                    )}
+                  >
+                    <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <input
+                      type="email"
+                      value={values.email}
+                      onChange={(e) => handleChange("email", e.target.value)}
+                      onBlur={() => handleBlur("email")}
+                      placeholder="name@example.com"
+                      className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
+                    />
+                    {isCheckingEmail && (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500 flex-shrink-0" />
+                    )}
+                  </div>
+                  {errors.email && (touched.email || errors.email) && (
+                    <div className="flex items-center justify-between text-[10.5px] text-red-400 font-medium pl-1">
+                      <span>{errors.email}</span>
+                      {mode === "register" && emailStatus && !emailStatus.available && (
+                        <button
+                          type="button"
+                          onClick={() => handleModeSwitch("login")}
+                          className="text-[#E5A855] hover:underline font-mono text-[10.5px] font-semibold ml-2 cursor-pointer flex-shrink-0"
+                        >
+                          Log in →
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-slate-300">
+                    Password
+                  </label>
+                  <div
+                    className={cn(
+                      "bg-[#1A1D26] border rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors",
+                      errors.password && (touched.password || errors.password)
+                        ? "border-red-500/60 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500/30"
+                        : "border-white/[0.08] focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30"
+                    )}
+                  >
+                    <Lock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={values.password}
+                      onChange={(e) => handleChange("password", e.target.value)}
+                      onBlur={() => handleBlur("password")}
+                      placeholder={
+                        mode === "login" ? "••••••••" : "Minimum 8 characters"
+                      }
+                      className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                  {errors.password && (touched.password || errors.password) && (
+                    <p className="text-[10.5px] text-red-400 font-medium pl-1">
+                      {errors.password}
+                    </p>
+                  )}
+                  {mode === "login" && (
+                    <div className="flex justify-end pt-0.5">
+                      <button
+                        type="button"
+                        onClick={handleOpenForgotPassword}
+                        className="font-mono text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Submit Button */}
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-slate-400 hover:text-white transition-colors cursor-pointer"
-                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-9 sm:h-10 rounded-xl bg-[#E5A855] hover:bg-[#d99b48] active:scale-[0.99] text-[#121316] font-bold text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-3 disabled:opacity-50 font-mono"
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-3.5 h-3.5" />
+                  {loginMutation.isPending || registerMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#121316]" />
                   ) : (
-                    <Eye className="w-3.5 h-3.5" />
+                    <span>{mode === "login" ? "Login" : "Create Account"}</span>
                   )}
                 </button>
+              </form>
+
+              {/* Clean Divider */}
+              <div className="relative my-3 text-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/[0.08]" />
+                </div>
+                <span className="relative bg-[#13151B] px-2 text-[10px] uppercase font-mono tracking-wider text-slate-500">
+                  or
+                </span>
               </div>
-              {errors.password && (touched.password || errors.password) && (
-                <p className="text-[10.5px] text-red-400 font-medium pl-1">
-                  {errors.password}
+
+              {/* Google Only Login Button */}
+              <button
+                type="button"
+                onClick={triggerGoogleLogin}
+                disabled={isLoading}
+                className="w-full h-9 sm:h-10 rounded-xl bg-[#1A1D26] hover:bg-[#222633] border border-white/10 hover:border-white/20 flex items-center justify-center gap-2.5 text-xs font-medium text-white transition-all cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-50"
+              >
+                {googleAuthMutation.isPending || isGoogleLoading ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                ) : (
+                  <>
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-3.5 h-3.5 flex-shrink-0"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fill="#EA4335"
+                        d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
+                      />
+                      <path
+                        fill="#4285F4"
+                        d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.8z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.5s.7 4.8 1.9 7.2l3.7-2.9z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 17C3.7 20.7 7.5 23.5 12 23.5z"
+                      />
+                    </svg>
+                    <span>Continue with Google</span>
+                  </>
+                )}
+              </button>
+            </>
+          ) : resetStep === "request" ? (
+            <div className="space-y-3.5">
+              <div className="text-center">
+                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                  Reset Password
+                </h1>
+                <p className="text-[11.5px] text-slate-400 mt-1">
+                  Enter your account email to receive a 6-digit recovery code.
                 </p>
+              </div>
+
+              {resetError && (
+                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{resetError}</span>
+                </div>
               )}
-            </div>
 
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-9 sm:h-10 rounded-xl bg-[#E5A855] hover:bg-[#d99b48] active:scale-[0.99] text-[#121316] font-bold text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-3 disabled:opacity-50 font-mono"
-            >
-              {loginMutation.isPending || registerMutation.isPending ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#121316]" />
-              ) : (
-                <span>{mode === "login" ? "Login" : "Create Account"}</span>
-              )}
-            </button>
-          </form>
+              <form onSubmit={handleRequestResetCode} noValidate className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-slate-300">
+                    Account Email
+                  </label>
+                  <div className="bg-[#1A1D26] border border-white/10 focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30 rounded-xl h-9 sm:h-10 px-3 flex items-center gap-2.5 transition-colors">
+                    <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <input
+                      type="email"
+                      value={resetEmail}
+                      onChange={(e) => {
+                        setResetError(null);
+                        setResetEmail(e.target.value);
+                      }}
+                      placeholder="name@example.com"
+                      autoFocus
+                      className="w-full bg-transparent font-mono text-xs text-white placeholder-slate-500 outline-none"
+                    />
+                  </div>
+                </div>
 
-          {/* Clean Divider */}
-          <div className="relative my-3 text-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/[0.08]" />
-            </div>
-            <span className="relative bg-[#13151B] px-2 text-[10px] uppercase font-mono tracking-wider text-slate-500">
-              or
-            </span>
-          </div>
-
-          {/* Google Only Login Button */}
-          <button
-            type="button"
-            onClick={triggerGoogleLogin}
-            disabled={isLoading}
-            className="w-full h-9 sm:h-10 rounded-xl bg-[#1A1D26] hover:bg-[#222633] border border-white/10 hover:border-white/20 flex items-center justify-center gap-2.5 text-xs font-medium text-white transition-all cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-50"
-          >
-            {googleAuthMutation.isPending || isGoogleLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-            ) : (
-              <>
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-3.5 h-3.5 flex-shrink-0"
-                  aria-hidden="true"
+                <button
+                  type="submit"
+                  disabled={isResetSubmitting}
+                  className="w-full h-9 sm:h-10 rounded-xl bg-[#E5A855] hover:bg-[#d99b48] active:scale-[0.99] text-[#121316] font-bold text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 font-mono"
                 >
-                  <path
-                    fill="#EA4335"
-                    d="M12 5c1.6 0 3 .6 4.1 1.7l3.1-3.1C17.3 1.8 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5.1 3.7-8.8z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.5s.7 4.8 1.9 7.2l3.7-2.9z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2-6.4-4.8L1.9 17C3.7 20.7 7.5 23.5 12 23.5z"
-                  />
-                </svg>
-                <span>Continue with Google</span>
-              </>
-            )}
-          </button>
+                  {isResetSubmitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#121316]" />
+                  ) : (
+                    <span>Send Reset Code</span>
+                  )}
+                </button>
+              </form>
+
+              <div className="pt-1 text-center">
+                <button
+                  type="button"
+                  onClick={handleExitReset}
+                  className="font-mono text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  ← Back to login
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="text-center">
+                <h1 className="text-lg sm:text-xl font-bold text-white tracking-tight">
+                  Verify & Set Password
+                </h1>
+                <p className="text-[11px] text-slate-400 mt-1 font-mono truncate">
+                  {resetEmail}
+                </p>
+              </div>
+
+              {resetError && (
+                <div className="p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>{resetError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleConfirmResetPassword} noValidate className="space-y-2.5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-medium text-slate-300">
+                      6-Digit Reset Code
+                    </label>
+                    {resetCooldown > 0 ? (
+                      <span className="font-mono tabular-nums text-[10px] text-slate-500">
+                        Resend in {resetCooldown}s
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isResetSubmitting}
+                        onClick={() => void handleRequestResetCode()}
+                        className="font-mono text-[10.5px] text-[#E5A855] hover:underline cursor-pointer disabled:opacity-50"
+                      >
+                        Resend code
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-6 gap-1.5" onPaste={handleResetOtpPaste}>
+                    {resetOtpDigits.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => {
+                          otpInputRefs.current[idx] = el;
+                        }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        aria-label={`Reset code digit ${idx + 1}`}
+                        value={digit}
+                        onChange={(e) => handleResetOtpChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleResetOtpKeyDown(idx, e)}
+                        className="w-full h-9 rounded-xl bg-[#1A1D26] border border-white/10 focus:border-[#E5A855] focus:ring-1 focus:ring-[#E5A855]/30 text-center font-mono tabular-nums text-lg font-semibold text-white outline-none transition-colors"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-slate-300">
+                    New Password
+                  </label>
+                  <div className="bg-[#1A1D26] border border-white/10 focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30 rounded-xl h-9 px-3 flex items-center gap-2.5 transition-colors">
+                    <Lock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <input
+                      type={showResetPassword ? "text" : "password"}
+                      value={resetNewPassword}
+                      onChange={(e) => {
+                        setResetError(null);
+                        setResetNewPassword(e.target.value);
+                      }}
+                      placeholder="Minimum 8 characters"
+                      className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(!showResetPassword)}
+                      className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      aria-label={showResetPassword ? "Hide password" : "Show password"}
+                    >
+                      {showResetPassword ? (
+                        <EyeOff className="w-3.5 h-3.5" />
+                      ) : (
+                        <Eye className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-slate-300">
+                    Confirm Password
+                  </label>
+                  <div className="bg-[#1A1D26] border border-white/10 focus-within:border-[#E5A855] focus-within:ring-1 focus-within:ring-[#E5A855]/30 rounded-xl h-9 px-3 flex items-center gap-2.5 transition-colors">
+                    <Lock className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <input
+                      type={showResetPassword ? "text" : "password"}
+                      value={resetConfirmPassword}
+                      onChange={(e) => {
+                        setResetError(null);
+                        setResetConfirmPassword(e.target.value);
+                      }}
+                      placeholder="Re-enter new password"
+                      className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isResetSubmitting}
+                  className="w-full h-9 sm:h-10 rounded-xl bg-[#E5A855] hover:bg-[#d99b48] active:scale-[0.99] text-[#121316] font-bold text-xs tracking-wide transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer mt-2 disabled:opacity-50 font-mono"
+                >
+                  {isResetSubmitting ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#121316]" />
+                  ) : (
+                    <span>Update Password</span>
+                  )}
+                </button>
+              </form>
+
+              <div className="pt-0.5 text-center">
+                <button
+                  type="button"
+                  onClick={handleExitReset}
+                  className="font-mono text-xs text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  ← Back to login
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Bottom: Footer */}
@@ -601,6 +970,16 @@ export const AuthPage: React.FC<AuthPageProps> = ({ initialMode }) => {
 
       {/* ================= RIGHT COLUMN: Hero Promo Area (65% width) ================= */}
       <AuthPromoBanner />
+
+      {toastMessage && (
+        <div
+          role="status"
+          className="fixed bottom-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#13151B] border border-white/10 text-slate-200 font-mono text-xs shadow-lg"
+        >
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

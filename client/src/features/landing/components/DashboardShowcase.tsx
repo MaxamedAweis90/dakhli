@@ -10,7 +10,6 @@ import {
   Dumbbell,
   Check,
   ChevronRight,
-  User as UserIcon,
 } from '@/components/shared/icons'
 import { Zap } from 'lucide-react'
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
@@ -287,8 +286,8 @@ export const DashboardShowcase: React.FC<{ className?: string }> = ({ className 
 
         {/* Bottom User Meta */}
         <div className="flex items-center gap-2.5 p-2 rounded-xl bg-[#18191f] border border-white/[0.06]">
-          <div className="w-7 h-7 rounded-full bg-[#242630] flex items-center justify-center text-zinc-300 shrink-0">
-            <UserIcon className="w-3.5 h-3.5" aria-hidden="true" />
+          <div className="w-7 h-7 rounded-full bg-[#1A1D26] border border-white/10 flex items-center justify-center font-mono text-[11px] font-semibold text-slate-300 shrink-0">
+            OK
           </div>
           <div className="min-w-0">
             <span className="block text-xs font-medium text-white leading-tight">Omar K.</span>

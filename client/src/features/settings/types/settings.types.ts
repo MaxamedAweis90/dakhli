@@ -33,3 +33,12 @@ export interface FinancialBaseline {
 }
 
 export type UpdateBaselinePayload = Partial<FinancialBaseline>;
+
+export interface UserPreferences {
+  currency: CurrencyCode;
+  maskBalancesOnStartup: boolean;
+  compactLedgerDensity: boolean;
+  carryOverDailySurplus: boolean;
+}
+
+export type UpdatePreferencesPayload = Partial<UserPreferences>;

@@ -6,6 +6,7 @@ import { withTransaction } from './transactionHelper';
 export interface DailySavingsTrackerResult {
   monthKey: string;
   totalVariance: number;
+  priorCycleVariance: number;
   daysLogged: number;
   logs: IDailyLog[];
 }
@@ -105,10 +106,18 @@ export const getDailySavingsTracker = async (
   }).sort({ date: 1 });
 
   const totalVariance = logs.reduce((sum, log) => sum + log.variance, 0);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const priorCycleVariance = Number(
+    logs
+      .filter((l) => l.date < todayStr)
+      .reduce((sum, l) => sum + (l.variance ?? l.plannedCap - l.actualSpend), 0)
+      .toFixed(2)
+  );
 
   return {
     monthKey,
     totalVariance,
+    priorCycleVariance,
     daysLogged: logs.length,
     logs,
   };

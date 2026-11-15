@@ -10,6 +10,13 @@ import {
   updateItem,
 } from '../controllers/itemController';
 import { authenticate } from '../middleware/auth';
+import { validateRequest } from '../middleware/validate';
+import {
+  createItemSchema,
+  itemIdParamSchema,
+  reorderItemsSchema,
+  updateItemSchema,
+} from '../schemas/itemSchemas';
 
 const router = Router();
 
@@ -17,13 +24,13 @@ router.use(authenticate);
 
 router.get('/', listItems);
 router.get('/summary', getItemSummary);
-router.post('/', createItem);
-router.patch('/reorder', reorderItems);
-router.patch('/:id', updateItem);
-router.patch('/:id/buy', buyItem);
-router.post('/:id/buy', buyItem);
-router.patch('/:id/unbuy', unbuyItem);
-router.post('/:id/unbuy', unbuyItem);
-router.delete('/:id', deleteItem);
+router.post('/', validateRequest({ body: createItemSchema }), createItem);
+router.patch('/reorder', validateRequest({ body: reorderItemsSchema }), reorderItems);
+router.patch('/:id', validateRequest({ params: itemIdParamSchema, body: updateItemSchema }), updateItem);
+router.patch('/:id/buy', validateRequest({ params: itemIdParamSchema }), buyItem);
+router.post('/:id/buy', validateRequest({ params: itemIdParamSchema }), buyItem);
+router.patch('/:id/unbuy', validateRequest({ params: itemIdParamSchema }), unbuyItem);
+router.post('/:id/unbuy', validateRequest({ params: itemIdParamSchema }), unbuyItem);
+router.delete('/:id', validateRequest({ params: itemIdParamSchema }), deleteItem);
 
 export default router;

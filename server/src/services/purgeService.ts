@@ -9,10 +9,11 @@ import {
   Item,
   UploadSession,
 } from '../models';
+import { deleteBlobFromStorage } from './blobService';
 
 /**
- * Permanently purge accounts whose 30-day deactivation grace period has expired.
- * Cascade-removes all financial documents and personal records.
+ * Permanently purge accounts whose 60-day deactivation grace period has expired.
+ * Cascade-removes uploaded media blobs and all financial/personal documents.
  */
 export const purgeExpiredAccounts = async (): Promise<{ purgedCount: number }> => {
   const now = new Date();
@@ -35,6 +36,29 @@ export const purgeExpiredAccounts = async (): Promise<{ purgedCount: number }> =
 
     for (const user of expiredUsers) {
       const userId = user._id;
+
+      // Collect and remove managed Vercel Blob media before wiping MongoDB records
+      const userItems = await Item.find({ userId }).select('imageUrl').lean();
+      const candidateUrls = [
+        user.avatar,
+        (user as unknown as { avatarUrl?: string | null }).avatarUrl,
+        ...userItems.map((item) => item.imageUrl),
+      ].filter(
+        (url): url is string =>
+          typeof url === 'string' && url.includes('/upload/media/')
+      );
+
+      const uniqueBlobUrls = Array.from(new Set(candidateUrls));
+      for (const blobUrl of uniqueBlobUrls) {
+        try {
+          await deleteBlobFromStorage(blobUrl);
+        } catch (blobErr) {
+          console.warn(
+            `[PurgeService] Failed to delete blob (${blobUrl}) for user ${userId}:`,
+            blobErr
+          );
+        }
+      }
 
       // Cascade remove all associated financial documents
       await Promise.all([

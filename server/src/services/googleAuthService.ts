@@ -11,62 +11,55 @@ export interface GooglePayload {
   emailVerified: boolean;
 }
 
+const createAuthError = (message: string, statusCode: number, code?: string): Error => {
+  const err = new Error(message) as Error & { statusCode?: number; code?: string };
+  err.statusCode = statusCode;
+  if (code) {
+    err.code = code;
+  }
+  return err;
+};
+
+const ensureGoogleConfigured = (): void => {
+  if (!ENV.GOOGLE_CLIENT_ID || !ENV.GOOGLE_CLIENT_ID.trim()) {
+    throw createAuthError('Google OAuth is not configured', 500, 'GOOGLE_OAUTH_NOT_CONFIGURED');
+  }
+};
+
 /**
  * Verifies a Google ID token from Google Identity Services.
  * Cryptographically verifies token signature and returns decoded safe user profile.
  */
 export async function verifyGoogleToken(rawToken: string): Promise<GooglePayload> {
+  ensureGoogleConfigured();
+
   const token = (rawToken || '').trim();
   if (!token) {
-    throw new Error('Google token cannot be empty.');
+    throw createAuthError('Google token cannot be empty.', 401, 'GOOGLE_TOKEN_EMPTY');
   }
 
-  // 1. Verify cryptographic signature via Google OAuth2 client
-  if (ENV.GOOGLE_CLIENT_ID) {
-    try {
-      const ticket = await client.verifyIdToken({
-        idToken: token,
-        audience: ENV.GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      if (!payload || !payload.email || !payload.sub) {
-        throw new Error('Invalid Google token payload structure.');
-      }
-      return {
-        googleId: payload.sub,
-        email: payload.email.toLowerCase().trim(),
-        name: payload.name || payload.given_name || payload.email.split('@')[0],
-        picture: payload.picture,
-        emailVerified: Boolean(payload.email_verified),
-      };
-    } catch (err: any) {
-      if (ENV.NODE_ENV === 'production') {
-        throw new Error(`Google token verification failed: ${err.message}`);
-      }
-    }
-  }
-
-  // 2. Fallback parser for valid JWT ID token format if audience check failed in dev
   try {
-    const parts = token.split('.');
-    if (parts.length === 3) {
-      const payloadJson = Buffer.from(parts[1], 'base64').toString('utf8');
-      const payload = JSON.parse(payloadJson);
-      if (payload.sub && payload.email) {
-        return {
-          googleId: payload.sub,
-          email: String(payload.email).toLowerCase().trim(),
-          name: payload.name || payload.given_name || String(payload.email).split('@')[0],
-          picture: payload.picture,
-          emailVerified: Boolean(payload.email_verified ?? true),
-        };
-      }
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: ENV.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email || !payload.sub) {
+      throw createAuthError('Invalid Google token payload structure.', 401, 'GOOGLE_TOKEN_INVALID');
     }
-  } catch {
-    // fall through
+    return {
+      googleId: payload.sub,
+      email: payload.email.toLowerCase().trim(),
+      name: payload.name || payload.given_name || payload.email.split('@')[0],
+      picture: payload.picture,
+      emailVerified: Boolean(payload.email_verified),
+    };
+  } catch (err: any) {
+    if (err?.statusCode === 500 || err?.statusCode === 401) {
+      throw err;
+    }
+    throw createAuthError(`Google token verification failed: ${err.message}`, 401, 'GOOGLE_TOKEN_INVALID');
   }
-
-  throw new Error('Google authentication failed: unable to verify ID token.');
 }
 
 /**
@@ -74,9 +67,11 @@ export async function verifyGoogleToken(rawToken: string): Promise<GooglePayload
  * for verified user credentials.
  */
 export async function exchangeGoogleCode(rawCode: string): Promise<GooglePayload> {
+  ensureGoogleConfigured();
+
   const code = (rawCode || '').trim();
   if (!code) {
-    throw new Error('Google authorization code cannot be empty.');
+    throw createAuthError('Google authorization code cannot be empty.', 401, 'GOOGLE_CODE_EMPTY');
   }
 
   let tokens: any = null;
@@ -94,8 +89,10 @@ export async function exchangeGoogleCode(rawCode: string): Promise<GooglePayload
       const res = await client.getToken(code);
       tokens = res.tokens;
     } catch (fallbackErr: any) {
-      throw new Error(
-        `Failed to exchange Google authorization code: ${err.message || fallbackErr.message}`
+      throw createAuthError(
+        `Failed to exchange Google authorization code: ${err.message || fallbackErr.message}`,
+        401,
+        'GOOGLE_CODE_EXCHANGE_FAILED'
       );
     }
   }
@@ -108,16 +105,22 @@ export async function exchangeGoogleCode(rawCode: string): Promise<GooglePayload
     return verifyGoogleAccessToken(tokens.access_token);
   }
 
-  throw new Error('Google authorization succeeded but no valid token was returned.');
+  throw createAuthError(
+    'Google authorization succeeded but no valid token was returned.',
+    401,
+    'GOOGLE_TOKEN_MISSING'
+  );
 }
 
 /**
  * Verifies an access token via Google's official userinfo endpoint.
  */
 export async function verifyGoogleAccessToken(rawAccessToken: string): Promise<GooglePayload> {
+  ensureGoogleConfigured();
+
   const accessToken = (rawAccessToken || '').trim();
   if (!accessToken) {
-    throw new Error('Google access token cannot be empty.');
+    throw createAuthError('Google access token cannot be empty.', 401, 'GOOGLE_ACCESS_TOKEN_EMPTY');
   }
 
   const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
@@ -128,12 +131,20 @@ export async function verifyGoogleAccessToken(rawAccessToken: string): Promise<G
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`Failed to retrieve Google user profile: ${errorText}`);
+    throw createAuthError(
+      `Failed to retrieve Google user profile: ${errorText}`,
+      401,
+      'GOOGLE_USERINFO_FAILED'
+    );
   }
 
   const data = (await response.json()) as any;
   if (!data?.sub || !data?.email) {
-    throw new Error('Invalid user info structure received from Google.');
+    throw createAuthError(
+      'Invalid user info structure received from Google.',
+      401,
+      'GOOGLE_USERINFO_INVALID'
+    );
   }
 
   return {

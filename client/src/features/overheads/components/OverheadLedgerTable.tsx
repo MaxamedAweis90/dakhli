@@ -16,6 +16,8 @@ import {
 import type { OverheadBill, OverheadStatus } from '../types/overhead.types'
 import { useLiquidityStore } from '@/stores/liquidityStore'
 import { usePrivacyStore, getDynamicBullets } from '@/stores/privacyStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useUserPreferences } from '@/features/settings/hooks/useBaseline'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
 import { cn } from '@/lib/utils'
 
@@ -99,6 +101,12 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
   const triggerRefs = useRef<Record<string, HTMLButtonElement | null>>({})
 
   const store = useLiquidityStore()
+  const { preferences } = useUserPreferences()
+  const { user } = useAuthStore()
+  const isCompact = Boolean(
+    preferences?.compactLedgerDensity ?? user?.preferences?.compactLedgerDensity ?? false
+  )
+  const rowCellPad = isCompact ? 'py-2 text-xs' : 'py-3.5'
   const currentCode = (store.currency in CURRENCY_CONFIGS
     ? store.currency
     : 'USD') as CurrencyCode
@@ -352,20 +360,22 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                     )}
                   >
                     {/* Bill Name + Icon Tile */}
-                    <td className="py-4 pl-1">
-                      <div className="flex items-center gap-3.5">
+                    <td className={cn(rowCellPad, 'pl-1')}>
+                      <div className={cn('flex items-center', isCompact ? 'gap-2.5' : 'gap-3.5')}>
                         <div
                           className={cn(
-                            'w-[2.2rem] h-[2.2rem] rounded-[0.65rem] bg-[#22242D] border border-white/[0.03] flex items-center justify-center shrink-0',
+                            'rounded-[0.65rem] bg-[#22242D] border border-white/[0.03] flex items-center justify-center shrink-0',
+                            isCompact ? 'w-[1.8rem] h-[1.8rem]' : 'w-[2.2rem] h-[2.2rem]',
                             isInactive ? 'text-[#60636d]' : 'text-[#d1d5db]'
                           )}
                         >
-                          <Icon className="w-4 h-4" />
+                          <Icon className={isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
                         </div>
                         <div>
                           <span
                             className={cn(
-                              'text-[0.92rem] font-medium tracking-tight block',
+                              'font-medium tracking-tight block',
+                              isCompact ? 'text-xs' : 'text-[0.92rem]',
                               isInactive || isPaidActive
                                 ? 'text-slate-400 line-through'
                                 : 'text-white'
@@ -385,7 +395,9 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                     {/* Due Date */}
                     <td
                       className={cn(
-                        'py-4 pr-3 text-[0.88rem] font-normal whitespace-nowrap',
+                        rowCellPad,
+                        'pr-3 font-normal whitespace-nowrap',
+                        !isCompact && 'text-[0.88rem]',
                         isInactive ? 'text-[#70727a] line-through' : 'text-white/90'
                       )}
                     >
@@ -396,7 +408,9 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                     {/* Billed Amount */}
                     <td
                       className={cn(
-                        'py-4 pr-3 text-[0.95rem] font-mono tabular-nums font-medium whitespace-nowrap',
+                        rowCellPad,
+                        'pr-3 font-mono tabular-nums font-medium whitespace-nowrap',
+                        !isCompact && 'text-[0.95rem]',
                         isInactive ? 'text-[#70727a] line-through' : 'text-white'
                       )}
                     >
@@ -405,12 +419,12 @@ export const OverheadLedgerTable: React.FC<OverheadLedgerTableProps> = ({
                     </td>
 
                     {/* Status (Clean Text, No Button Borders or Backgrounds) */}
-                    <td className="py-4 text-[0.88rem] font-medium font-mono">
+                    <td className={cn(rowCellPad, !isCompact && 'text-[0.88rem]', 'font-medium font-mono')}>
                       {renderStatus(bill)}
                     </td>
 
                     {/* Actions */}
-                    <td className="py-4 pr-2 text-right relative">
+                    <td className={cn(rowCellPad, 'pr-2 text-right relative')}>
                       <div className="inline-flex items-center gap-2">
                         {/* Mark Paid / Status Button */}
                         {isDormant ? (

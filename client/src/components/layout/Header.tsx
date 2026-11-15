@@ -4,7 +4,6 @@ import {
   Calendar,
   ChevronDown,
   LogOut,
-  Plus,
   Search,
   Settings,
   User as UserIcon,
@@ -13,6 +12,7 @@ import { Calculator, ChevronLeft, Eye, EyeOff, Menu, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { usePrivacyStore } from '@/stores/privacyStore'
 import { useSearchStore } from '@/stores/searchStore'
+import { useSettingsUiStore } from '@/stores/settingsUiStore'
 import {
   useOverheadsStore,
   getRealCurrentMonth,
@@ -44,6 +44,12 @@ export const Header: React.FC<HeaderProps> = ({ isScrolled = false }) => {
   const { user, clearSession } = useAuthStore()
   const { isMasked, togglePrivacy } = usePrivacyStore()
   const { openSearch } = useSearchStore()
+  const {
+    activeTab: settingsTab,
+    isFinanceDirty,
+    isPreferencesDirty,
+    isSaving: isSettingsSaving,
+  } = useSettingsUiStore()
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
@@ -100,6 +106,13 @@ export const Header: React.FC<HeaderProps> = ({ isScrolled = false }) => {
   const displayEmail = user?.email || 'user@dakhli.app'
   const isMonthAware = ['/overheads', '/overhead'].includes(location.pathname)
   const isSettings = location.pathname === '/settings'
+  const isSettingsDirty = settingsTab === 'finance' ? isFinanceDirty : isPreferencesDirty
+  const settingsFormId = settingsTab === 'finance' ? 'settings-baseline-form' : 'settings-preferences-form'
+  const settingsButtonText = isSettingsSaving
+    ? 'Saving...'
+    : settingsTab === 'finance'
+    ? 'Save Baseline'
+    : 'Save Preferences'
   const isCurrentDormant = Boolean(user?.dormantCycles?.includes(currentMonth))
   const showCalAndEye = !isMonthAware || isScrolled || isToolsExpanded
   const title =
@@ -179,15 +192,21 @@ export const Header: React.FC<HeaderProps> = ({ isScrolled = false }) => {
             )}
           </button>
 
-          {/* + Save Baseline Button on Settings route */}
+          {/* Contextual Save Button on Settings route */}
           {isSettings && (
             <button
               type="submit"
-              form="settings-baseline-form"
-              className="flex items-center gap-[0.35rem] h-[2.2rem] px-[1.15rem] rounded-full bg-[#E5A855] hover:bg-[#d89740] active:scale-[0.98] text-[#121316] font-semibold text-[0.825rem] transition-all shadow-[0_2px_12px_rgba(229,168,85,0.25)] cursor-pointer"
+              form={settingsFormId}
+              disabled={!isSettingsDirty || isSettingsSaving}
+              data-testid="settings-save-button"
+              className={cn(
+                'flex items-center justify-center h-[2.2rem] px-[1.15rem] rounded-full bg-[#F5C469] text-[#0D0E12] font-semibold text-[0.825rem] transition-all',
+                isSettingsDirty || isSettingsSaving
+                  ? 'opacity-100 hover:bg-[#EAB308] active:scale-[0.98] cursor-pointer shadow-[0_2px_12px_rgba(245,196,105,0.2)]'
+                  : 'opacity-60 cursor-default'
+              )}
             >
-              <Plus className="w-[0.875rem] h-[0.875rem] stroke-[2.5]" />
-              <span>Save Baseline</span>
+              <span>{settingsButtonText}</span>
             </button>
           )}
         </div>
@@ -351,11 +370,20 @@ export const Header: React.FC<HeaderProps> = ({ isScrolled = false }) => {
           {isSettings && (
             <button
               type="submit"
-              form="settings-baseline-form"
-              className="flex items-center gap-1 h-8 px-3 rounded-full bg-[#E5A855] hover:bg-[#d89740] text-[#121316] font-semibold text-xs transition-all cursor-pointer active:scale-95"
+              form={settingsFormId}
+              disabled={!isSettingsDirty || isSettingsSaving}
+              data-testid="mobile-settings-save-button"
+              className={cn(
+                'flex items-center justify-center h-8 px-3 rounded-full bg-[#F5C469] text-[#0D0E12] font-semibold text-xs whitespace-nowrap transition-all',
+                isSettingsDirty || isSettingsSaving
+                  ? 'opacity-100 hover:bg-[#EAB308] active:scale-95 cursor-pointer'
+                  : 'opacity-60 cursor-default'
+              )}
             >
-              <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-              <span>Save</span>
+              <span>
+                <span className="sm:hidden">{isSettingsSaving ? 'Saving...' : 'Save'}</span>
+                <span className="hidden sm:inline">{settingsButtonText}</span>
+              </span>
             </button>
           )}
 

@@ -36,7 +36,7 @@ export const AccountDeactivatedPage: React.FC = () => {
   const targetEmail = stateData.email || user?.email || ''
   const deletionScheduledAt =
     stateData.deletionScheduledAt ||
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
   const restorationToken = stateData.restorationToken
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
@@ -148,7 +148,7 @@ export const AccountDeactivatedPage: React.FC = () => {
             Account in Dormant State
           </h1>
           <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-            This account was deactivated and is scheduled for permanent data deletion.
+            This account was deactivated and is within its 60-day recovery window before permanent data deletion.
             All recurring overhead bills and savings cuts are currently frozen.
           </p>
         </div>
@@ -166,7 +166,7 @@ export const AccountDeactivatedPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400 font-mono">STATUS</span>
             <span className="text-amber-400 bg-amber-500/10 border border-amber-500/20 font-mono text-xs px-2 py-0.5 rounded">
-              DEACTIVATION GRACE PERIOD
+              60-DAY GRACE PERIOD
             </span>
           </div>
 
@@ -229,7 +229,7 @@ export const AccountDeactivatedPage: React.FC = () => {
       {/* Minimalist Bottom-Right Slate Toast */}
       {showToast && (
         <div className="fixed bottom-6 right-6 z-50 bg-[#1A1D26] border border-white/10 text-slate-200 px-4 py-3 rounded-lg shadow-2xl font-mono text-xs flex items-center gap-2.5 animate-in slide-in-from-bottom-2 fade-in duration-200">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
           <span>Account restored. Recurring ledger active.</span>
         </div>
       )}

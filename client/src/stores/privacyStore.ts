@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 const STORAGE_KEY = 'dakhli_privacy_mode'
+const PREFERENCES_STORAGE_KEY = 'dakhli_settings_preferences'
 
 /**
  * Calculates a magnitude-proportional bullet string based on the underlying number value.
@@ -39,10 +40,24 @@ interface PrivacyState {
 }
 
 export const usePrivacyStore = create<PrivacyState>((set) => {
-  const initialMasked =
-    typeof window !== 'undefined'
-      ? localStorage.getItem(STORAGE_KEY) === 'true'
-      : false
+  let initialMasked = false
+  if (typeof window !== 'undefined') {
+    try {
+      const rawPrefs = localStorage.getItem(PREFERENCES_STORAGE_KEY)
+      if (rawPrefs) {
+        const parsed = JSON.parse(rawPrefs)
+        if (parsed?.maskBalancesOnStartup === true) {
+          initialMasked = true
+        } else {
+          initialMasked = localStorage.getItem(STORAGE_KEY) === 'true'
+        }
+      } else {
+        initialMasked = localStorage.getItem(STORAGE_KEY) === 'true'
+      }
+    } catch {
+      initialMasked = localStorage.getItem(STORAGE_KEY) === 'true'
+    }
+  }
 
   return {
     isMasked: initialMasked,

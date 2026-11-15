@@ -1,3 +1,10 @@
+export interface UserPreferencesState {
+  currency?: 'USD' | 'SOS' | 'EUR'
+  maskBalancesOnStartup?: boolean
+  compactLedgerDensity?: boolean
+  carryOverDailySurplus?: boolean
+}
+
 export interface AuthUser {
   id: string
   email: string
@@ -9,6 +16,7 @@ export interface AuthUser {
   isDeactivated?: boolean
   isOnboarded?: boolean
   dormantCycles?: string[]
+  preferences?: UserPreferencesState
   createdAt?: string
 }
 

@@ -8,6 +8,9 @@ export interface FinancialOverview {
   currency: string;
   paydayAnchor: number;
   baseMonthlyIncome: number;
+  overheadAutoGenerate: boolean;
+  defaultDailyCap: number;
+  warningThreshold: number;
 }
 
 /**
@@ -49,6 +52,9 @@ export const getFinancialOverview = async (
     currency: balance.currency,
     paydayAnchor: balance.paydayAnchor,
     baseMonthlyIncome: balance.baseMonthlyIncome,
+    overheadAutoGenerate: balance.overheadAutoGenerate ?? true,
+    defaultDailyCap: balance.defaultDailyCap ?? 30,
+    warningThreshold: balance.warningThreshold ?? 80,
   };
 };
 

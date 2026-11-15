@@ -14,7 +14,7 @@ const startServer = async (): Promise<void> => {
   // Non-blocking storage folders verification ('items/', 'avatars/') in Vercel Blob
   void initBlobFolders();
 
-  // Start background 30-day purge worker
+  // Start background 60-day purge worker
   purgeService.startPurgeWorker();
 
   const server = app.listen(ENV.PORT, () => {

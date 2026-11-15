@@ -127,12 +127,51 @@ export const updatePasswordSchema = z.object({
     .regex(/^\d{6}$/, 'Verification code must consist of 6 digits only.'),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string({ error: 'Email is required.' })
+    .trim()
+    .min(1, 'Email is required.')
+    .email('Please enter a valid email address.')
+    .toLowerCase(),
+});
+
+export const resetPasswordSchema = z.object({
+  email: z
+    .string({ error: 'Email is required.' })
+    .trim()
+    .min(1, 'Email is required.')
+    .email('Please enter a valid email address.')
+    .toLowerCase(),
+  otp: z
+    .string({ error: 'Verification code is required.' })
+    .trim()
+    .length(6, 'Verification code must be exactly 6 digits.')
+    .regex(/^\d{6}$/, 'Verification code must consist of 6 digits only.'),
+  newPassword: z
+    .string({ error: 'New password is required.' })
+    .min(8, 'New password must be at least 8 characters long.'),
+});
+
 export const deactivateAccountSchema = z.object({
   confirmation: z.string().trim().optional(),
 });
 
 export const restoreAccountSchema = z.object({
-  restorationToken: z.string().trim().optional(),
+  restorationToken: z.string().trim().min(1, 'Restoration token cannot be empty.').optional(),
+  otp: z
+    .string()
+    .trim()
+    .length(6, 'Verification code must be exactly 6 digits.')
+    .regex(/^\d{6}$/, 'Verification code must consist of 6 digits only.')
+    .optional(),
+});
+
+export const updatePreferencesSchema = z.object({
+  currency: z.enum(['USD', 'SOS', 'EUR'] as const).optional(),
+  maskBalancesOnStartup: z.boolean().optional(),
+  compactLedgerDensity: z.boolean().optional(),
+  carryOverDailySurplus: z.boolean().optional(),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -144,5 +183,8 @@ export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 export type RequestPasswordOtpInput = z.infer<typeof requestPasswordOtpSchema>;
 export type UpdatePasswordInput = z.infer<typeof updatePasswordSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type DeactivateAccountInput = z.infer<typeof deactivateAccountSchema>;
 export type RestoreAccountInput = z.infer<typeof restoreAccountSchema>;
+export type UpdatePreferencesInput = z.infer<typeof updatePreferencesSchema>;

@@ -42,24 +42,7 @@ export const useItems = (activeTierFilter?: 'All' | DisplayItemTier) => {
 
   // Enrich items with any linked save plan progress
   const enrichedItems = useMemo(() => {
-    const storeFallback = useItemsStore.getState().items.map((i) => ({
-      id: i.id,
-      userId: '',
-      title: i.name,
-      name: i.name,
-      targetPrice: i.price,
-      price: i.price,
-      tier: i.tier === 'Essentials' ? 'essentials' : i.tier === 'Future Needs' ? 'future_needs' : 'wants',
-      displayTier: i.tier,
-      status: i.status === 'bought' ? 'bought' : 'planned',
-      imageUrl: i.imageUrl,
-      tag: i.tag,
-      targetProgress: i.targetProgress,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    } as RegistryItem))
-
-    const raw = (query.data && query.data.length > 0) ? query.data : storeFallback
+    const raw = query.data ?? []
     const sorted = [...raw].sort((a, b) => {
       const orderA = a.sortOrder ?? 0
       const orderB = b.sortOrder ?? 0

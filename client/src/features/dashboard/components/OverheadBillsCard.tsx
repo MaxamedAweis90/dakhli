@@ -1,32 +1,29 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
-import { Home, Wifi, Dumbbell, ChevronRight } from '@/components/shared/icons'
-import { Zap, Shield } from 'lucide-react'
-import { useOverheads } from '@/features/overheads/hooks/useOverheads'
-import { useLiquidityStore } from '@/stores/liquidityStore'
-import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
-import { AnimatedNumber } from '@/components/shared/AnimatedNumber'
-import { cn } from '@/lib/utils'
+import React from "react";
+import { Link } from "react-router-dom";
+import { Home, Wifi, Dumbbell, ChevronRight } from "@/components/shared/icons";
+import { Zap, Shield } from "lucide-react";
+import { useOverheads } from "@/features/overheads/hooks/useOverheads";
+import { useLiquidityStore } from "@/stores/liquidityStore";
+import {
+  CURRENCY_CONFIGS,
+  type CurrencyCode,
+} from "@/features/settings/types/settings.types";
+import { AnimatedNumber } from "@/components/shared/AnimatedNumber";
+import { cn } from "@/lib/utils";
 
 export interface QuickBillItem {
-  id?: string
-  name: string
-  icon: 'home' | 'wifi' | 'dumbbell' | 'flash' | 'shield'
+  id?: string;
+  name: string;
+  icon: "home" | "wifi" | "dumbbell" | "flash" | "shield";
 }
 
 export interface OverheadBillsCardProps {
-  unpaid?: number
-  paid?: number
-  currency?: string
-  items?: QuickBillItem[]
-  className?: string
+  unpaid?: number;
+  paid?: number;
+  currency?: string;
+  items?: QuickBillItem[];
+  className?: string;
 }
-
-const DEFAULT_QUICK_ITEMS: QuickBillItem[] = [
-  { id: 'rent', name: 'Rent', icon: 'home' },
-  { id: 'internet', name: 'Internet', icon: 'wifi' },
-  { id: 'gym', name: 'Gym', icon: 'dumbbell' },
-]
 
 const ICONS = {
   home: Home,
@@ -34,7 +31,7 @@ const ICONS = {
   dumbbell: Dumbbell,
   flash: Zap,
   shield: Shield,
-} as const
+} as const;
 
 export const OverheadBillsCard: React.FC<OverheadBillsCardProps> = ({
   unpaid: propUnpaid,
@@ -43,49 +40,63 @@ export const OverheadBillsCard: React.FC<OverheadBillsCardProps> = ({
   items: propItems,
   className,
 }) => {
-  const { bills, summary } = useOverheads()
-  const store = useLiquidityStore()
+  const { bills, summary } = useOverheads();
+  const store = useLiquidityStore();
 
-  const currentCode = (store.currency in CURRENCY_CONFIGS
-    ? store.currency
-    : 'USD') as CurrencyCode
-  const config = CURRENCY_CONFIGS[currentCode]
+  const currentCode = (
+    store.currency in CURRENCY_CONFIGS ? store.currency : "USD"
+  ) as CurrencyCode;
+  const config = CURRENCY_CONFIGS[currentCode];
 
-  const liveUnpaid = propUnpaid ?? summary.totalUnpaid
-  const livePaid = propPaid ?? summary.totalPaid
-  const activeCurrencySymbol = propCurrency ?? config.symbol
-  const rate = propCurrency ? 1 : (config.rate ?? 1)
+  const liveUnpaid = propUnpaid ?? summary.totalUnpaid;
+  const livePaid = propPaid ?? summary.totalPaid;
+  const activeCurrencySymbol = propCurrency ?? config.symbol;
+  const rate = propCurrency ? 1 : (config.rate ?? 1);
 
-  const convertedUnpaid = liveUnpaid * rate
-  const convertedPaid = livePaid * rate
-  const liveTotalCommitted = summary.totalMonthly || (liveUnpaid + livePaid)
-  const convertedTotalCommitted = liveTotalCommitted * rate
+  const convertedUnpaid = liveUnpaid * rate;
+  const convertedPaid = livePaid * rate;
+  const liveTotalCommitted = summary.totalMonthly || liveUnpaid + livePaid;
+  const convertedTotalCommitted = liveTotalCommitted * rate;
 
-  const recurringBills = bills.filter((b) => b.isRecurring !== false)
-  const sourceBills = recurringBills.length > 0 ? recurringBills : bills
+  const recurringBills = bills.filter((b) => b.isRecurring !== false);
+  const sourceBills = recurringBills.length > 0 ? recurringBills : bills;
 
-  const displayItems: QuickBillItem[] = propItems ?? (
-    sourceBills.length > 0
+  const displayItems: QuickBillItem[] =
+    propItems ??
+    (sourceBills.length > 0
       ? sourceBills.slice(0, 3).map((b) => {
-          let iconType: 'home' | 'wifi' | 'dumbbell' | 'flash' | 'shield' = 'home'
-          if (b.iconKey === 'dumbbell' || b.title.toLowerCase().includes('gym')) iconType = 'dumbbell'
-          else if (b.iconKey === 'wifi' || b.title.toLowerCase().includes('internet')) iconType = 'wifi'
-          else if (b.iconKey === 'flash' || b.title.toLowerCase().includes('electric')) iconType = 'flash'
-          else if (b.iconKey === 'shield' || b.title.toLowerCase().includes('insur')) iconType = 'shield'
+          let iconType: "home" | "wifi" | "dumbbell" | "flash" | "shield" =
+            "home";
+          if (b.iconKey === "dumbbell" || b.title.toLowerCase().includes("gym"))
+            iconType = "dumbbell";
+          else if (
+            b.iconKey === "wifi" ||
+            b.title.toLowerCase().includes("internet")
+          )
+            iconType = "wifi";
+          else if (
+            b.iconKey === "flash" ||
+            b.title.toLowerCase().includes("electric")
+          )
+            iconType = "flash";
+          else if (
+            b.iconKey === "shield" ||
+            b.title.toLowerCase().includes("insur")
+          )
+            iconType = "shield";
           return {
             id: b.id,
             name: b.title,
             icon: iconType,
-          }
+          };
         })
-      : DEFAULT_QUICK_ITEMS
-  )
+      : []);
 
   return (
     <div
       className={cn(
-        'rounded-[1.25rem] bg-overhead-warm px-[1.1rem] pt-[1.1rem] pb-[1.1rem] flex flex-col justify-between gap-[1rem] select-none h-auto min-h-fit',
-        className
+        "rounded-[1.25rem] bg-overhead-warm px-[1.1rem] pt-[1.1rem] pb-[1.1rem] flex flex-col justify-between gap-[1rem] select-none h-auto min-h-fit",
+        className,
       )}
     >
       <div>
@@ -101,7 +112,9 @@ export const OverheadBillsCard: React.FC<OverheadBillsCardProps> = ({
             className="text-[0.75rem] font-mono tabular-nums text-white/90 bg-black/20 px-2 py-0.5 rounded-md border border-white/10 flex items-center gap-1.5"
             title="Total Monthly Committed Overhead"
           >
-            <span className="text-white/60 text-[0.68rem] tracking-wide uppercase">Total</span>
+            <span className="text-white/60 text-[0.68rem] tracking-wide uppercase">
+              Total
+            </span>
             <AnimatedNumber
               value={convertedTotalCommitted}
               prefix={activeCurrencySymbol}
@@ -110,7 +123,9 @@ export const OverheadBillsCard: React.FC<OverheadBillsCardProps> = ({
             />
           </div>
         </div>
-        <p className="mt-[0.9rem] text-[0.8125rem] leading-4 text-white/90">This Month</p>
+        <p className="mt-[0.9rem] text-[0.8125rem] leading-4 text-white/90">
+          This Month
+        </p>
 
         <div className="mt-[0.5rem] flex items-start gap-[1.5rem]">
           <div>
@@ -143,21 +158,42 @@ export const OverheadBillsCard: React.FC<OverheadBillsCardProps> = ({
         to="/overheads"
         className="bg-quick-items-frosted rounded-[0.9rem] px-[0.75rem] pt-[0.7rem] pb-[0.7rem] hover:brightness-105 transition-all block cursor-pointer"
       >
-        <h4 className="text-[0.8125rem] leading-4 font-normal text-[#1c1c1c]">Quick items</h4>
-        <ul className="mt-[0.55rem] flex flex-col gap-[0.55rem]">
-          {displayItems.map((item) => {
-            const Icon = ICONS[item.icon] ?? Home
-            return (
-              <li key={item.id ?? item.name} className="flex items-center gap-[0.55rem]">
-                <Icon className="w-[0.875rem] h-[0.875rem] text-[#1c1c1c]" strokeWidth={1.7} />
-                <span className="text-[0.78rem] leading-4 text-[#1c1c1c] truncate">{item.name}</span>
-              </li>
-            )
-          })}
-        </ul>
+        <h4 className="text-[0.8125rem] leading-4 font-normal text-[#1c1c1c]">
+          Quick items
+        </h4>
+        {displayItems.length === 0 ? (
+          <div className="mt-[0.55rem] py-2 flex flex-col gap-1">
+            <span className="text-xs font-mono text-[#1c1c1c]/65">
+              No recurring bills scheduled
+            </span>
+            <span className="text-xs font-mono font-medium text-[#1c1c1c] underline-offset-2 group-hover:underline">
+              + Add Bill
+            </span>
+          </div>
+        ) : (
+          <ul className="mt-[0.55rem] flex flex-col gap-[0.55rem]">
+            {displayItems.map((item) => {
+              const Icon = ICONS[item.icon] ?? Home;
+              return (
+                <li
+                  key={item.id ?? item.name}
+                  className="flex items-center gap-[0.55rem]"
+                >
+                  <Icon
+                    className="w-[0.875rem] h-[0.875rem] text-[#1c1c1c]"
+                    strokeWidth={1.7}
+                  />
+                  <span className="text-[0.78rem] leading-4 text-[#1c1c1c] truncate">
+                    {item.name}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </Link>
     </div>
-  )
-}
+  );
+};
 
-export default OverheadBillsCard
+export default OverheadBillsCard;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { useLiquidityStore } from '@/stores/liquidityStore'
 import { CURRENCY_CONFIGS, type CurrencyCode } from '@/features/settings/types/settings.types'
@@ -8,6 +8,8 @@ export interface RecordCheckOffCardProps {
   initialPlannedCap?: number
   initialActualSpend?: number
   initialNotes?: string
+  carryOverEnabled?: boolean
+  rolloverDelta?: number
   isEditing?: boolean
   title?: string
   isSubmitting?: boolean
@@ -18,8 +20,10 @@ export interface RecordCheckOffCardProps {
 
 export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
   initialPlannedCap = 30,
-  initialActualSpend = 20,
-  initialNotes = 'Planned cap vs actual spend $20',
+  initialActualSpend = 0,
+  initialNotes = '',
+  carryOverEnabled = false,
+  rolloverDelta,
   isEditing = false,
   title = 'Record Check-Off',
   isSubmitting = false,
@@ -30,10 +34,17 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
   const store = useLiquidityStore()
   const currentCode = (store.currency in CURRENCY_CONFIGS ? store.currency : 'USD') as CurrencyCode
   const config = CURRENCY_CONFIGS[currentCode]
+  const rate = config.rate ?? 1
 
   const [plannedCap, setPlannedCap] = useState(initialPlannedCap.toString())
   const [actualSpend, setActualSpend] = useState(initialActualSpend.toString())
   const [notes, setNotes] = useState(initialNotes)
+
+  useEffect(() => {
+    if (!isEditing) {
+      setPlannedCap(initialPlannedCap.toString())
+    }
+  }, [initialPlannedCap, isEditing])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,6 +103,13 @@ export const RecordCheckOffCard: React.FC<RecordCheckOffCardProps> = ({
                 className="w-16 bg-transparent text-[1.05rem] font-semibold text-white outline-none"
               />
             </div>
+            {!isEditing && carryOverEnabled && rolloverDelta !== undefined && (
+              <p className="font-mono tabular-nums text-[10px] text-slate-400 mt-1.5 tracking-tight">
+                {rolloverDelta >= 0
+                  ? `INCL. +${config.symbol}${(rolloverDelta * rate).toFixed(2)} SURPLUS ROLLOVER`
+                  : `ADJ. -${config.symbol}${(Math.abs(rolloverDelta) * rate).toFixed(2)} DEFICIT`}
+              </p>
+            )}
           </div>
 
           {/* VS Divider Text */}

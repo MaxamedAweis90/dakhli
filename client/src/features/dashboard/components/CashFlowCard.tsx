@@ -21,9 +21,45 @@ interface SparklineProps {
   path: string;
   viewBox: string;
   color: string;
-  dot: [number, number];
+  dot: [number, number] | null;
   className?: string;
 }
+
+const buildSparkline = (
+  values: number[],
+  activeColor: string,
+): { path: string; color: string; dot: [number, number] | null } => {
+  const valid = values.filter((v) => Number.isFinite(v) && v >= 0);
+  if (valid.length === 0 || valid.every((v) => v <= 0)) {
+    return {
+      path: "M0,24 L120,24",
+      color: "#64748B",
+      dot: null,
+    };
+  }
+
+  const series = valid.length === 1 ? [valid[0], valid[0]] : valid.slice(-14);
+  const max = Math.max(...series);
+  const min = Math.min(...series, 0);
+  const span = max - min;
+
+  const points: [number, number][] = series.map((val, idx) => {
+    const x = Number((2 + (idx / (series.length - 1)) * 114).toFixed(1));
+    const normalized = span > 0 ? (val - min) / span : 0.5;
+    const y = Number((38 - normalized * 26).toFixed(1));
+    return [x, y];
+  });
+
+  const path = points
+    .map(([x, y], idx) => `${idx === 0 ? "M" : "L"}${x},${y}`)
+    .join(" ");
+
+  return {
+    path,
+    color: activeColor,
+    dot: points[points.length - 1],
+  };
+};
 
 const Sparkline: React.FC<SparklineProps> = ({
   path,
@@ -42,10 +78,10 @@ const Sparkline: React.FC<SparklineProps> = ({
     >
       <defs>
         <linearGradient id={`fade-${id}`} x1="0" x2="1" y1="0" y2="0">
-          <stop offset="0" stopColor={color} stopOpacity="0" />
-          <stop offset="0.25" stopColor={color} stopOpacity="0.85" />
-          <stop offset="0.75" stopColor={color} stopOpacity="0.95" />
-          <stop offset="1" stopColor={color} stopOpacity="0" />
+          <stop offset="0" stopColor={color} stopOpacity={dot ? "0" : "0.35"} />
+          <stop offset="0.25" stopColor={color} stopOpacity={dot ? "0.85" : "0.45"} />
+          <stop offset="0.75" stopColor={color} stopOpacity={dot ? "0.95" : "0.45"} />
+          <stop offset="1" stopColor={color} stopOpacity={dot ? "0" : "0.35"} />
         </linearGradient>
         <filter
           id={`glow-${id}`}
@@ -68,16 +104,20 @@ const Sparkline: React.FC<SparklineProps> = ({
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle
-        cx={dot[0]}
-        cy={dot[1]}
-        r="7"
-        fill={color}
-        opacity="0.45"
-        filter={`url(#glow-${id})`}
-      />
-      <circle cx={dot[0]} cy={dot[1]} r="2.8" fill={color} />
-      <circle cx={dot[0]} cy={dot[1]} r="1.2" fill="#ffffff" />
+      {dot && (
+        <>
+          <circle
+            cx={dot[0]}
+            cy={dot[1]}
+            r="7"
+            fill={color}
+            opacity="0.45"
+            filter={`url(#glow-${id})`}
+          />
+          <circle cx={dot[0]} cy={dot[1]} r="2.8" fill={color} />
+          <circle cx={dot[0]} cy={dot[1]} r="1.2" fill="#ffffff" />
+        </>
+      )}
     </svg>
   );
 };
@@ -100,12 +140,8 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
   const config = CURRENCY_CONFIGS[currentCode];
   const rate = config.rate ?? 1;
 
-  // Base raw amounts
-  const rawIncome =
-    propIncome ??
-    (baseline?.monthlyIncome !== undefined && baseline.monthlyIncome > 0
-      ? baseline.monthlyIncome
-      : 8385);
+  // Base raw amounts (strictly zero until real user records exist)
+  const rawIncome = propIncome ?? (baseline?.monthlyIncome ?? 0);
 
   const liveSpent = dailyLogs.reduce((sum, l) => sum + (l.spent || 0), 0);
   const liveOverheadObligations =
@@ -113,8 +149,7 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
     (overheadSummary.totalPaid || 0) + (overheadSummary.totalUnpaid || 0);
   const totalRecordedExpenses = liveSpent + liveOverheadObligations;
 
-  const rawExpenses =
-    propExpenses ?? (totalRecordedExpenses > 0 ? totalRecordedExpenses : 2200);
+  const rawExpenses = propExpenses ?? totalRecordedExpenses;
 
   const dailySpendCeiling =
     baseline?.defaultDailyCap && baseline.defaultDailyCap > 0
@@ -125,9 +160,9 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
     propLimit ??
     (dailySpendCeiling > 0
       ? dailySpendCeiling + liveOverheadObligations
-      : rawIncome
+      : rawIncome > 0
       ? Math.round(rawIncome * 0.9)
-      : 82300);
+      : 0);
 
   // Converted amounts
   const income = rawIncome * rate;
@@ -137,10 +172,25 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
 
   const usedPercent =
     propUsedPercent ??
-    (limit > 0 ? Math.min(100, Math.round((expenses / limit) * 100)) : 67);
+    (limit > 0 ? Math.min(100, Math.round((expenses / limit) * 100)) : 0);
 
   const isNetPositive = net >= 0;
   const netSign = isNetPositive ? "+" : "-";
+
+  // Data-driven sparklines with flat muted baseline on zero/empty data
+  const incomeSeries = rawIncome > 0 ? [rawIncome] : [];
+  const sortedExpenseValues = [...dailyLogs]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((l) => l.spent || 0);
+  const expenseSeries =
+    sortedExpenseValues.some((v) => v > 0)
+      ? sortedExpenseValues
+      : rawExpenses > 0
+      ? [rawExpenses]
+      : [];
+
+  const incomeSparkline = buildSparkline(incomeSeries, "#4ADE80");
+  const expenseSparkline = buildSparkline(expenseSeries, "#F87171");
 
   // Cycle burn-rate calculation
   const totalCycleDays = new Date(
@@ -154,7 +204,7 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
       ? baseline.defaultDailyCap * totalCycleDays
       : rawLimit > 0
       ? rawLimit
-      : 1000;
+      : 0;
 
   const cumulativeSpend =
     propExpenses !== undefined
@@ -169,6 +219,7 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
   const burnRate = calculateCycleBurnRate({
     cumulativeSpend,
     discretionaryBaseline: baselineForBurn,
+    warningThreshold: baseline?.warningThreshold ?? 35,
   });
 
   return (
@@ -205,16 +256,15 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
                 value={income}
                 prefix={config.symbol}
                 currency={currentCode}
-                decimals={0}
                 className="font-mono tabular-nums"
               />
             </div>
           </div>
           <Sparkline
-            viewBox="0 0 100 50"
-            path="M 0,38 C 12,38 18,44 26,42 C 34,40 38,12 48,8 C 55,5 57,20 63,20 C 69,20 73,15 80,18 C 88,22 93,36 100,40"
-            color="#4ADE80"
-            dot={[60, 20]}
+            viewBox="0 0 120 48"
+            path={incomeSparkline.path}
+            color={incomeSparkline.color}
+            dot={incomeSparkline.dot}
             className="w-[5.4rem] h-[2.8rem]"
           />
         </div>
@@ -230,16 +280,15 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
                 value={expenses}
                 prefix={config.symbol}
                 currency={currentCode}
-                decimals={0}
                 className="font-mono tabular-nums"
               />
             </div>
           </div>
           <Sparkline
-            viewBox="0 0 100 50"
-            path="M 0,30 C 8,30 14,22 24,20 C 34,18 38,36 48,38 C 58,40 64,18 74,18 C 84,18 88,38 100,32"
-            color="#F87171"
-            dot={[74, 18]}
+            viewBox="0 0 120 48"
+            path={expenseSparkline.path}
+            color={expenseSparkline.color}
+            dot={expenseSparkline.dot}
             className="w-[5.4rem] h-[2.5rem]"
           />
         </div>
@@ -250,7 +299,6 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
             value={Math.abs(net)}
             prefix={`${netSign}${config.symbol}`}
             currency={currentCode}
-            decimals={0}
             className="font-mono tabular-nums font-semibold"
           />
         </div>
@@ -271,7 +319,6 @@ export const CashFlowCard: React.FC<CashFlowCardProps> = ({
                 value={limit}
                 prefix={config.symbol}
                 currency={currentCode}
-                decimals={0}
                 className="font-mono tabular-nums"
               />
             </span>

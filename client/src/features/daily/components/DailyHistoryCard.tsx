@@ -18,6 +18,7 @@ export interface DailyHistoryCardProps {
     notes?: string
   }
   isEditing: boolean
+  isCompact?: boolean
   onStartEdit: () => void
   onCancelEdit: () => void
   onSaveEdit: (updates: { cap: number; spent: number; note: string }) => void
@@ -48,6 +49,7 @@ const STATUS_STYLES: Record<DailyStatus, { bg: string; text: string; border: str
 export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
   record,
   isEditing,
+  isCompact = false,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
@@ -124,7 +126,10 @@ export const DailyHistoryCard: React.FC<DailyHistoryCardProps> = ({
         }
       }}
       className={cn(
-        'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] border border-white/[0.03] hover:border-white/[0.12] transition-all px-4 py-4 sm:px-6 sm:py-5 select-none cursor-pointer flex flex-col gap-3',
+        'group relative rounded-[1.25rem] bg-[#17181D] shadow-[0_4px_24px_-4px_rgba(0,0,0,0.4)] border border-white/[0.03] hover:border-white/[0.12] transition-all select-none cursor-pointer flex flex-col',
+        isCompact
+          ? 'px-4 py-2 sm:px-5 sm:py-2 text-xs gap-1.5'
+          : 'px-4 py-4 sm:px-6 sm:py-5 gap-3',
         className
       )}
     >

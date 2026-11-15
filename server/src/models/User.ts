@@ -7,6 +7,13 @@ export interface IOtpToken {
   lastSentAt: Date | null;
 }
 
+export interface IUserPreferences {
+  currency: 'USD' | 'SOS' | 'EUR';
+  maskBalancesOnStartup: boolean;
+  compactLedgerDensity: boolean;
+  carryOverDailySurplus: boolean;
+}
+
 export interface IUser extends Document {
   email: string;
   passwordHash?: string;
@@ -23,6 +30,7 @@ export interface IUser extends Document {
   deactivatedAt: Date | null;
   deletionScheduledAt: Date | null;
   dormantCycles: string[];
+  preferences: IUserPreferences;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -121,6 +129,25 @@ const userSchema = new Schema<IUser>(
     dormantCycles: {
       type: [String],
       default: [],
+    },
+    preferences: {
+      currency: {
+        type: String,
+        enum: ['USD', 'SOS', 'EUR'],
+        default: 'USD',
+      },
+      maskBalancesOnStartup: {
+        type: Boolean,
+        default: false,
+      },
+      compactLedgerDensity: {
+        type: Boolean,
+        default: false,
+      },
+      carryOverDailySurplus: {
+        type: Boolean,
+        default: false,
+      },
     },
   },
   {
